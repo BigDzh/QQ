@@ -12,6 +12,8 @@ import ProjectDetail from './pages/ProjectDetail';
 import CategoryModules from './pages/CategoryModules';
 import ModuleDetail from './pages/ModuleDetail';
 import ComponentDetail from './pages/ComponentDetail';
+import SoftwareDetail from './pages/SoftwareDetail';
+import SystemDetail from './pages/SystemDetail';
 import FileManagement from './pages/FileManagement';
 import TaskManagement from './pages/TaskManagement';
 import BorrowSystem from './pages/BorrowSystem';
@@ -50,8 +52,10 @@ function AppRoutes() {
                 <Route path="/projects/:id" element={<ProjectDetail />} />
                 <Route path="/projects/:id/category/:category" element={<CategoryModules />} />
                 <Route path="/projects/:id/files" element={<FileManagement />} />
+                <Route path="/systems/:id" element={<SystemDetail />} />
                 <Route path="/modules/:id" element={<ModuleDetail />} />
                 <Route path="/components/:id" element={<ComponentDetail />} />
+                <Route path="/software/:id" element={<SoftwareDetail />} />
                 <Route path="/tasks" element={<TaskManagement />} />
                 <Route path="/borrow" element={<BorrowSystem />} />
                 <Route path="/tools" element={<Tools />} />
