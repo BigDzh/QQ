@@ -74,6 +74,27 @@ code {
   animation: spin 1s linear infinite;
 }
 
+.animate-spin-slow {
+  animation: spin 60s linear infinite;
+}
+
+@keyframes slow-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-slow-rotate {
+  animation: slow-rotate 60s linear infinite;
+}
+
+.origin-center {
+  transform-origin: center center;
+}
+
 .scrollbar-thin::-webkit-scrollbar {
   width: 6px;
   height: 6px;
