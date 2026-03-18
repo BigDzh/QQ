@@ -1,7 +1,7 @@
-export type ProjectStage = 'C阶段' | 'S阶段' | 'D阶段' | 'P阶段';
+export type ProjectStage = 'F阶段' | 'C阶段' | 'S阶段' | 'D阶段' | 'P阶段';
 
-export type ModuleStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '故障';
-export type ComponentStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '故障';
+export type ModuleStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '借用中' | '故障';
+export type ComponentStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '借用中' | '故障';
 export type DocumentStatus = '未完成' | '已完成';
 export type SoftwareStatus = '未完成' | '已完成';
 export type TaskStatus = '进行中' | '已完成' | '已过期';
@@ -10,7 +10,13 @@ export type UserRole = 'admin' | 'manager' | 'engineer' | 'viewer';
 
 export type CertificateStatus = '未签署' | '已签署';
 
-export interface Certificates {
+export interface AssemblyCertificate {
+  status: CertificateStatus;
+  signedAt?: string;
+  signedBy?: string;
+}
+
+export interface ComponentCertificates {
   pcb?: CertificateStatus;
   assembly?: CertificateStatus;
   coating?: CertificateStatus;
@@ -64,6 +70,7 @@ export interface Document {
   fileSize?: number;
   uploadDate?: string;
   completionDate?: string;
+  dbId?: string;
 }
 
 export interface Software {
@@ -79,10 +86,13 @@ export interface Software {
   uploadDate?: string;
   completionDate?: string;
   productionOrderNumber?: string;
- 固化日期?: string;
- 固化指令号?: string[];
+  固化日期?: string;
+  固化指令号?: string[];
   adaptedCategories?: string[];
   adaptedComponentTypes?: string[];
+  adaptedComponentIds?: string[];
+  adaptedComponents?: { id: string; name: string }[];
+  dbId?: string;
 }
 
 export interface DesignFile {
@@ -117,7 +127,7 @@ export interface Component {
   version?: string;
   status: ComponentStatus;
   logs: ComponentLog[];
-  certificates: Certificates;
+  certificates: ComponentCertificates;
   statusChanges: StatusChange[];
   designFiles?: string[];
   burnedSoftware?: BurnedSoftware[];
@@ -135,6 +145,7 @@ export interface BurnedSoftware {
 export interface Module {
   id: string;
   projectId: string;
+  systemId?: string;
   productionOrderNumber: string;
   moduleNumber: string;
   moduleName: string;
@@ -148,6 +159,33 @@ export interface Module {
   logs: ModuleLog[];
   statusChanges: StatusChange[];
   designFiles?: string[];
+  assemblyCertificate?: AssemblyCertificate;
+}
+
+export type SystemStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '借用中' | '故障';
+
+export interface SystemLog {
+  id: string;
+  action: string;
+  timestamp: string;
+  userId: string;
+  username: string;
+  details?: string;
+}
+
+export interface System {
+  id: string;
+  projectId: string;
+  systemNumber: string;
+  systemName: string;
+  instructionNumber: string;
+  stage: ProjectStage;
+  status: SystemStatus;
+  holder?: string;
+  version?: string;
+  logs: SystemLog[];
+  statusChanges: StatusChange[];
+  createdAt?: string;
 }
 
 export interface Project {
@@ -158,6 +196,7 @@ export interface Project {
   version: string;
   categories: string[];
   modules: Module[];
+  systems: System[];
   documents: Document[];
   software: Software[];
   designFiles: DesignFile[];
