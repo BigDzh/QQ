@@ -7,11 +7,16 @@ import { useThemeStyles } from '../hooks/useThemeStyles';
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
-  const { getProject, addModule, currentUser } = useApp();
+  const { getProject, addModule, updateProject, currentUser } = useApp();
   const { showToast } = useToast();
   const t = useThemeStyles();
   const [activeTab, setActiveTab] = useState<'overview' | 'modules' | 'documents' | 'software'>('overview');
   const [showModuleModal, setShowModuleModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
+  const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
+  const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
+  const [hoveredComponentCategory, setHoveredComponentCategory] = useState<string | null>(null);
   const [moduleForm, setModuleForm] = useState({
     moduleNumber: '',
     moduleName: '',
@@ -71,6 +76,38 @@ export default function ProjectDetail() {
     const documentsCompleted = project.documents.filter((d) => d.status === '已完成').length;
     const softwareCompleted = project.software.filter((s) => s.status === '已完成').length;
 
+    const moduleStatusStats = project.modules.reduce((acc, m) => {
+      acc[m.status] = (acc[m.status] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const categoryStats = project.modules.reduce((acc, m) => {
+      if (!acc[m.category]) {
+        acc[m.category] = { moduleCount: 0, componentCount: 0 };
+      }
+      acc[m.category].moduleCount += 1;
+      acc[m.category].componentCount += m.components.length;
+      return acc;
+    }, {} as Record<string, { moduleCount: number; componentCount: number }>);
+
+    const componentCategoryStats = project.modules.reduce((acc, m) => {
+      m.components.forEach(() => {
+        if (!acc[m.category]) {
+          acc[m.category] = 0;
+        }
+        acc[m.category] += 1;
+      });
+      return acc;
+    }, {} as Record<string, number>);
+
+    const statusModuleDetails = project.modules.reduce((acc, m) => {
+      if (!acc[m.status]) {
+        acc[m.status] = [];
+      }
+      acc[m.status].push({ name: m.moduleName, number: m.moduleNumber, components: m.components.length });
+      return acc;
+    }, {} as Record<string, { name: string; number: string; components: number }[]>);
+
     return {
       totalModules,
       totalComponents,
@@ -80,6 +117,10 @@ export default function ProjectDetail() {
       documentsTotal: project.documents.length,
       softwareCompleted,
       softwareTotal: project.software.length,
+      moduleStatusStats,
+      categoryStats,
+      componentCategoryStats,
+      statusModuleDetails,
     };
   };
 
@@ -92,6 +133,21 @@ export default function ProjectDetail() {
     { id: 'documents', label: '文档管理' },
     { id: 'software', label: '软件管理' },
   ];
+
+  const handleAddCategory = () => {
+    if (!newCategory.trim()) {
+      showToast('请输入种类名称', 'error');
+      return;
+    }
+    if (project.categories.includes(newCategory.trim())) {
+      showToast('该种类已存在', 'error');
+      return;
+    }
+    updateProject(id!, { categories: [...project.categories, newCategory.trim()] });
+    showToast('种类添加成功', 'success');
+    setNewCategory('');
+    setShowCategoryModal(false);
+  };
 
   return (
     <div>
@@ -128,24 +184,265 @@ export default function ProjectDetail() {
       </div>
 
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
-            <div className={`text-sm ${t.textMuted} mb-1`}>项目阶段</div>
-            <div className={`text-2xl font-bold ${t.text}`}>{project.stage}</div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <div className={`text-sm ${t.textMuted} mb-1`}>项目阶段</div>
+              <div className={`text-2xl font-bold ${t.text}`}>{project.stage}</div>
+            </div>
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <div className={`text-sm ${t.textMuted} mb-1`}>模块种类</div>
+              <div className={`text-2xl font-bold text-cyan-400`}>{project.categories.length}</div>
+            </div>
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <div className={`text-sm ${t.textMuted} mb-1`}>模块总数 / 正常率</div>
+              <div className={`text-2xl font-bold ${t.success}`}>{stats.totalModules} / {stats.normalRate}%</div>
+            </div>
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <div className={`text-sm ${t.textMuted} mb-1`}>组件总数 / 故障率</div>
+              <div className={`text-2xl font-bold ${t.error}`}>{stats.totalComponents} / {stats.faultRate}%</div>
+            </div>
           </div>
-          <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
-            <div className={`text-sm ${t.textMuted} mb-1`}>模块种类</div>
-            <div className={`text-2xl font-bold text-cyan-400`}>{project.categories.length}</div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <h3 className={`text-lg font-semibold ${t.text} mb-4`}>模块状态分布</h3>
+              <div className="flex flex-col items-center">
+                <div className="relative w-48 h-48">
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                    {Object.entries(stats.moduleStatusStats).reduce((acc, [status, count], index, arr) => {
+                      const percentage = (count / stats.totalModules) * 100;
+                      const statusColors: Record<string, string> = {
+                        '正常': '#10b981',
+                        '投产中': '#3b82f6',
+                        '维修中': '#f97316',
+                        '三防中': '#8b5cf6',
+                        '测试中': '#eab308',
+                        '仿真中': '#06b6d4',
+                        '未投产': '#6b7280',
+                        '故障': '#ef4444',
+                      };
+                      const color = statusColors[status] || '#6b7280';
+                      const prevPercentage = arr.slice(0, index).reduce((sum, [, c]) => sum + (c / stats.totalModules) * 100, 0);
+                      const dashArray = percentage;
+                      const dashOffset = prevPercentage;
+                      acc.push(
+                        <circle
+                          key={status}
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="12"
+                          strokeDasharray={`${dashArray} ${100 - dashArray}`}
+                          strokeDashoffset={-dashOffset}
+                          className={`transition-all duration-300 cursor-pointer ${hoveredStatus === status ? 'opacity-100' : hoveredStatus ? 'opacity-40' : 'opacity-90'}`}
+                          onMouseEnter={() => setHoveredStatus(status)}
+                          onMouseLeave={() => setHoveredStatus(null)}
+                        />
+                      );
+                      return acc;
+                    }, [] as React.ReactNode[])}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-bold ${t.text}`}>{stats.totalModules}</span>
+                    <span className={`text-xs ${t.textMuted}`}>模块</span>
+                  </div>
+                </div>
+                <div className="w-full mt-4 space-y-2">
+                  {Object.entries(stats.moduleStatusStats).map(([status, count]) => {
+                    const percentage = stats.totalModules > 0 ? Math.round((count / stats.totalModules) * 100) : 0;
+                    const statusColorMap: Record<string, string> = {
+                      '正常': 'bg-emerald-500',
+                      '投产中': 'bg-blue-500',
+                      '维修中': 'bg-orange-500',
+                      '三防中': 'bg-violet-500',
+                      '测试中': 'bg-yellow-500',
+                      '仿真中': 'bg-cyan-500',
+                      '未投产': 'bg-gray-500',
+                      '故障': 'bg-red-500',
+                    };
+                    const colorClass = statusColorMap[status] || 'bg-gray-500';
+                    const isHovered = hoveredStatus === status;
+                    return (
+                      <div
+                        key={status}
+                        className={`p-2 rounded-lg cursor-pointer transition-all ${isHovered ? `${t.border} shadow-sm` : ''}`}
+                        onMouseEnter={() => setHoveredStatus(status)}
+                        onMouseLeave={() => setHoveredStatus(null)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${colorClass}`} />
+                            <span className={`text-sm ${t.text}`}>{status}</span>
+                          </div>
+                          <span className={`text-sm font-medium ${t.text}`}>{count} ({percentage}%)</span>
+                        </div>
+                        {isHovered && stats.statusModuleDetails[status] && (
+                          <div className={`ml-5 p-2 rounded ${t.emptyBg} text-xs ${t.textMuted}`}>
+                            {stats.statusModuleDetails[status].map((m, i) => (
+                              <div key={i} className="py-1">
+                                <span className={t.text}>{m.name}</span>
+                                <span className="mx-1">|</span>
+                                <span>{m.number}</span>
+                                <span className="mx-1">|</span>
+                                <span>组件: {m.components}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className={`text-lg font-semibold ${t.text}`}>模块种类统计</h3>
+                {canEdit && (
+                  <button
+                    onClick={() => setShowCategoryModal(true)}
+                    className={`flex items-center gap-1 px-2 py-1 text-sm ${t.button} rounded-lg`}
+                  >
+                    <Plus size={14} />
+                    添加种类
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col items-center">
+                <div className="relative w-40 h-40">
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                    {Object.entries(stats.categoryStats).reduce((acc, [category, data], index, arr) => {
+                      const percentage = (data.moduleCount / stats.totalModules) * 100;
+                      const categoryColors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#84cc16'];
+                      const color = categoryColors[index % categoryColors.length];
+                      const prevPercentage = arr.slice(0, index).reduce((sum, [, d]) => sum + (d.moduleCount / stats.totalModules) * 100, 0);
+                      const dashArray = percentage;
+                      const dashOffset = prevPercentage;
+                      acc.push(
+                        <circle
+                          key={category}
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="12"
+                          strokeDasharray={`${dashArray} ${100 - dashArray}`}
+                          strokeDashoffset={-dashOffset}
+                          className={`transition-all duration-300 cursor-pointer ${hoveredCategory === category ? 'opacity-100' : hoveredCategory ? 'opacity-40' : 'opacity-90'}`}
+                          onMouseEnter={() => setHoveredCategory(category)}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                        />
+                      );
+                      return acc;
+                    }, [] as React.ReactNode[])}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-2xl font-bold ${t.text}`}>{stats.totalModules}</span>
+                    <span className={`text-xs ${t.textMuted}`}>模块</span>
+                  </div>
+                </div>
+                <div className="w-full mt-4 space-y-2">
+                  {Object.entries(stats.categoryStats).map(([category, data], index) => {
+                    const percentage = stats.totalModules > 0 ? Math.round((data.moduleCount / stats.totalModules) * 100) : 0;
+                    const categoryColors = ['bg-cyan-500', 'bg-violet-500', 'bg-pink-500', 'bg-amber-500', 'bg-emerald-500', 'bg-blue-500', 'bg-red-500', 'bg-lime-500'];
+                    const colorClass = categoryColors[index % categoryColors.length];
+                    const isHovered = hoveredCategory === category;
+                    return (
+                      <div
+                        key={category}
+                        className={`p-2 rounded-lg cursor-pointer transition-all ${isHovered ? `${t.border} shadow-sm` : ''}`}
+                        onMouseEnter={() => setHoveredCategory(category)}
+                        onMouseLeave={() => setHoveredCategory(null)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${colorClass}`} />
+                            <span className={`text-sm ${t.text}`}>{category}</span>
+                          </div>
+                          <span className={`text-sm font-medium ${t.text}`}>{data.moduleCount} ({percentage}%)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {Object.keys(stats.categoryStats).length === 0 && (
+                    <p className={`text-sm ${t.textMuted}`}>暂无模块数据</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+              <h3 className={`text-lg font-semibold ${t.text} mb-4`}>组件种类统计</h3>
+              <div className="flex flex-col items-center">
+                <div className="relative w-40 h-40">
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
+                    {Object.entries(stats.componentCategoryStats).reduce((acc, [category, count], index, arr) => {
+                      const percentage = (count / stats.totalComponents) * 100;
+                      const categoryColors = ['#06b6d4', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444', '#84cc16'];
+                      const color = categoryColors[index % categoryColors.length];
+                      const prevPercentage = arr.slice(0, index).reduce((sum, [, c]) => sum + (c / stats.totalComponents) * 100, 0);
+                      const dashArray = percentage;
+                      const dashOffset = prevPercentage;
+                      acc.push(
+                        <circle
+                          key={category}
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          fill="none"
+                          stroke={color}
+                          strokeWidth="12"
+                          strokeDasharray={`${dashArray} ${100 - dashArray}`}
+                          strokeDashoffset={-dashOffset}
+                          className={`transition-all duration-300 cursor-pointer ${hoveredComponentCategory === category ? 'opacity-100' : hoveredComponentCategory ? 'opacity-40' : 'opacity-90'}`}
+                          onMouseEnter={() => setHoveredComponentCategory(category)}
+                          onMouseLeave={() => setHoveredComponentCategory(null)}
+                        />
+                      );
+                      return acc;
+                    }, [] as React.ReactNode[])}
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-2xl font-bold ${t.text}`}>{stats.totalComponents}</span>
+                    <span className={`text-xs ${t.textMuted}`}>组件</span>
+                  </div>
+                </div>
+                <div className="w-full mt-4 space-y-2">
+                  {Object.entries(stats.componentCategoryStats).map(([category, count], index) => {
+                    const percentage = stats.totalComponents > 0 ? Math.round((count / stats.totalComponents) * 100) : 0;
+                    const categoryColors = ['bg-cyan-500', 'bg-violet-500', 'bg-pink-500', 'bg-amber-500', 'bg-emerald-500', 'bg-blue-500', 'bg-red-500', 'bg-lime-500'];
+                    const colorClass = categoryColors[index % categoryColors.length];
+                    const isHovered = hoveredComponentCategory === category;
+                    return (
+                      <div
+                        key={category}
+                        className={`p-2 rounded-lg cursor-pointer transition-all ${isHovered ? `${t.border} shadow-sm` : ''}`}
+                        onMouseEnter={() => setHoveredComponentCategory(category)}
+                        onMouseLeave={() => setHoveredComponentCategory(null)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-3 h-3 rounded-full ${colorClass}`} />
+                            <span className={`text-sm ${t.text}`}>{category}</span>
+                          </div>
+                          <span className={`text-sm font-medium ${t.text}`}>{count} ({percentage}%)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {Object.keys(stats.componentCategoryStats).length === 0 && (
+                    <p className={`text-sm ${t.textMuted}`}>暂无组件数据</p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
-            <div className={`text-sm ${t.textMuted} mb-1`}>模块总数 / 正常率</div>
-            <div className={`text-2xl font-bold ${t.success}`}>{stats.totalModules} / {stats.normalRate}%</div>
-          </div>
-          <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
-            <div className={`text-sm ${t.textMuted} mb-1`}>组件总数 / 故障率</div>
-            <div className={`text-2xl font-bold ${t.error}`}>{stats.totalComponents} / {stats.faultRate}%</div>
-          </div>
-        </div>
+        </>
       )}
 
       {activeTab === 'modules' && (
@@ -355,6 +652,44 @@ export default function ProjectDetail() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowCategoryModal(false)}>
+          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-md border ${t.modalBorder}`} onClick={(e) => e.stopPropagation()}>
+            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>添加模块种类</h2>
+            <div className="space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>种类名称</label>
+                <input
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg ${t.input}`}
+                  placeholder="请输入种类名称"
+                  autoFocus
+                />
+              </div>
+              <div className={`text-sm ${t.textMuted}`}>
+                当前种类: {project.categories.join(', ') || '暂无'}
+              </div>
+            </div>
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={() => setShowCategoryModal(false)}
+                className={`flex-1 py-2 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg}`}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleAddCategory}
+                className={`flex-1 py-2 ${t.button} rounded-lg`}
+              >
+                添加
+              </button>
+            </div>
           </div>
         </div>
       )}
