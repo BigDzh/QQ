@@ -1,0 +1,26 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.env.local
+.vscode/
+.idea/
+
+# Electron build outputs
+asar-extract/
+check-asar/
+check-extract/
+electron/
+electron-output/
+electron-release/
+electron-win7-output/
+release/
+temp-pack/
+win7-app-output/
+
+# Build artifacts
+*.zip
+绿色可执行应用/
+绿色可执行应用_Win7/
+Web应用打包/
