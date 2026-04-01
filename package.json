@@ -1,0 +1,88 @@
+{
+  "name": "lifecycle-management-system-export",
+  "private": true,
+  "version": "2.19.1-export",
+  "description": "项目全生命周期管理系统 (导出版本)",
+  "main": "electron/main.cjs",
+  "author": "Your Name",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "analyze": "vite build && npx vite-bundle-analyzer dist/assets/*.js",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "e2e:headed": "playwright test --headed",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5174 && electron .\"",
+    "electron:build": "npm run build && electron-builder --win --dir",
+    "electron:dist": "npm run build && electron-builder --win"
+  },
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.13.23",
+    "clsx": "^2.1.0",
+    "crypto-js": "^4.2.0",
+    "html2canvas": "^1.4.1",
+    "idb": "^8.0.0",
+    "jspdf": "^4.2.1",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.344.0",
+    "mammoth": "^1.12.0",
+    "pdf-parse": "^2.4.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0",
+    "recharts": "^2.12.0",
+    "tesseract.js": "^5.0.4",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^10.4.0",
+    "@playwright/test": "^1.58.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/crypto-js": "^4.2.2",
+    "@types/react": "^18.2.56",
+    "@types/react-dom": "^18.2.19",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.17",
+    "concurrently": "^8.2.2",
+    "electron": "^28.2.0",
+    "electron-builder": "^24.9.1",
+    "jsdom": "^29.0.1",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4",
+    "vitest": "^4.1.1",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.lifecycle.management.export",
+    "productName": "项目全生命周期管理系统_导出版",
+    "copyright": "Copyright © 2024",
+    "electronVersion": "28.2.0",
+    "directories": {
+      "output": "C:\\temp\\win7-app-export"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "portable",
+      "artifactName": "${productName}.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

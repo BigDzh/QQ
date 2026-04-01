@@ -1,0 +1,116 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e-chromium:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Chromium E2E tests
+        run: npx playwright test --project=chromium
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-chromium
+          path: playwright-report/
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-chromium
+          path: |
+            test-results/
+            playwright-traces/
+          retention-days: 7
+
+  e2e-firefox:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps firefox
+
+      - name: Run Firefox E2E tests
+        run: npx playwright test --project=firefox
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-firefox
+          path: playwright-report/
+          retention-days: 7
+
+  e2e-webkit:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps webkit
+
+      - name: Run WebKit E2E tests
+        run: npx playwright test --project=webkit
+        continue-on-error: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-webkit
+          path: playwright-report/
+          retention-days: 7
+
+  test-summary:
+    needs: [e2e-chromium, e2e-firefox, e2e-webkit]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Test Summary
+        run: |
+          echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- Chromium: ${{ needs.e2e-chromium.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Firefox: ${{ needs.e2e-firefox.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- WebKit: ${{ needs.e2e-webkit.result }}" >> $GITHUB_STEP_SUMMARY
