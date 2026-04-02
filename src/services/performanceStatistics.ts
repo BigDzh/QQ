@@ -165,8 +165,6 @@ function updateDailyStats(record: PerformanceRecord): void {
     dayStats.minFps = Math.min(dayStats.minFps, record.fps);
     dayStats.recordCount++;
 
-    const recentRecords = getPerformanceRecords(1);
-    const alertThreshold = getStatisticsConfig();
     let alertCount = 0;
     if (record.cpu >= 85 || record.memory >= 85 || record.disk >= 90 || record.fps < 30) {
       alertCount = 1;

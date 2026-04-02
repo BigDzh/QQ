@@ -65,7 +65,6 @@ export interface CrossReferenceResult {
 }
 
 const CACHE_TTL = 30000;
-const PROJECT_CACHE_TTL = 60000;
 
 interface CacheEntry<T> {
   data: T;
@@ -76,7 +75,6 @@ export class DataRelationService {
   private projects: Project[] = [];
   private tasks: Task[] = [];
   private borrowRecords: BorrowRecord[] = [];
-  private projectsHash: string = '';
 
   private relationsCache: CacheEntry<DataRelation[]> | null = null;
   private unifiedDataCache: CacheEntry<UnifiedDataItem[]> | null = null;
@@ -91,21 +89,12 @@ export class DataRelationService {
     this.projects = projects;
     this.tasks = tasks || [];
     this.borrowRecords = borrowRecords || [];
-    this.projectsHash = this.computeDataHash();
     this.invalidateAllCaches();
     console.log('[DataRelationService] Initialized with:', {
       projects: this.projects.length,
       tasks: this.tasks.length,
       borrowRecords: this.borrowRecords.length,
     });
-  }
-
-  private computeDataHash(): string {
-    const data = {
-      projects: this.projects.map(p => ({ id: p.id, updatedAt: p.createdAt })),
-      tasks: this.tasks.map(t => t.id),
-    };
-    return JSON.stringify(data);
   }
 
   private invalidateAllCaches(): void {
@@ -313,7 +302,7 @@ export class DataRelationService {
           projectName: project.name,
           name: system.systemName,
           status: system.status,
-          createdAt: system.createdAt,
+          createdAt: system.createdAt || new Date().toISOString(),
           metadata: { systemNumber: system.systemNumber },
         });
       }
@@ -500,7 +489,6 @@ export class DataRelationService {
 
     for (const relation of relations) {
       const sourceKey = `${relation.sourceType}-${relation.sourceId}`;
-      const targetKey = `${relation.targetType}-${relation.targetId}`;
 
       if (!indexMap.has(sourceKey) && relation.sourceType !== 'designFile') {
         errors.push({

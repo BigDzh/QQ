@@ -130,7 +130,6 @@ export default function ModuleDetail() {
     setPendingComponent(component);
     setPendingComponentStatus(newStatus);
     setComponentStatusReason('');
-    setShowComponentStatusModal(false);
     setShowComponentReasonModal(true);
   };
 
@@ -379,7 +378,8 @@ export default function ModuleDetail() {
                       <td className="px-4 py-3">
                         {canEdit ? (
                           <button
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setPendingComponent(component);
                               setShowComponentStatusModal(true);
                             }}

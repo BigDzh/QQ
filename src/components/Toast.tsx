@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
 import ReactDOM from 'react-dom';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle, Bell, BellOff, Trash2, Check, Settings } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle, Bell, BellOff, Trash2, Check } from 'lucide-react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 

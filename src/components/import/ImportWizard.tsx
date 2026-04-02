@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { X, Upload, FileSpreadsheet, Check, AlertCircle, Download, ChevronLeft, ChevronRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { X, Upload, FileSpreadsheet, Check, AlertCircle, Download, ChevronLeft, Loader2, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { useToast } from '../Toast';
@@ -45,7 +45,7 @@ export function ImportWizard({
   maxFileSize = 10 * 1024 * 1024,
   customValidators = [],
 }: ImportWizardProps) {
-  const { theme, isDark, isCyberpunk } = useTheme();
+  const { isCyberpunk } = useTheme();
   const t = useThemeStyles();
   const { showToast } = useToast();
 
@@ -54,7 +54,7 @@ export function ImportWizard({
   const [importData, setImportData] = useState<ImportRow[]>([]);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [errors, setErrors] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
   const [showErrorsOnly, setShowErrorsOnly] = useState(false);
   const [importProgress, setImportProgress] = useState(0);

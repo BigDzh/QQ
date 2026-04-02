@@ -28,7 +28,6 @@ export async function compressFolderToZip(
       continue;
     }
 
-    const mimeType = dataParts[0].match(/:([^;]+)/)?.[1] || 'application/octet-stream';
     const base64Data = dataParts[1];
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);

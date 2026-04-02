@@ -1,9 +1,8 @@
-import React from 'react';
 import { Trash2, Download, X, CheckSquare, Square, FolderOpen } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 
-interface BatchOperationsBarProps<T> {
+interface BatchOperationsBarProps<_T> {
   selectedCount: number;
   totalCount: number;
   isAllSelected: boolean;
@@ -17,7 +16,7 @@ interface BatchOperationsBarProps<T> {
   exportLabel?: string;
 }
 
-export function BatchOperationsBar<T>({
+export function BatchOperationsBar({
   selectedCount,
   totalCount,
   isAllSelected,
@@ -29,8 +28,8 @@ export function BatchOperationsBar<T>({
   itemType = '项目',
   deleteLabel = '删除',
   exportLabel = '导出',
-}: BatchOperationsBarProps<T>) {
-  const { theme, isDark, isCyberpunk } = useTheme();
+}: BatchOperationsBarProps<unknown>) {
+  const { isDark, isCyberpunk } = useTheme();
   const t = useThemeStyles();
 
   if (selectedCount === 0) {

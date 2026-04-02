@@ -10,7 +10,7 @@ import { calculateFileMD5Async } from '../utils/md5';
 import { generateDesignDiagrams, type DiagramCard } from '../services/designDiagramService';
 import { createPreUpdateSnapshot, rollbackData, getRollbackSnapshot, type DataSnapshot } from '../services/dataMigration';
 import { downloadFile, saveFileInChunks } from '../services/database';
-import type { ProjectStage, ProjectVersion, ModuleStatus, Module, Component } from '../types';
+import type { ProjectStage, ProjectVersion, ModuleStatus, Module, Component, ComponentStatus } from '../types';
 import type { ModalState } from './useModalState';
 import type { ProjectState } from './useProjectState';
 
@@ -943,6 +943,12 @@ export function useProjectHandlers(
     modalState.setShowComponentCopyModal(true);
   }, [modalState]);
 
+  const handleComponentStatusChange = useCallback((component: any) => {
+    modalState.setEditingComponent(component);
+    modalState.setComponentStatusForm({ status: component.status, reason: '' });
+    modalState.setShowComponentStatusModal(true);
+  }, [modalState]);
+
   const handleSystemEdit = useCallback((system: any) => {
     modalState.setSystemForm({
       systemNumber: system.systemNumber, systemName: system.systemName,
@@ -1060,6 +1066,80 @@ export function useProjectHandlers(
     modalState.setShowComponentEditModal(false);
     modalState.setEditingComponent(null);
   }, [project, modalState, updateProject, updateComponent, showToast]);
+
+  const handleStatusChangeWithReason = useCallback(async (
+    componentId: string,
+    moduleId: string,
+    newStatus: ComponentStatus,
+    reason: string
+  ): Promise<{ success: boolean; error?: string; errorType?: 'network' | 'permission' | 'validation' | 'unknown' }> => {
+    if (currentUser?.role === 'viewer') {
+      return {
+        success: false,
+        error: '您没有权限更改组件状态',
+        errorType: 'permission'
+      };
+    }
+
+    if (!reason.trim()) {
+      return {
+        success: false,
+        error: '请输入状态变更原因',
+        errorType: 'validation'
+      };
+    }
+
+    try {
+      const targetModule = project.modules.find((m: any) => m.id === moduleId);
+      if (!targetModule) {
+        return {
+          success: false,
+          error: '未找到对应的模块',
+          errorType: 'validation'
+        };
+      }
+
+      const targetComponent = targetModule.components?.find((c: any) => c.id === componentId);
+      if (!targetComponent) {
+        return {
+          success: false,
+          error: '未找到对应的组件',
+          errorType: 'validation'
+        };
+      }
+
+      await new Promise((resolve, reject) => {
+        setTimeout(() => {
+          try {
+            updateComponent(project.id, moduleId, componentId, {
+              status: newStatus,
+              logs: [...(targetComponent.logs || []), {
+                id: generateId(),
+                action: `状态变更：${targetComponent.status} → ${newStatus}`,
+                timestamp: new Date().toISOString(),
+                userId: currentUser?.id || '',
+                username: currentUser?.username || '',
+                details: reason,
+              }],
+            });
+            resolve(true);
+          } catch (err) {
+            reject(err);
+          }
+        }, 300);
+      });
+
+      showToast('组件状态已更新', 'success');
+      return { success: true };
+    } catch (error) {
+      console.error('Status change error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '状态变更失败，请重试',
+        errorType: 'network'
+      };
+    }
+  }, [project, updateComponent, currentUser, showToast]);
 
   const handleComponentStatusSubmit = useCallback(() => {
     const { componentStatusForm, editingComponent } = modalState;
@@ -1462,6 +1542,7 @@ export function useProjectHandlers(
     handleComponentDelete,
     handleComponentStatusUpdate,
     handleComponentCopy,
+    handleComponentStatusChange,
     handleSystemEdit,
     handleSystemDelete,
     handleTaskToggleComplete,
@@ -1499,5 +1580,6 @@ export function useProjectHandlers(
     handleComponentSubmit,
     handleOpenAddReview,
     handleStageUpdate,
+    handleStatusChangeWithReason,
   };
 }

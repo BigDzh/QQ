@@ -115,7 +115,6 @@ export function ResourceMonitorPanel() {
     toggleMode,
     isAutoMode,
     setAutoMode,
-    isLowResource,
     resourceMetrics,
     alerts,
     enabledFeatures,

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Search, X, FileText, Package, Boxes, Download, Loader2, Filter, ChevronDown, FolderKanban, CheckSquare } from 'lucide-react';
+import { Search, X, FileText, Package, Boxes, Download, Loader2, Filter, FolderKanban, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemeStyles } from '../../hooks/useThemeStyles';
 import type { SearchResult } from '../../types/search';
 
 const DEBOUNCE_MS = 150;
@@ -34,7 +34,7 @@ export default function SystemSearch({ systemId, projectId, onBackupClick }: Sys
   const [isExpanded, setIsExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'type'>('relevance');
@@ -44,7 +44,7 @@ export default function SystemSearch({ systemId, projectId, onBackupClick }: Sys
   const navigate = useNavigate();
   const { projects } = useApp();
   const t = useThemeStyles();
-  const { isDark, isCyberpunk, isAnime, isCosmos } = useTheme();
+  const { isDark } = useTheme();
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const project = projects.find(p => p.id === projectId);

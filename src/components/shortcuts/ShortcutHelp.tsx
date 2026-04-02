@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { X, Keyboard, Search, ToggleLeft, Save, Download, FileText, Plus, Hash, HelpCircle } from 'lucide-react';
+import { useMemo } from 'react';
+import { X, Keyboard, Search, ToggleLeft, Save, Download, Plus, Hash, HelpCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 import { useShortcutHelp } from '../../hooks/useShortcuts';
@@ -10,9 +10,9 @@ interface ShortcutHelpProps {
 }
 
 export function ShortcutHelp({ isOpen, onClose }: ShortcutHelpProps) {
-  const { theme, isDark, isCyberpunk } = useTheme();
+  const { isDark, isCyberpunk } = useTheme();
   const t = useThemeStyles();
-  const { shortcuts, getShortcutsByCategory, formatShortcut } = useShortcutHelp();
+  const { shortcuts: _shortcuts, getShortcutsByCategory, formatShortcut } = useShortcutHelp();
 
   const shortcutsByCategory = useMemo(() => getShortcutsByCategory(), [getShortcutsByCategory]);
 

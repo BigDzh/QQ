@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Play, Pause, Trash2, Plus, Edit, Move, X, CheckCircle,
-  Clock, AlertCircle, Settings, Copy, Link2, Unlink, AlertTriangle,
-  Gauge, Users, ArrowRight, ChevronDown, ChevronRight, Save, Database,
+  ArrowLeft, Play, Pause, Trash2, Plus, Move, Clock,
+  Settings, Copy, Link2, AlertTriangle,
+  Gauge, Users, ArrowRight, ChevronDown, ChevronRight, Database,
   Bell
 } from 'lucide-react';
 import { useToast } from '../components/Toast';

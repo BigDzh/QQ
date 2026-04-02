@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useTheme } from '../context/ThemeContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';
+import { useModuleComponentSync } from '../hooks/useModuleComponentSync';
 import FilterArea from '../components/BorrowSystemFilter';
 
 import type { BorrowRecord } from '../types';
@@ -25,10 +26,11 @@ interface ReturnModalData {
 }
 
 export default function BorrowSystem() {
-  const { projects, borrowRecords, addBorrowRecord, returnBorrowRecord, updateModule, updateComponent, currentUser } = useApp();
+  const { projects, borrowRecords, addBorrowRecord, returnBorrowRecord, updateComponent, currentUser } = useApp();
   const { showToast } = useToast();
   const { theme } = useTheme();
   const t = useThemeStyles();
+  const { cascadeBorrowModule, cascadeReturnModule } = useModuleComponentSync();
   const [showBorrowModal, setShowBorrowModal] = useState(false);
   const [borrowData, setBorrowData] = useState<BorrowModalData | null>(null);
   const [borrower, setBorrower] = useState('');
@@ -148,36 +150,20 @@ export default function BorrowSystem() {
       return;
     }
 
-    const moduleBorrowRecord = {
-      itemType: 'module' as const,
-      itemId: borrowData.item.id,
-      itemName: borrowData.item.name,
-      borrower,
-      borrowDate: new Date().toISOString(),
-      expectedReturnDate: expectedReturnDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      actualReturnDate: '',
-      status: '借用中' as const,
-      notes,
-    };
-
     if (borrowData.type === 'module') {
-      module.components.forEach((c) => {
-        updateComponent(project.id, module.id, c.id, { status: '借用中', borrower });
-        addBorrowRecord({
-          itemType: 'component',
-          itemId: c.id,
-          itemName: `${c.componentName} (${c.componentNumber})`,
-          borrower,
-          borrowDate: new Date().toISOString(),
-          expectedReturnDate: expectedReturnDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-          actualReturnDate: '',
-          status: '借用中',
-          notes: `随模块"${borrowData.item.name}"借用`,
-          parentModuleBorrowId: moduleBorrowRecord.itemId,
-        });
+      const result = cascadeBorrowModule({
+        module,
+        borrower,
+        expectedReturnDate,
+        notes,
       });
-      updateModule(borrowData.item.projectId!, borrowData.item.id, { status: '借用中', borrower });
-      addBorrowRecord(moduleBorrowRecord);
+
+      if (!result.success) {
+        showToast(result.errors[0] || '借用失败', 'error');
+        return;
+      }
+
+      showToast(`借用成功，已同步更新 ${result.updatedComponents.length} 个组件状态`, 'success');
     } else {
       updateComponent(borrowData.item.projectId!, borrowData.item.moduleId!, borrowData.item.id, { status: '借用中', borrower });
       addBorrowRecord({
@@ -216,14 +202,22 @@ export default function BorrowSystem() {
       const project = projects.find((p) => p.modules.some((m) => m.id === record.itemId));
       const module = project?.modules.find((m) => m.id === record.itemId);
       if (project && module) {
-        updateModule(project.id, module.id, { status: newStatus, borrower: undefined });
-        module.components.forEach((c) => {
-          updateComponent(project.id, module.id, c.id, { status: newStatus, borrower: undefined });
+        const result = cascadeReturnModule({
+          module,
+          newStatus: newStatus as '正常' | '故障' | '维修中' | '三防中' | '测试中' | '仿真中',
         });
+
+        if (!result.success) {
+          showToast(result.errors[0] || '归还失败', 'error');
+          return;
+        }
+
+        borrowRecords
+          .filter((r) => r.itemType === 'component' && r.parentModuleBorrowId === record.itemId && r.status === '借用中')
+          .forEach((r) => returnBorrowRecord(r.id));
+
+        showToast(`归还成功，状态已更新为"${newStatus}"，已同步更新 ${result.updatedComponents.length} 个组件`, 'success');
       }
-      borrowRecords
-        .filter((r) => r.itemType === 'component' && r.parentModuleBorrowId === record.itemId && r.status === '借用中')
-        .forEach((r) => returnBorrowRecord(r.id));
     } else {
       for (const project of projects) {
         for (const module of project.modules) {

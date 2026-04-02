@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Cpu, HardDrive, Monitor, ChevronDown, ChevronUp, MemoryStick, Globe, Zap, Gauge, Wifi, WifiOff, Clock, Activity, TrendingUp, TrendingDown, Minus, RefreshCw, Bell, BellOff, BarChart3 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { Cpu, HardDrive, Monitor, ChevronDown, ChevronUp, MemoryStick, Globe, Zap, Gauge, Wifi, WifiOff, Clock, Activity, TrendingUp, TrendingDown, Minus, RefreshCw, Bell, BellOff, BarChart3, Check, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
-import { usePerformanceMode, type PerformanceMode } from '../context/PerformanceModeContext';
+import { usePerformanceMode } from '../context/PerformanceModeContext';
+import { useLowPerformanceMode } from '../context/LowPerformanceModeContext';
 import { useToast } from './Toast';
 import { usePerformanceAlert, getAlertConfig } from '../hooks/usePerformanceAlert';
 import { AlertConfigPanel } from './AlertConfigPanel';
 import { PerformanceStatsPanel } from './PerformanceStatsPanel';
+import { CORE_FEATURES, ENHANCED_FEATURES, OPTIONAL_FEATURES } from '../types/lowPerformanceMode';
+import type { FeatureToggle } from '../types/lowPerformanceMode';
 
 interface ResourceData {
   cpu: number;
@@ -37,9 +40,12 @@ const MAX_HISTORY = 20;
 
 export default function SystemResources() {
   const [expanded, setExpanded] = useState(false);
-  const { mode, isHighPerformance, setMode } = usePerformanceMode();
+  const [showFeatures, setShowFeatures] = useState(false);
+  const { isHighPerformance, setMode } = usePerformanceMode();
   const { showToast } = useToast();
   const { isDark } = useTheme();
+  const { features: allFeatures, isFeatureEnabled } = useLowPerformanceMode();
+  const [featureOverrides, setFeatureOverrides] = useState<Record<string, boolean>>({});
   const [resources, setResources] = useState<ResourceData>({
     cpu: 0,
     memory: 0,
@@ -380,9 +386,37 @@ export default function SystemResources() {
     showToast(message, newMode === 'low' ? 'warning' : 'success');
   }, [isHighPerformance, setMode, showToast]);
 
+  const getEffectiveFeatureState = useCallback((feature: FeatureToggle) => {
+    if (featureOverrides[feature.id] !== undefined) {
+      return featureOverrides[feature.id];
+    }
+    return isFeatureEnabled(feature.id);
+  }, [featureOverrides, isFeatureEnabled]);
+
+  const handleFeatureToggle = useCallback((featureId: string, enabled: boolean) => {
+    setFeatureOverrides(prev => ({
+      ...prev,
+      [featureId]: enabled
+    }));
+    const feature = allFeatures.find(f => f.id === featureId);
+    const featureName = feature?.name || featureId;
+    showToast(
+      enabled ? `已启用: ${featureName}` : `已禁用: ${featureName}`,
+      enabled ? 'success' : 'info'
+    );
+  }, [allFeatures, showToast]);
+
+  const handleResetFeatures = useCallback(() => {
+    setFeatureOverrides({});
+    showToast('已重置所有功能设置', 'info');
+  }, [showToast]);
+
+  const enabledCount = useMemo(() => {
+    return allFeatures.filter(f => getEffectiveFeatureState(f)).length;
+  }, [allFeatures, getEffectiveFeatureState]);
+
   const cpuHistory = history.map(h => h.cpu);
   const memoryHistory = history.map(h => h.memory);
-  const fpsHistory = history.map(h => h.fps);
 
   return (
     <div className="relative flex items-center gap-2 z-[var(--z-toast)]">
@@ -482,6 +516,18 @@ export default function SystemResources() {
                   {isHighPerformance ? <Zap size={14} className="text-amber-500" /> : <Gauge size={14} className="text-slate-500" />}
                   性能模式
                 </span>
+                <button
+                  onClick={() => setShowFeatures(!showFeatures)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+                    showFeatures
+                      ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                      : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <Globe size={12} />
+                  功能 {enabledCount}/{allFeatures.length}
+                  <ChevronRight size={12} className={`transition-transform ${showFeatures ? 'rotate-90' : ''}`} />
+                </button>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -505,6 +551,119 @@ export default function SystemResources() {
                   低性能
                 </button>
               </div>
+
+              {showFeatures && (
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      核心功能始终启用，增强/可选功能可手动控制
+                    </span>
+                    {Object.keys(featureOverrides).length > 0 && (
+                      <button
+                        onClick={handleResetFeatures}
+                        className="text-xs text-blue-500 hover:text-blue-600"
+                      >
+                        重置
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                        <Zap size={10} className="text-amber-500" />
+                        核心功能 (始终启用)
+                      </div>
+                      <div className="space-y-1">
+                        {CORE_FEATURES.map(feature => (
+                          <div key={feature.id} className="flex items-center gap-2 py-1 px-2 rounded bg-white/50 dark:bg-gray-800/50">
+                            <Check size={12} className="text-green-500" />
+                            <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">{feature.name}</span>
+                            <span className="text-xs text-gray-400">{feature.description}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                        <Activity size={10} className="text-blue-500" />
+                        增强功能
+                      </div>
+                      <div className="space-y-1">
+                        {ENHANCED_FEATURES.map(feature => {
+                          const isEnabled = getEffectiveFeatureState(feature);
+                          const isOverridden = featureOverrides[feature.id] !== undefined;
+                          return (
+                            <div
+                              key={feature.id}
+                              className={`flex items-center gap-2 py-1.5 px-2 rounded transition-colors ${
+                                isEnabled ? 'bg-blue-50/50 dark:bg-blue-900/20' : 'bg-gray-100/50 dark:bg-gray-700/30'
+                              }`}
+                            >
+                              <button
+                                onClick={() => handleFeatureToggle(feature.id, !isEnabled)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                  isEnabled
+                                    ? 'bg-blue-500 border-blue-500 text-white'
+                                    : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
+                                }`}
+                              >
+                                {isEnabled && <Check size={10} />}
+                              </button>
+                              <span className={`text-sm flex-1 ${isEnabled ? 'text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {feature.name}
+                              </span>
+                              {isOverridden && (
+                                <span className="text-xs text-blue-400">已自定义</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5 flex items-center gap-1">
+                        <BarChart3 size={10} className="text-purple-500" />
+                        可选功能
+                      </div>
+                      <div className="space-y-1">
+                        {OPTIONAL_FEATURES.map(feature => {
+                          const isEnabled = getEffectiveFeatureState(feature);
+                          const isOverridden = featureOverrides[feature.id] !== undefined;
+                          return (
+                            <div
+                              key={feature.id}
+                              className={`flex items-center gap-2 py-1.5 px-2 rounded transition-colors ${
+                                isEnabled ? 'bg-purple-50/50 dark:bg-purple-900/20' : 'bg-gray-100/50 dark:bg-gray-700/30'
+                              }`}
+                            >
+                              <button
+                                onClick={() => handleFeatureToggle(feature.id, !isEnabled)}
+                                className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                                  isEnabled
+                                    ? 'bg-purple-500 border-purple-500 text-white'
+                                    : 'border-gray-300 dark:border-gray-600 hover:border-purple-400'
+                                }`}
+                              >
+                                {isEnabled && <Check size={10} />}
+                              </button>
+                              <span className={`text-sm flex-1 ${isEnabled ? 'text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>
+                                {feature.name}
+                              </span>
+                              <span className="text-xs text-gray-400">{feature.resourceCost === 'high' ? '高消耗' : feature.resourceCost === 'medium' ? '中消耗' : '低消耗'}</span>
+                              {isOverridden && (
+                                <span className="text-xs text-purple-400">已自定义</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">

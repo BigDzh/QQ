@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, BellOff, Settings, RotateCcw, Cpu, MemoryStick, HardDrive, Activity, AlertTriangle, Check } from 'lucide-react';
+import { Bell, BellOff, Settings, RotateCcw, Cpu, MemoryStick, HardDrive, Activity, AlertTriangle } from 'lucide-react';
 import { getAlertConfig, saveAlertConfig, type AlertConfig, type AlertThreshold } from '../hooks/usePerformanceAlert';
 import { useTheme } from '../context/ThemeContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';

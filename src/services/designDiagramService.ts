@@ -292,7 +292,7 @@ export async function downloadExcel(project: Project): Promise<void> {
 
   const stageModules = project.modules.reduce<Record<ProjectStage, Module[]>>(
     (acc, module) => {
-      const stage = module.stage;
+      const stage = module.stage as ProjectStage;
       if (!acc[stage]) acc[stage] = [];
       acc[stage].push(module);
       return acc;

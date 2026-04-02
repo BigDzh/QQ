@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Package, CheckCircle, XCircle, AlertTriangle, Shield, TestTube, Cpu, Clock } from 'lucide-react';
 import type { Component, ComponentStatus } from '../types';
 import { useThemeStyles } from '../hooks/useThemeStyles';
@@ -96,34 +97,9 @@ const STATUS_CONFIG: Record<ComponentStatus, StatusConfig> = {
   },
 };
 
-interface TooltipPosition {
-  x: number;
-  y: number;
-}
-
-interface TooltipState {
-  visible: boolean;
-  component: Component | null;
-  position: TooltipPosition;
-}
-
-const CURSOR_OFFSET = 8;
-const TOOLTIP_WIDTH = 288;
-const TOOLTIP_HEIGHT = 340;
-
-export default function ModuleStatusBoard({ components, moduleName, moduleId, projectId, canEdit = false, onComponentClick }: ModuleStatusBoardProps) {
+export default function ModuleStatusBoard({ components, moduleName, moduleId: _moduleId, projectId: _projectId, canEdit = false, onComponentClick }: ModuleStatusBoardProps) {
   const t = useThemeStyles();
-  const [tooltipState, setTooltipState] = useState<TooltipState>({
-    visible: false,
-    component: null,
-    position: { x: 0, y: 0 }
-  });
-  const [isHoveringTooltip, setIsHoveringTooltip] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const currentComponentRef = useRef<Component | null>(null);
-  const mousePositionRef = useRef<TooltipPosition>({ x: 0, y: 0 });
+  const navigate = useNavigate();
 
   const getStatusStats = () => {
     const stats: Record<ComponentStatus, number> = {} as Record<ComponentStatus, number>;
@@ -150,120 +126,25 @@ export default function ModuleStatusBoard({ components, moduleName, moduleId, pr
 
   const health = getOverallHealth();
 
-  const clearAllTimeouts = useCallback(() => {
-    if (hideTimeoutRef.current) {
-      clearTimeout(hideTimeoutRef.current);
-      hideTimeoutRef.current = null;
-    }
-    if (showTimeoutRef.current) {
-      clearTimeout(showTimeoutRef.current);
-      showTimeoutRef.current = null;
-    }
-  }, []);
-
-  const calculateTooltipPosition = useCallback((mouseX: number, mouseY: number): TooltipPosition => {
-    const padding = 10;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    let x = mouseX + CURSOR_OFFSET;
-    let y = mouseY + CURSOR_OFFSET;
-
-    if (x + TOOLTIP_WIDTH > viewportWidth - padding) {
-      x = mouseX - TOOLTIP_WIDTH - CURSOR_OFFSET;
-    }
-
-    if (y + TOOLTIP_HEIGHT > viewportHeight - padding) {
-      y = mouseY - TOOLTIP_HEIGHT - CURSOR_OFFSET;
-    }
-
-    if (x < padding) {
-      x = padding;
-    }
-    if (y < padding) {
-      y = padding;
-    }
-
-    return { x, y };
-  }, []);
-
-  const handleMouseEnter = useCallback((e: React.MouseEvent, component: Component) => {
-    clearAllTimeouts();
-
-    currentComponentRef.current = component;
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    mousePositionRef.current = { x: mouseX, y: mouseY };
-
-    const position = calculateTooltipPosition(mouseX, mouseY);
-
-    showTimeoutRef.current = setTimeout(() => {
-      setTooltipState({
-        visible: true,
-        component,
-        position
-      });
-    }, 50);
-  }, [clearAllTimeouts, calculateTooltipPosition]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent, component: Component) => {
-    if (tooltipState.visible && currentComponentRef.current?.id === component.id) {
-      mousePositionRef.current = { x: e.clientX, y: e.clientY };
-      const position = calculateTooltipPosition(e.clientX, e.clientY);
-      setTooltipState(prev => ({
-        ...prev,
-        position
-      }));
-    }
-  }, [tooltipState.visible, calculateTooltipPosition]);
-
-  const handleMouseLeave = useCallback(() => {
-    clearAllTimeouts();
-
-    if (!isHoveringTooltip) {
-      hideTimeoutRef.current = setTimeout(() => {
-        setTooltipState(prev => ({
-          ...prev,
-          visible: false
-        }));
-        currentComponentRef.current = null;
-      }, 50);
-    }
-  }, [clearAllTimeouts, isHoveringTooltip]);
-
-  const handleTooltipMouseEnter = useCallback(() => {
-    setIsHoveringTooltip(true);
-    clearAllTimeouts();
-  }, [clearAllTimeouts]);
-
-  const handleTooltipMouseLeave = useCallback(() => {
-    setIsHoveringTooltip(false);
-    hideTimeoutRef.current = setTimeout(() => {
-      setTooltipState(prev => ({
-        ...prev,
-        visible: false
-      }));
-      currentComponentRef.current = null;
-    }, 50);
-  }, [clearAllTimeouts]);
-
-  useEffect(() => {
-    return () => {
-      clearAllTimeouts();
-    };
-  }, [clearAllTimeouts]);
-
   const ComponentCard = ({ component, canEdit }: { component: Component; canEdit: boolean }) => {
     const config = STATUS_CONFIG[component.status] || STATUS_CONFIG['未投产'];
     const Icon = config.icon;
 
+    const handleCardClick = useCallback(() => {
+      navigate(`/components/${component.id}`);
+    }, [component, navigate]);
+
+    const handleStatusClick = useCallback((e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (canEdit && onComponentClick) {
+        onComponentClick(component);
+      }
+    }, [canEdit, component, onComponentClick]);
+
     return (
       <div
-        className={`relative p-3 rounded-lg border ${config.borderColor} ${config.bgColor} ${canEdit ? 'cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg' : 'cursor-default'} ${config.glowColor}`}
-        onMouseEnter={(e) => handleMouseEnter(e, component)}
-        onMouseMove={(e) => handleMouseMove(e, component)}
-        onMouseLeave={handleMouseLeave}
-        onClick={() => canEdit && onComponentClick?.(component)}
+        className={`relative p-3 rounded-lg border ${config.borderColor} ${config.bgColor} cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${config.glowColor}`}
+        onClick={handleCardClick}
       >
         <div className="flex items-center gap-2">
           <Icon size={16} className={config.color} />
@@ -277,13 +158,16 @@ export default function ModuleStatusBoard({ components, moduleName, moduleId, pr
           </div>
         </div>
         <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${config.color.replace('text-', 'bg-')}`} />
-        <div className="mt-1 flex items-center justify-between">
+        <div
+          className="mt-1 flex items-center justify-between cursor-pointer"
+          onClick={handleStatusClick}
+        >
           <span className={`text-xs ${t.textMuted} truncate`}>
             {component.status}
           </span>
           {canEdit && (
             <span className={`text-xs ${t.textMuted} opacity-60`}>
-              点击修改
+              点击{component.status === '未投产' ? '投产' : '修改'}
             </span>
           )}
         </div>
@@ -291,34 +175,8 @@ export default function ModuleStatusBoard({ components, moduleName, moduleId, pr
     );
   };
 
-  const { visible, component: hoveredComponent, position } = tooltipState;
-  const config = hoveredComponent ? STATUS_CONFIG[hoveredComponent.status] || STATUS_CONFIG['未投产'] : null;
-  const Icon = config?.icon;
-
-  const getCreatedTime = () => {
-    if (!hoveredComponent?.logs || hoveredComponent.logs.length === 0) return null;
-    const sortedLogs = [...hoveredComponent.logs].sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-    return sortedLogs[0]?.timestamp;
-  };
-
-  const getLastLogTime = () => {
-    if (!hoveredComponent?.logs || hoveredComponent.logs.length === 0) return null;
-    const sortedLogs = [...hoveredComponent.logs].sort((a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
-    return sortedLogs[0]?.timestamp;
-  };
-
-  const createdTime = getCreatedTime();
-  const lastLogTime = getLastLogTime();
-
   return (
-    <div
-      className={`${t.card} rounded-lg border ${t.border} p-4`}
-      ref={containerRef}
-    >
+    <div className={`${t.card} rounded-lg border ${t.border} p-4`}>
       <div className="flex items-center justify-between mb-4">
         <h3 className={`text-lg font-semibold ${t.text} flex items-center gap-2`}>
           <Package size={18} />
@@ -405,180 +263,6 @@ export default function ModuleStatusBoard({ components, moduleName, moduleId, pr
           </div>
         )}
       </div>
-
-      {visible && hoveredComponent && (
-        <div
-          className="fixed z-[9999] pointer-events-none"
-          style={{
-            left: position.x,
-            top: position.y
-          }}
-        >
-          <div
-            className="pointer-events-auto"
-            onMouseEnter={handleTooltipMouseEnter}
-            onMouseLeave={handleTooltipMouseLeave}
-          >
-            <div
-              className={`${t.card} border ${t.border} rounded-xl shadow-2xl p-4 w-72 backdrop-blur-xl`}
-              style={{
-                animation: 'tooltipFadeIn 0.12s ease-out forwards',
-              }}
-            >
-              <div className="flex items-start gap-3 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-                {Icon && <Icon size={20} className={config?.color} />}
-                <div className="flex-1 min-w-0">
-                  <div className={`font-semibold ${t.text} truncate`} title={hoveredComponent.componentName}>
-                    {hoveredComponent.componentName}
-                  </div>
-                  <div className={`text-xs ${t.textMuted} mt-0.5`}>
-                    {hoveredComponent.componentNumber}
-                  </div>
-                </div>
-                <div className={`px-2 py-0.5 rounded-full text-xs font-medium ${config?.bgColor} ${config?.color} border ${config?.borderColor}`}>
-                  {hoveredComponent.status}
-                </div>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                  <div className={`text-xs ${t.textMuted}`}>类型</div>
-                  <div className={`text-xs font-medium ${t.text} truncate`}>
-                    {hoveredComponent.stage || '未分类'}
-                  </div>
-
-                  <div className={`text-xs ${t.textMuted}`}>版本</div>
-                  <div className={`text-xs font-medium ${t.text}`}>
-                    {hoveredComponent.version || '-'}
-                  </div>
-
-                  <div className={`text-xs ${t.textMuted}`}>生产指令号</div>
-                  <div className={`text-xs font-medium ${t.text} truncate`}>
-                    {hoveredComponent.productionOrderNumber || '-'}
-                  </div>
-
-                  <div className={`text-xs ${t.textMuted}`}>负责人</div>
-                  <div className={`text-xs font-medium ${t.text} truncate`}>
-                    {hoveredComponent.holder || '-'}
-                  </div>
-
-                  {hoveredComponent.borrower && (
-                    <>
-                      <div className={`text-xs ${t.textMuted}`}>借用人</div>
-                      <div className={`text-xs font-medium ${t.text} truncate`}>
-                        {hoveredComponent.borrower}
-                      </div>
-                    </>
-                  )}
-
-                  {hoveredComponent.repairOrderNumber && (
-                    <>
-                      <div className={`text-xs ${t.textMuted}`}>维修单号</div>
-                      <div className={`text-xs font-medium ${t.text} truncate`}>
-                        {hoveredComponent.repairOrderNumber}
-                      </div>
-                    </>
-                  )}
-
-                  {hoveredComponent.protectionOrderNumber && (
-                    <>
-                      <div className={`text-xs ${t.textMuted}`}>三防单号</div>
-                      <div className={`text-xs font-medium ${t.text} truncate`}>
-                        {hoveredComponent.protectionOrderNumber}
-                      </div>
-                    </>
-                  )}
-
-                  {createdTime && (
-                    <>
-                      <div className={`text-xs ${t.textMuted}`}>创建时间</div>
-                      <div className={`text-xs font-medium ${t.text}`}>
-                        {new Date(createdTime).toLocaleString('zh-CN', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </>
-                  )}
-
-                  {lastLogTime && (
-                    <>
-                      <div className={`text-xs ${t.textMuted}`}>更新时间</div>
-                      <div className={`text-xs font-medium ${t.text}`}>
-                        {new Date(lastLogTime).toLocaleString('zh-CN', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {hoveredComponent.statusChanges && hoveredComponent.statusChanges.length > 0 && (
-                  <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className={`text-xs ${t.textMuted} mb-1.5`}>状态变更历史</div>
-                    <div className={`text-xs ${t.text} ${t.emptyBg} rounded-lg p-2 max-h-20 overflow-y-auto space-y-1`}>
-                      {hoveredComponent.statusChanges.slice(-3).reverse().map((change: any, idx: number) => (
-                        <div key={change.id || idx} className="text-xs">
-                          <span className="text-gray-400">{new Date(change.changedAt).toLocaleDateString('zh-CN')}: </span>
-                          <span className={t.text}>{change.fromStatus}</span>
-                          <span className="text-gray-400"> → </span>
-                          <span className={t.text}>{change.toStatus}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {hoveredComponent.logs && hoveredComponent.logs.length > 0 && (
-                  <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className={`text-xs ${t.textMuted} mb-1.5`}>最近日志</div>
-                    <div className={`text-xs ${t.text} ${t.emptyBg} rounded-lg p-2 max-h-16 overflow-y-auto`}>
-                      {hoveredComponent.logs[hoveredComponent.logs.length - 1]?.action || '无'}
-                    </div>
-                  </div>
-                )}
-
-                {hoveredComponent.burnedSoftware && hoveredComponent.burnedSoftware.length > 0 && (
-                  <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
-                    <div className={`text-xs ${t.textMuted} mb-1.5`}>烧录软件</div>
-                    <div className={`text-xs ${t.text} ${t.emptyBg} rounded-lg p-2`}>
-                      {hoveredComponent.burnedSoftware[hoveredComponent.burnedSoftware.length - 1]?.softwareName} ({hoveredComponent.burnedSoftware[hoveredComponent.burnedSoftware.length - 1]?.softwareVersion})
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className={`mt-3 pt-2 border-t border-gray-200 dark:border-gray-700 text-center text-xs ${t.textSecondary}`}>
-                {canEdit ? (
-                  hoveredComponent.status === '未投产' ? '👆 点击卡片编辑投产' : '👆 点击卡片更改状态（需填写原因）'
-                ) : (
-                  '👁️ 查看组件详情'
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes tooltipFadeIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-      `}</style>
     </div>
   );
 }

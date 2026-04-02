@@ -1,16 +1,11 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   BarChart3,
-  TrendingUp,
-  TrendingDown,
   Activity,
   Cpu,
   MemoryStick,
-  HardDrive,
-  Clock,
   Trash2,
   Download,
-  RefreshCw,
   AlertTriangle,
   CheckCircle,
   Calendar,
@@ -18,13 +13,11 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';
-import { usePerformanceStatistics } from '../hooks/usePerformanceStatistics';
 import {
   getStatisticsSummary,
   getDailyStats,
   getPerformanceRecords,
   clearAllStatistics,
-  type DailyStats,
 } from '../services/performanceStatistics';
 
 interface PerformanceStatsPanelProps {
@@ -96,25 +89,6 @@ export function PerformanceStatsPanel({ isOpen, onClose }: PerformanceStatsPanel
         </div>
         <span className="text-xs mt-1 font-medium text-gray-600 dark:text-gray-400">{value}</span>
       </div>
-    );
-  };
-
-  const TrendIndicator = ({ current, previous }: { current: number; previous: number }) => {
-    const diff = current - previous;
-    if (Math.abs(diff) < 2) {
-      return <span className="text-gray-400 text-xs">持平</span>;
-    }
-    if (diff > 0) {
-      return (
-        <span className="text-red-500 text-xs flex items-center gap-0.5">
-          <TrendingUp size={12} /> +{diff}
-        </span>
-      );
-    }
-    return (
-      <span className="text-green-500 text-xs flex items-center gap-0.5">
-        <TrendingDown size={12} /> {diff}
-      </span>
     );
   };
 

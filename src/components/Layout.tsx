@@ -18,7 +18,6 @@ import {
   FlaskConical,
   Layers,
   Trash2,
-  Package,
 } from 'lucide-react';
 import SystemResources from './SystemResources';
 import { useApp } from '../context/AppContext';
@@ -160,7 +159,7 @@ function ThemeSelector({ onClose }: { onClose: () => void }) {
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout, isAuthenticated, projects, tasks, borrowRecords, clearAllData } = useApp();
+  const { currentUser, logout, isAuthenticated, clearAllData } = useApp();
   const { theme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -173,14 +172,6 @@ export default function Layout({ children }: LayoutProps) {
   const isDark = theme === 'dark' || theme === 'cyberpunk' || theme === 'linear';
   const isCyberpunk = theme === 'cyberpunk';
   const isAnime = theme === 'anime';
-
-  const stats = {
-    projects: (projects || []).length,
-    modules: (projects || []).reduce((sum, p) => sum + ((p.modules && Array.isArray(p.modules)) ? p.modules.length : 0), 0),
-    components: (projects || []).reduce((sum, p) => sum + ((p.modules && Array.isArray(p.modules)) ? p.modules.reduce((s, m) => s + ((m.components && Array.isArray(m.components)) ? m.components.length : 0), 0) : 0), 0),
-    tasks: (tasks || []).length,
-    borrowRecords: (borrowRecords || []).length,
-  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

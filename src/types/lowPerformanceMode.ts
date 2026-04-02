@@ -348,7 +348,7 @@ export function getOverallResourceStatus(statuses: ResourceStatus[]): ResourceSt
 
 export function shouldSwitchToLowMode(
   metrics: ResourceMetrics,
-  config: LowPerformanceModeConfig
+  _config: LowPerformanceModeConfig
 ): { shouldSwitch: boolean; reason: string; trigger: SwitchTrigger } {
   if (metrics.memory.status === 'critical') {
     return { shouldSwitch: true, reason: '内存使用严重超标', trigger: 'auto-memory' };

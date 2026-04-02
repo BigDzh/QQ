@@ -228,7 +228,7 @@ export default function GlobalSearch() {
                     <span className="uppercase font-medium">{type}</span>
                     <span className="text-gray-400">({typeResults.length})</span>
                   </div>
-                  {typeResults.map((result, index) => {
+                  {typeResults.map((result, _index) => {
                     const globalIndex = results.indexOf(result);
                     return (
                       <div

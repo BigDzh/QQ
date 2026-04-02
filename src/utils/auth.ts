@@ -165,7 +165,7 @@ const CSRF_TOKEN_KEY = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';
 
 export function generateCSRFToken(): string {
-  const token = CryptoJS.lib.Wordarray.random(32).toString();
+  const token = CryptoJS.lib.WordArray.random(32).toString();
   sessionStorage.setItem(CSRF_TOKEN_KEY, token);
   return token;
 }

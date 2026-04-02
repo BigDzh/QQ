@@ -16,7 +16,6 @@ import {
   Settings,
   RefreshCw,
   Zap,
-  Gauge,
   Database,
   AlertTriangle,
   CheckCircle,

@@ -1,15 +1,17 @@
-import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Package, ChevronRight } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Package, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useThemeStyles } from '../hooks/useThemeStyles';
+import type { Module } from '../types';
 
 export default function CategoryModules() {
   const { id, category } = useParams<{ id: string; category: string }>();
-  const { getProject } = useApp();
+  const navigate = useNavigate();
+  const { getProject, deleteModule } = useApp();
   const t = useThemeStyles();
-  
+
   const project = getProject(id!);
-  
+
   if (!project) {
     return (
       <div className={`text-center py-12 ${t.textMuted}`}>
@@ -20,6 +22,18 @@ export default function CategoryModules() {
       </div>
     );
   }
+
+  const handleDelete = (e: React.MouseEvent, moduleId: string) => {
+    e.stopPropagation();
+    if (confirm('确定要删除该模块吗？')) {
+      deleteModule(project.id, moduleId);
+    }
+  };
+
+  const handleEdit = (e: React.MouseEvent, module: Module) => {
+    e.stopPropagation();
+    navigate(`/modules/${module.id}/edit`);
+  };
 
   const categoryModules = ((project.modules && Array.isArray(project.modules)) ? project.modules.filter((m) => m.category === category) : []);
 
@@ -90,23 +104,39 @@ export default function CategoryModules() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {categoryModules.map((module) => (
-            <Link
+            <div
               key={module.id}
-              to={`/modules/${module.id}`}
-              className={`${t.card} rounded-lg shadow-sm hover:shadow-md transition p-5 border ${t.border}`}
+              onClick={() => navigate(`/modules/${module.id}`)}
+              className={`${t.card} rounded-lg shadow-sm hover:shadow-md transition p-5 border cursor-pointer ${t.border}`}
             >
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className={`font-semibold ${t.text}`}>{module.moduleName}</h3>
                   <p className={`text-sm ${t.textMuted}`}>{module.moduleNumber}</p>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs ${
-                  t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors.故障
-                }`}>
-                  {module.status}
-                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleEdit(e, module); }}
+                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-500 transition"
+                    title="编辑模块"
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(e, module.id); }}
+                    className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-red-500 transition"
+                    title="删除模块"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors.故障
+                  }`}>
+                    {module.status}
+                  </span>
+                </div>
               </div>
-              
+
               <div className={`grid grid-cols-3 gap-2 text-sm mb-3`}>
                 <div>
                   <div className={t.textMuted}>生产指令</div>
@@ -130,7 +160,7 @@ export default function CategoryModules() {
                     查看详情 <ChevronRight size={16} />
                   </div>
                 </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}

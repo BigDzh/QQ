@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Play, CheckCircle, Package, FileText, ArrowRightLeft, Trash2, RefreshCw, AlertTriangle, Database, Layers, Cpu, ClipboardList, Repeat, FolderOpen, TestTube2 } from 'lucide-react';
+import { Play, CheckCircle, Package, FileText, Trash2, RefreshCw, AlertTriangle, Database, Layers, Cpu, ClipboardList, Repeat, FolderOpen, TestTube2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { ConfirmModal } from '../pages/ProjectDetail/components/ConfirmModal';
 import { clearAllFiles, exportDatabase } from '../services/database';
@@ -8,16 +8,6 @@ import {
   getDefaultTestData,
   getTestDataSets,
   getTestDataStats,
-  createNormalProjects,
-  createBoundaryProjects,
-  createErrorProjects,
-  createEdgeCaseProjects,
-  createNormalTasks,
-  createBoundaryTasks,
-  createErrorTasks,
-  createEdgeCaseTasks,
-  createNormalBorrowRecords,
-  createEdgeCaseBorrowRecords,
   type TestDataCategory,
 } from '../testData';
 

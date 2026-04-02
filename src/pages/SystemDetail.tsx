@@ -3,8 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Plus, Package, User, Hash,
   CheckCircle, AlertTriangle, Settings, Layers, FolderTree,
-  ChevronRight, ChevronDown, Network, LayoutGrid, List, GitBranch,
-  Unlink, HelpCircle
+  ChevronRight, ChevronDown, Network, LayoutGrid, GitBranch,
+  Unlink
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { X, Database, Clock, HardDrive } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
@@ -9,13 +8,17 @@ interface BackupReminderToastProps {
 }
 
 export function BackupReminderToast({ onBackup }: BackupReminderToastProps) {
-  const { theme, isDark, isCyberpunk } = useTheme();
+  const { isDark, isCyberpunk } = useTheme();
   const t = useThemeStyles();
-  const { shouldRemind, timeSinceLastBackup, triggerBackup, dismissReminder } =
-    useBackupReminder({
-      checkInterval: 60000,
-      enabled: true,
-    });
+  const {
+    shouldRemind,
+    timeSinceLastBackup,
+    triggerBackup,
+    dismissReminder,
+  } = useBackupReminder({
+    checkInterval: 60000,
+    enabled: true,
+  });
 
   const handleBackup = async () => {
     const success = await triggerBackup();
@@ -108,5 +111,3 @@ export function BackupReminderToast({ onBackup }: BackupReminderToastProps) {
     </div>
   );
 }
-
-export default BackupReminderToast;

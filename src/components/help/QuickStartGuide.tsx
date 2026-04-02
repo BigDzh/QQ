@@ -1,5 +1,5 @@
-import React, { useState, useCallback } from 'react';
-import { X, BookOpen, ChevronRight, ChevronLeft, Check, HelpCircle, ExternalLink } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { X, BookOpen, ChevronRight, ChevronLeft, Check, HelpCircle } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useThemeStyles } from '../../hooks/useThemeStyles';
 
@@ -95,7 +95,7 @@ const FAQ_ITEMS = [
 ];
 
 export function QuickStartGuide({ isOpen, onClose, onComplete }: QuickStartGuideProps) {
-  const { theme, isDark, isCyberpunk, isAnime, isCosmos } = useTheme();
+  const { isDark, isCyberpunk, isAnime, isCosmos } = useTheme();
   const t = useThemeStyles();
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());

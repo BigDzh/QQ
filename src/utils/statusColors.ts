@@ -295,7 +295,7 @@ export function getStatusBadgeClassName(
 
 export function getStatusDotClassName(
   status: string,
-  type: StatusType = 'general',
+  _type: StatusType = 'general',
   className: string = ''
 ): string {
   const level = STATUS_MAP[status] || 'inactive';

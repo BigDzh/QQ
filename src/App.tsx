@@ -1,4 +1,4 @@
-import React, { useEffect, lazy, Suspense, useState, useRef } from 'react';
+import React, { useEffect, lazy, Suspense, useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -10,7 +10,8 @@ import { TransferProvider } from './components/TransferProgress';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
 import GlobalSearch from './components/search/GlobalSearch';
-import { PerformanceModeIndicator } from './components/PerformanceModeIndicator';
+
+import { WelcomeScreen } from './components/help/WelcomeScreen';
 import { useAutoTaskManager } from './hooks/useAutoTaskManager';
 import { useTaskProjectSync } from './hooks/useTaskProjectSync';
 import { useMemoryMonitor } from './hooks/useMemoryMonitor';
@@ -19,7 +20,7 @@ import { ServiceWorkerUpdatePrompt } from './hooks/useServiceWorker';
 import Login from './pages/Login';
 import ProjectList from './pages/ProjectList';
 import { Loader2 } from 'lucide-react';
-import { SkeletonDashboard, SkeletonCard } from './components/Skeleton';
+import { SkeletonDashboard } from './components/Skeleton';
 
 const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
 const CategoryModules = lazy(() => import('./pages/CategoryModules'));
@@ -37,15 +38,7 @@ const Tools = lazy(() => import('./pages/Tools'));
 const WorkflowDetail = lazy(() => import('./pages/WorkflowDetail'));
 const TestDataInitializer = lazy(() => import('./pages/TestDataInitializer'));
 
-const AnimatedDonutChart = lazy(() => import('./components/AnimatedDonutChart'));
-const ImportWizard = lazy(() => import('./components/import/ImportWizard'));
 const PerformanceMonitor = lazy(() => import('./components/PerformanceMonitor'));
-
-interface LoadingState {
-  isLoading: boolean;
-  progress: number;
-  message: string;
-}
 
 function PageLoader() {
   return (
@@ -56,23 +49,6 @@ function PageLoader() {
       </div>
     </div>
   );
-}
-
-function ChunkLoader({ chunks }: { chunks: string[] }) {
-  const [loadedChunks, setLoadedChunks] = useState<Set<string>>(new Set());
-  const totalChunks = chunks.length;
-
-  useEffect(() => {
-    chunks.forEach((chunk) => {
-      const link = document.createElement('link');
-      link.rel = 'preload';
-      link.as = 'script';
-      link.href = `/assets/${chunk}.js`;
-      document.head.appendChild(link);
-    });
-  }, [chunks]);
-
-  return null;
 }
 
 function PrefetchHelper() {
@@ -190,7 +166,6 @@ function AppRoutes() {
               <MemoryMonitorWrapper>
                 <Layout>
                   <GlobalSearch />
-                  <PerformanceModeIndicator />
                   <Routes>
                     <Route path="/" element={<Navigate to="/projects" replace />} />
                     <Route path="/projects" element={<ProjectList />} />
@@ -223,6 +198,18 @@ function AppRoutes() {
 
 export default function App() {
   const isDev = import.meta.env.DEV;
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    const welcomeCompleted = localStorage.getItem('welcome_screen_completed');
+    if (!welcomeCompleted) {
+      setShowWelcome(true);
+    }
+  }, []);
+
+  const handleWelcomeComplete = useCallback(() => {
+    setShowWelcome(false);
+  }, []);
 
   return (
     <ErrorBoundary>
@@ -236,6 +223,12 @@ export default function App() {
                     <TransferProvider>
                       <PrefetchHelper />
                       <ServiceWorkerUpdatePrompt />
+                      {showWelcome && (
+                        <WelcomeScreen
+                          onComplete={handleWelcomeComplete}
+                          onSkip={handleWelcomeComplete}
+                        />
+                      )}
                       <AppRoutes />
                       {isDev && (
                         <Suspense fallback={null}>

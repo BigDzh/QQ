@@ -164,7 +164,6 @@ export function searchDocuments(
     };
   }
 
-  const cacheKey = `${query.toLowerCase()}-${options.searchType}-${options.matchMode}`;
   if (
     searchCache &&
     searchCache.query === query.toLowerCase() &&

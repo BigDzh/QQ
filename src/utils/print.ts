@@ -46,12 +46,6 @@ export function printElement(elementId: string): void {
     </style>
   `;
 
-  const escapeHtml = (text: string): string => {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  };
-
   const clonedElement = element.cloneNode(true) as HTMLElement;
   const scripts = clonedElement.querySelectorAll('script');
   scripts.forEach(script => script.remove());

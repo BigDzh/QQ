@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Search, X, FileText, Clock, HardDrive, ArrowUpDown, ChevronLeft, ChevronRight, RotateCcw, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import {

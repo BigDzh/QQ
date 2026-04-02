@@ -7,6 +7,7 @@ export type ComponentStatus = '未投产' | '投产中' | '正常' | '维修中'
 export type DocumentStatus = '未完成' | '已完成';
 export type SoftwareStatus = '未完成' | '已完成';
 export type TaskStatus = '进行中' | '已完成' | '已过期';
+export type TaskPriority = '低' | '中' | '高' | '紧急';
 
 export type UserRole = 'admin' | 'manager' | 'engineer' | 'viewer';
 

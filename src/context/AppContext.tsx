@@ -74,32 +74,36 @@ const STATUS_PRIORITY: Record<string, number> = {
 
 const calculateModuleStatus = (components: any[]): ModuleStatus => {
   if (components.length === 0) return '未投产';
-  const statusCounts = components.reduce((acc, c) => {
-    acc[c.status] = (acc[c.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
 
-  for (const [status, priority] of Object.entries(STATUS_PRIORITY)) {
-    if (statusCounts[status] === components.length) {
-      return status as ModuleStatus;
+  let minPriority = Infinity;
+  let worstStatus: ModuleStatus = '正常';
+
+  for (const component of components) {
+    const priority = STATUS_PRIORITY[component.status];
+    if (priority !== undefined && priority < minPriority) {
+      minPriority = priority;
+      worstStatus = component.status as ModuleStatus;
     }
   }
-  return '未投产';
+
+  return worstStatus;
 };
 
 const calculateSystemStatus = (modules: any[]): SystemStatus => {
   if (modules.length === 0) return '未投产';
-  const statusCounts = modules.reduce((acc, m) => {
-    acc[m.status] = (acc[m.status] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
 
-  for (const [status, priority] of Object.entries(STATUS_PRIORITY)) {
-    if (statusCounts[status] === modules.length) {
-      return status as SystemStatus;
+  let minPriority = Infinity;
+  let worstStatus: SystemStatus = '正常';
+
+  for (const mod of modules) {
+    const priority = STATUS_PRIORITY[mod.status];
+    if (priority !== undefined && priority < minPriority) {
+      minPriority = priority;
+      worstStatus = mod.status as SystemStatus;
     }
   }
-  return '未投产';
+
+  return worstStatus;
 };
 
 const getDefaultPasswordHash = (): string => {

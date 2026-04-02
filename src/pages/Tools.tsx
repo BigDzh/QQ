@@ -1,14 +1,23 @@
 import React, { useState, useRef } from 'react';
-import { Hash, Copy, Upload, Loader2, GitCompare, Crop, Binary, X, Trash2, Plus, Play, Pause, Settings, CheckCircle, Edit, ExternalLink, Download, History, Image as ImageIcon, Sliders } from 'lucide-react';
+import { Hash, Copy, Upload, Loader2, GitCompare, Crop, Binary, X, Trash2, Settings, CheckCircle, ExternalLink, Download, History, Sliders, Link2, AlertTriangle } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { generateMD5, calculateFileMD5, copyToClipboard } from '../utils/md5';
 import { deleteFile } from '../services/database';
+import JumpSkillConfig from './Tools/JumpSkillConfig';
+import {
+  compareFilesOptimized,
+  compareFilesParallel,
+  clearDiffCache,
+  getCacheSize,
+  type DiffProgress,
+  type FileComparisonResult
+} from '../services/fileDiffService';
 
 export default function Tools() {
   const { showToast } = useToast();
   const t = useThemeStyles();
-  const [activeTab, setActiveTab] = useState<'md5' | 'ocr' | 'diff'>('md5');
+  const [activeTab, setActiveTab] = useState<'md5' | 'ocr' | 'diff' | 'jump'>('md5');
   
   const [md5Input, setMd5Input] = useState('');
   const [md5Result, setMd5Result] = useState('');
@@ -72,6 +81,11 @@ export default function Tools() {
   const diffFileInput2Ref = useRef<HTMLInputElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
   const selectionRef = useRef<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+  const [isComparing, setIsComparing] = useState(false);
+  const [diffProgress, setDiffProgress] = useState<DiffProgress | null>(null);
+  const [comparisonResult, setComparisonResult] = useState<FileComparisonResult | null>(null);
+  const [useParallelMode, setUseParallelMode] = useState(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const handleStringMD5 = () => {
     if (!md5Input.trim()) {
@@ -290,6 +304,69 @@ export default function Tools() {
     }
 
     setDiffResult(result);
+  };
+
+  const handleOptimizedCompare = async () => {
+    if (!diffFile1 || !diffFile2) {
+      showToast('请先选择两个文件进行比较', 'error');
+      return;
+    }
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    setIsComparing(true);
+    setDiffProgress(null);
+    setComparisonResult(null);
+    setDiffResult([]);
+
+    const file1 = new File([], diffFile1.name, { type: 'application/octet-stream' });
+    const file2 = new File([], diffFile2.name, { type: 'application/octet-stream' });
+
+    try {
+      const result = await compareFilesOptimized(
+        file1 as any,
+        file2 as any,
+        {
+          isHexView: diffHexView,
+          onProgress: (progress) => {
+            setDiffProgress(progress);
+          },
+          signal: abortControllerRef.current.signal
+        }
+      );
+
+      setComparisonResult(result);
+
+      if (diffHexView) {
+        setDiffResult(result.diffResults as any);
+      } else if (result.textDiffResults) {
+        setDiffResult(result.textDiffResults);
+      }
+
+      if (result.isIdentical) {
+        showToast('文件完全相同', 'success');
+      } else {
+        showToast(`发现 ${result.totalDiffs} 处不同`, 'info');
+      }
+    } catch (error: any) {
+      if (error.message === '操作已被用户取消') {
+        showToast('比较已取消', 'info');
+      } else {
+        showToast(`比较失败: ${error.message}`, 'error');
+      }
+    } finally {
+      setIsComparing(false);
+    }
+  };
+
+  const handleCancelCompare = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      showToast('正在取消比较...', 'info');
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -906,6 +983,17 @@ export default function Tools() {
           <GitCompare size={18} className="inline mr-2" />
           文件比较
         </button>
+        <button
+          onClick={() => setActiveTab('jump')}
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'jump'
+              ? `${t.button} text-white`
+              : `${t.border} ${t.textSecondary} hover:${t.hoverBg}`
+          }`}
+        >
+          <Link2 size={18} className="inline mr-2" />
+          跳转技能
+        </button>
       </div>
 
       {activeTab === 'md5' && (
@@ -1454,19 +1542,119 @@ export default function Tools() {
                 </div>
               </div>
             </div>
+
+            <div className="flex items-center gap-4 mb-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useParallelMode}
+                  onChange={(e) => setUseParallelMode(e.target.checked)}
+                  className="w-4 h-4 rounded border-gray-300"
+                  disabled={isComparing}
+                />
+                <span className={`text-sm ${t.textSecondary}`}>启用并行比较模式</span>
+              </label>
+              <span className={`text-xs ${t.textMuted}`}>
+                缓存: {getCacheSize()} 条记录
+                <button
+                  onClick={() => {
+                    clearDiffCache();
+                    showToast('缓存已清除', 'success');
+                  }}
+                  className={`ml-2 text-cyan-500 hover:text-cyan-600`}
+                  disabled={isComparing}
+                >
+                  清除
+                </button>
+              </span>
+            </div>
+
+            {isComparing && diffProgress && (
+              <div className={`${t.emptyBg} rounded-lg p-4 mb-4 border border-cyan-500/30`}>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Loader2 size={16} className={`animate-spin ${t.textMuted}`} />
+                    <span className={`text-sm ${t.textSecondary}`}>{diffProgress.currentAction}</span>
+                  </div>
+                  <span className={`text-xs ${t.textMuted}`}>{diffProgress.percent}%</span>
+                </div>
+                <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      diffProgress.isFastMode
+                        ? 'bg-gradient-to-r from-green-500 to-blue-500'
+                        : 'bg-gradient-to-r from-cyan-500 to-purple-500'
+                    }`}
+                    style={{ width: `${diffProgress.percent}%` }}
+                  />
+                </div>
+                {diffProgress.isFastMode && (
+                  <div className="flex items-center gap-1 mt-2">
+                    <span className={`text-xs px-2 py-0.5 rounded bg-green-500/10 text-green-600`}>
+                      快速模式
+                    </span>
+                    <span className={`text-xs ${t.textMuted}`}>（哈希预比较，仅在不一致时逐字节比对）</span>
+                  </div>
+                )}
+                <button
+                  onClick={handleCancelCompare}
+                  className={`mt-3 px-3 py-1.5 text-xs border rounded-lg ${t.border} hover:bg-red-500/10 hover:border-red-500/50 flex items-center gap-1`}
+                >
+                  <AlertTriangle size={12} className="text-red-500" />
+                  取消比较
+                </button>
+              </div>
+            )}
+
+            {comparisonResult && !isComparing && (
+              <div className={`${t.emptyBg} rounded-lg p-4 mb-4 border border-green-500/30`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle size={16} className="text-green-500" />
+                  <span className={`text-sm font-medium ${t.text}`}>比较完成</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className={`${t.textMuted}`}>处理模式：</span>
+                    <span className={`font-medium ${comparisonResult.mode === 'fast' ? 'text-green-500' : 'text-cyan-500'}`}>
+                      {comparisonResult.mode === 'fast' ? '快速模式' : '完整模式'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`${t.textMuted}`}>处理时间：</span>
+                    <span className={`font-medium ${t.text}`}>{comparisonResult.processingTime.toFixed(2)}ms</span>
+                  </div>
+                  <div>
+                    <span className={`${t.textMuted}`}>差异数量：</span>
+                    <span className={`font-medium ${comparisonResult.totalDiffs > 0 ? 'text-red-500' : 'text-green-500'}`}>
+                      {comparisonResult.totalDiffs} 处
+                    </span>
+                  </div>
+                  <div>
+                    <span className={`${t.textMuted}`}>文件状态：</span>
+                    <span className={`font-medium ${comparisonResult.isIdentical ? 'text-green-500' : 'text-orange-500'}`}>
+                      {comparisonResult.isIdentical ? '完全相同' : '存在差异'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button
-              onClick={() => {
-                if (diffHexView) {
-                  computeBinaryDiff();
-                } else {
-                  computeFileTextDiff();
-                }
-              }}
-              disabled={!diffFile1 || !diffFile2}
-              className={`px-4 py-2 ${t.button} text-white rounded-lg disabled:opacity-50`}
+              onClick={handleOptimizedCompare}
+              disabled={!diffFile1 || !diffFile2 || isComparing}
+              className={`px-4 py-2 ${t.button} text-white rounded-lg disabled:opacity-50 flex items-center gap-2`}
             >
-              <GitCompare size={18} className="inline mr-2" />
-              开始比较
+              {isComparing ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  比较中...
+                </>
+              ) : (
+                <>
+                  <GitCompare size={18} />
+                  开始优化比较
+                </>
+              )}
             </button>
           </div>
 
@@ -1548,6 +1736,12 @@ export default function Tools() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'jump' && (
+        <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+          <JumpSkillConfig />
         </div>
       )}
     </div>

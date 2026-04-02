@@ -1,4 +1,4 @@
-import type { TrashTask, DeletionHistory } from '../types/duplicateTask';
+import type { TrashTask } from '../types/duplicateTask';
 
 export interface AutoCleanupConfig {
   enabled: boolean;
