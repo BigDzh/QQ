@@ -67,6 +67,7 @@ export interface Review {
   reviewDate?: string;
   createdAt: string;
   createdBy: string;
+  systemName?: string;
   comments?: ReviewComment[];
   files?: ReviewFile[];
   categories?: string[];
@@ -167,7 +168,7 @@ export interface Component {
   protectionOrderNumber?: string;
   holder?: string;
   borrower?: string;
-  stage?: string;
+  stage?: ProjectStage;
   version: ProjectVersion;
   status: ComponentStatus;
   logs: ComponentLog[];
@@ -199,7 +200,7 @@ export interface Module {
   holder?: string;
   borrower?: string;
   status: ModuleStatus;
-  stage: string;
+  stage: ProjectStage;
   version: ProjectVersion;
   productionNumber?: string;
   components: Component[];

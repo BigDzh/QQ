@@ -1,4 +1,4 @@
-import React, { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 
 interface AccessibleButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;

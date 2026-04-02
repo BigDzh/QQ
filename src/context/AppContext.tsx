@@ -4,12 +4,15 @@ import type { User } from '../types/auth';
 import type { Project, Module, Component, Task, BorrowRecord, System, ProjectStage, SystemStatus, DesignFile, ModuleStatus } from '../types';
 import { generateId, generateToken, verifyToken, hashPassword, verifyPassword } from '../utils/auth';
 import { addAuditLog } from '../services/audit';
+import { addStateChangeLog, validateReason, isReasonMandatory } from '../services/stateChangeLogger';
 import {
   safeSetObject,
   safeGetObject,
   autoCleanupIfNeeded,
   getStorageWarning,
 } from '../services/storageManager';
+import { dataRelationService } from '../services/dataRelationService';
+import { invalidateSearchCache } from '../services/searchService';
 
 interface AppState {
   currentUser: User | null;
@@ -26,10 +29,10 @@ interface AppContextType extends AppState {
   updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   addModule: (projectId: string, module: Omit<Module, 'id' | 'logs' | 'statusChanges'>) => void;
-  updateModule: (projectId: string, moduleId: string, updates: Partial<Module>) => void;
+  updateModule: (projectId: string, moduleId: string, updates: Partial<Module> & { statusChangeReason?: string }) => void;
   deleteModule: (projectId: string, moduleId: string) => void;
   addSystem: (projectId: string, system: Omit<System, 'id' | 'logs' | 'statusChanges'>) => string;
-  updateSystem: (projectId: string, systemId: string, updates: Partial<System>) => void;
+  updateSystem: (projectId: string, systemId: string, updates: Partial<System> & { statusChangeReason?: string }) => void;
   deleteSystem: (projectId: string, systemId: string) => void;
   addComponent: (projectId: string, moduleId: string, component: Omit<Component, 'id' | 'statusChanges'>) => void;
   updateComponent: (projectId: string, moduleId: string, componentId: string, updates: Partial<Component> & { statusChangeReason?: string }) => void;
@@ -205,6 +208,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (isInitializedRef.current && projects.length > 0) {
+      dataRelationService.initialize(projects, tasks, borrowRecords);
+      invalidateSearchCache();
+    }
+  }, [projects, tasks, borrowRecords]);
+
   const migrateProjectsData = (projects: any[]): any[] => {
     return projects.map(project => ({
       ...project,
@@ -325,44 +335,66 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
-  const updateModule = useCallback((projectId: string, moduleId: string, updates: Partial<Module>) => {
+  const updateModule = useCallback((projectId: string, moduleId: string, updates: Partial<Module> & { statusChangeReason?: string }) => {
+    const currentProject = projects.find(p => p.id === projectId);
+    const currentModule = currentProject?.modules.find(m => m.id === moduleId);
+    const previousState = currentModule?.status || '未知';
+    const newStatus = updates.status;
+
     setProjects((prev) => prev.map((p) => {
-      if (p.id === projectId) {
-        const module = p.modules.find(m => m.id === moduleId);
-        const changes: string[] = [];
-        if (updates.moduleName && updates.moduleName !== module?.moduleName) changes.push(`模块名称: ${module?.moduleName} → ${updates.moduleName}`);
-        if (updates.moduleNumber && updates.moduleNumber !== module?.moduleNumber) changes.push(`模块编号: ${module?.moduleNumber} → ${updates.moduleNumber}`);
-        if (updates.category && updates.category !== module?.category) changes.push(`模块种类: ${module?.category} → ${updates.category}`);
-        if (updates.productionOrderNumber && updates.productionOrderNumber !== module?.productionOrderNumber) changes.push(`生产指令号: ${module?.productionOrderNumber || '-'} → ${updates.productionOrderNumber}`);
-        if (updates.holder && updates.holder !== module?.holder) changes.push(`负责人: ${module?.holder || '-'} → ${updates.holder}`);
-        if (updates.stage && updates.stage !== module?.stage) changes.push(`阶段: ${module?.stage} → ${updates.stage}`);
-        if (updates.version && updates.version !== module?.version) changes.push(`版本: ${module?.version} → ${updates.version}`);
-        if (updates.status && updates.status !== module?.status) changes.push(`状态: ${module?.status} → ${updates.status}`);
+      if (p.id !== projectId) return p;
 
-        const newLog = {
-          id: generateId(),
-          action: `模块信息更新${changes.length > 0 ? `: ${changes.join(', ')}` : ''}`,
-          timestamp: new Date().toISOString(),
-          userId: currentUser?.id || '',
-          username: currentUser?.username || currentUser?.name || '未知',
-          details: JSON.stringify(updates),
-        };
+      const module = p.modules.find(m => m.id === moduleId);
+      const changes: string[] = [];
+      if (updates.moduleName && updates.moduleName !== module?.moduleName) changes.push(`模块名称: ${module?.moduleName} → ${updates.moduleName}`);
+      if (updates.moduleNumber && updates.moduleNumber !== module?.moduleNumber) changes.push(`模块编号: ${module?.moduleNumber} → ${updates.moduleNumber}`);
+      if (updates.category && updates.category !== module?.category) changes.push(`模块种类: ${module?.category} → ${updates.category}`);
+      if (updates.productionOrderNumber && updates.productionOrderNumber !== module?.productionOrderNumber) changes.push(`生产指令号: ${module?.productionOrderNumber || '-'} → ${updates.productionOrderNumber}`);
+      if (updates.holder && updates.holder !== module?.holder) changes.push(`负责人: ${module?.holder || '-'} → ${updates.holder}`);
+      if (updates.stage && updates.stage !== module?.stage) changes.push(`阶段: ${module?.stage} → ${updates.stage}`);
+      if (updates.version && updates.version !== module?.version) changes.push(`版本: ${module?.version} → ${updates.version}`);
+      if (updates.status && updates.status !== module?.status) changes.push(`状态: ${module?.status} → ${updates.status}`);
 
-        return {
-          ...p,
-          modules: p.modules.map((m) => (m.id === moduleId ? {
-            ...m,
-            ...updates,
-            logs: [...(m.logs || []), newLog],
-          } : m)),
-        };
+      if (updates.status && updates.status !== module?.status && updates.statusChangeReason) {
+        try {
+          addStateChangeLog(
+            currentUser?.id || null,
+            currentUser?.username || currentUser?.name || '系统',
+            'MODULE',
+            moduleId,
+            module?.moduleName || '未知模块',
+            previousState,
+            newStatus,
+            updates.statusChangeReason,
+            { metadata: { projectId, projectName: currentProject?.name } }
+          );
+        } catch (error) {
+          console.error('Failed to add state change log:', error);
+        }
       }
-      return p;
+
+      const newLog = {
+        id: generateId(),
+        action: `模块信息更新${changes.length > 0 ? `: ${changes.join(', ')}` : ''}`,
+        timestamp: new Date().toISOString(),
+        userId: currentUser?.id || '',
+        username: currentUser?.username || currentUser?.name || '未知',
+        details: JSON.stringify(updates),
+      };
+
+      return {
+        ...p,
+        modules: p.modules.map((m) => (m.id === moduleId ? {
+          ...m,
+          ...updates,
+          logs: [...(m.logs || []), newLog],
+        } : m)),
+      };
     }));
     if (currentUser) {
       addAuditLog(currentUser.id, currentUser.username, 'UPDATE', 'INFO', '模块', moduleId);
     }
-  }, [currentUser]);
+  }, [currentUser, projects]);
 
   const deleteModule = useCallback((projectId: string, moduleId: string) => {
     setProjects((prev) => prev.map((p) => {
@@ -395,43 +427,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return newSystem.id;
   }, [currentUser]);
 
-  const updateSystem = useCallback((projectId: string, systemId: string, updates: Partial<System>) => {
+  const updateSystem = useCallback((projectId: string, systemId: string, updates: Partial<System> & { statusChangeReason?: string }) => {
+    const currentProject = projects.find(p => p.id === projectId);
+    const currentSystem = currentProject?.systems?.find(s => s.id === systemId);
+    const previousState = currentSystem?.status || '未知';
+    const newStatus = updates.status;
+
     setProjects((prev) => prev.map((p) => {
-      if (p.id === projectId) {
-        const system = p.systems?.find(s => s.id === systemId);
-        const changes: string[] = [];
-        if (updates.systemName && updates.systemName !== system?.systemName) changes.push(`系统名称: ${system?.systemName} → ${updates.systemName}`);
-        if (updates.systemNumber && updates.systemNumber !== system?.systemNumber) changes.push(`系统编号: ${system?.systemNumber} → ${updates.systemNumber}`);
-        if (updates.productionOrderNumber && updates.productionOrderNumber !== system?.productionOrderNumber) changes.push(`生产指令号: ${system?.productionOrderNumber} → ${updates.productionOrderNumber}`);
-        if (updates.holder && updates.holder !== system?.holder) changes.push(`负责人: ${system?.holder || '-'} → ${updates.holder}`);
-        if (updates.stage && updates.stage !== system?.stage) changes.push(`阶段: ${system?.stage} → ${updates.stage}`);
-        if (updates.version && updates.version !== system?.version) changes.push(`版本: ${system?.version} → ${updates.version}`);
-        if (updates.status && updates.status !== system?.status) changes.push(`状态: ${system?.status} → ${updates.status}`);
+      if (p.id !== projectId) return p;
 
-        const newLog = {
-          id: generateId(),
-          action: `系统信息更新${changes.length > 0 ? `: ${changes.join(', ')}` : ''}`,
-          timestamp: new Date().toISOString(),
-          userId: currentUser?.id || '',
-          username: currentUser?.username || currentUser?.name || '未知',
-          details: JSON.stringify(updates),
-        };
+      const system = p.systems?.find(s => s.id === systemId);
+      const changes: string[] = [];
+      if (updates.systemName && updates.systemName !== system?.systemName) changes.push(`系统名称: ${system?.systemName} → ${updates.systemName}`);
+      if (updates.systemNumber && updates.systemNumber !== system?.systemNumber) changes.push(`系统编号: ${system?.systemNumber} → ${updates.systemNumber}`);
+      if (updates.productionOrderNumber && updates.productionOrderNumber !== system?.productionOrderNumber) changes.push(`生产指令号: ${system?.productionOrderNumber} → ${updates.productionOrderNumber}`);
+      if (updates.holder && updates.holder !== system?.holder) changes.push(`负责人: ${system?.holder || '-'} → ${updates.holder}`);
+      if (updates.stage && updates.stage !== system?.stage) changes.push(`阶段: ${system?.stage} → ${updates.stage}`);
+      if (updates.version && updates.version !== system?.version) changes.push(`版本: ${system?.version} → ${updates.version}`);
+      if (updates.status && updates.status !== system?.status) changes.push(`状态: ${system?.status} → ${updates.status}`);
 
-        return {
-          ...p,
-          systems: (p.systems || []).map((s) => (s.id === systemId ? {
-            ...s,
-            ...updates,
-            logs: [...(s.logs || []), newLog],
-          } : s)),
-        };
+      if (updates.status && updates.status !== system?.status && updates.statusChangeReason) {
+        try {
+          addStateChangeLog(
+            currentUser?.id || null,
+            currentUser?.username || currentUser?.name || '系统',
+            'SYSTEM',
+            systemId,
+            system?.systemName || '未知系统',
+            previousState,
+            newStatus,
+            updates.statusChangeReason,
+            { metadata: { projectId, projectName: currentProject?.name } }
+          );
+        } catch (error) {
+          console.error('Failed to add state change log:', error);
+        }
       }
-      return p;
+
+      const newLog = {
+        id: generateId(),
+        action: `系统信息更新${changes.length > 0 ? `: ${changes.join(', ')}` : ''}`,
+        timestamp: new Date().toISOString(),
+        userId: currentUser?.id || '',
+        username: currentUser?.username || currentUser?.name || '未知',
+        details: JSON.stringify(updates),
+      };
+
+      return {
+        ...p,
+        systems: (p.systems || []).map((s) => (s.id === systemId ? {
+          ...s,
+          ...updates,
+          logs: [...(s.logs || []), newLog],
+        } : s)),
+      };
     }));
     if (currentUser) {
       addAuditLog(currentUser.id, currentUser.username, 'UPDATE', 'INFO', '系统', systemId);
     }
-  }, [currentUser]);
+  }, [currentUser, projects]);
 
   const deleteSystem = useCallback((projectId: string, systemId: string) => {
     setProjects((prev) => prev.map((p) => {
@@ -489,6 +543,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   const updateComponent = useCallback((projectId: string, moduleId: string, componentId: string, updates: Partial<Component> & { statusChangeReason?: string }) => {
+    const currentProject = projects.find(p => p.id === projectId);
+    const currentModule = currentProject?.modules.find(m => m.id === moduleId);
+    const currentComponent = currentModule?.components.find(c => c.id === componentId);
+
+    const previousState = currentComponent?.status || '未知';
+    const newStatus = updates.status;
+
     setProjects((prev) => prev.map((p) => {
       if (p.id !== projectId) return p;
 
@@ -509,6 +570,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         let updatedStatusChanges = component?.statusChanges || [];
 
         if (updates.status && updates.status !== component?.status) {
+          if (isReasonMandatory('COMPONENT', component?.status || '', updates.status)) {
+            const validation = validateReason(updates.statusChangeReason);
+            if (!validation.isValid) {
+              console.error('Invalid status change reason:', validation.errors);
+            }
+          }
+
+          if (updates.statusChangeReason) {
+            try {
+              addStateChangeLog(
+                currentUser?.id || null,
+                currentUser?.username || currentUser?.name || '系统',
+                'COMPONENT',
+                componentId,
+                currentComponent?.componentName || '未知组件',
+                previousState,
+                newStatus,
+                updates.statusChangeReason,
+                { metadata: { projectId, moduleId, projectName: currentProject?.name, moduleName: currentModule?.moduleName } }
+              );
+            } catch (error) {
+              console.error('Failed to add state change log:', error);
+            }
+          }
+
           const newLog = {
             id: generateId(),
             action: `状态从 ${component?.status} 变更为 ${updates.status}`,

@@ -59,3 +59,47 @@ export interface ComponentAuditLog extends AuditLog {
   componentName: string;
   changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'STATUS_CHANGE' | 'PROPERTY_CHANGE' | 'STYLE_CHANGE';
 }
+
+export type StateChangePriority = 'LOW' | 'NORMAL' | 'HIGH' | 'CRITICAL';
+
+export interface StateChangeContext {
+  previousValue?: unknown;
+  newValue?: unknown;
+  metadata?: Record<string, unknown>;
+  ipAddress?: string;
+  userAgent?: string;
+  sessionId?: string;
+}
+
+export interface StateChangeLog {
+  id: string;
+  timestamp: string;
+  userId: string | null;
+  username: string;
+  resourceType: AuditResourceType;
+  resourceId: string;
+  resourceName: string;
+  previousState: string;
+  newState: string;
+  reason: string;
+  priority: StateChangePriority;
+  context: StateChangeContext;
+  level: AuditLevel;
+  tags?: string[];
+}
+
+export interface StateChangeValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface StateChangeLogFilter {
+  resourceType?: AuditResourceType;
+  resourceId?: string;
+  userId?: string;
+  startDate?: string;
+  endDate?: string;
+  priority?: StateChangePriority;
+  minLevel?: AuditLevel;
+  searchTerm?: string;
+}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Cpu, HardDrive, Monitor, ChevronDown, ChevronUp, MemoryStick, Globe, Zap, Gauge, Wifi, WifiOff, Clock, Activity, TrendingUp, TrendingDown, Minus, RefreshCw, Bell, BellOff, BarChart3, Check, ChevronRight } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { usePerformanceMode } from '../context/PerformanceModeContext';
@@ -41,6 +42,8 @@ const MAX_HISTORY = 20;
 export default function SystemResources() {
   const [expanded, setExpanded] = useState(false);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [panelPosition, setPanelPosition] = useState<{ top: number; right: number }>({ top: 0, right: 0 });
+  const triggerButtonRef = useRef<HTMLButtonElement>(null);
   const { isHighPerformance, setMode } = usePerformanceMode();
   const { showToast } = useToast();
   const { isDark } = useTheme();
@@ -280,6 +283,35 @@ export default function SystemResources() {
     return () => clearInterval(interval);
   }, [startTime]);
 
+  useEffect(() => {
+    if (expanded && triggerButtonRef.current) {
+      const rect = triggerButtonRef.current.getBoundingClientRect();
+      setPanelPosition({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right
+      });
+    }
+  }, [expanded]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!expanded) return;
+
+      const target = event.target as Node;
+      const panel = document.querySelector('[data-system-monitor-panel="true"]');
+      const trigger = triggerButtonRef.current;
+
+      if (panel && panel.contains(target)) return;
+      if (trigger && trigger.contains(target)) return;
+
+      setExpanded(false);
+      setShowFeatures(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [expanded]);
+
   const getStatusColor = (value: number) => {
     if (value < 60) return 'text-green-500';
     if (value < 85) return 'text-yellow-500';
@@ -440,6 +472,7 @@ export default function SystemResources() {
       </button>
 
       <button
+        ref={triggerButtonRef}
         onClick={() => setExpanded(!expanded)}
         className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all ${
           expanded
@@ -473,8 +506,16 @@ export default function SystemResources() {
         )}
       </button>
 
-      {expanded && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-xl z-50 p-4">
+      {expanded && createPortal(
+        <div
+          className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-gray-200/50 dark:border-gray-700/50 rounded-xl shadow-2xl p-4"
+          style={{
+            top: `${panelPosition.top}px`,
+            right: `${panelPosition.right}px`,
+            zIndex: 9999
+          }}
+          data-system-monitor-panel="true"
+        >
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-gray-100 dark:border-gray-700/50">
               <span className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -762,7 +803,8 @@ export default function SystemResources() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <AlertConfigPanel

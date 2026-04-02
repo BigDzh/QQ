@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, CheckCircle, XCircle, AlertTriangle, Shield, TestTube, Cpu, Clock } from 'lucide-react';
 import type { Component, ComponentStatus } from '../types';

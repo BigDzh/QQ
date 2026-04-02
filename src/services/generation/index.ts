@@ -1,0 +1,33 @@
+export {
+  initGenerationSystem,
+  initGenerationSystemWithDefaults,
+  getConfig,
+  updateConfig,
+  GenerationRegistry,
+  GenerationValidator,
+  GenerationLogger,
+  InterfaceGenerator,
+  logEvent,
+  getGenerator,
+  getRegistry,
+  getValidator,
+  getLoggerInstance,
+} from './core';
+
+export {
+  GENERATION_EVENT_DESCRIPTIONS,
+  SKIP_REASON_MESSAGES,
+  getValidationSeverityColor,
+  getResultBadgeStyle,
+  formatDuration,
+  formatTimestamp,
+  getCooldownDisplay,
+  assessGenerationHealth,
+  buildTypeKey,
+  parseTypeKey,
+  isModuleTypeKey,
+  isComponentTypeKey,
+  getEntryHealthStatus,
+  generateAuditReport,
+  type GenerationAuditReport,
+} from './specification';

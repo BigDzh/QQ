@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Plus, Package, Settings, Clock, User, Hash, Tag, CheckCircle, XCircle, FileText, Download, Copy, Search } from 'lucide-react';
+import { Plus, Package, Settings, Clock, User, Hash, Tag, CheckCircle, XCircle, FileText, Download, Copy, Search, Edit2, Save, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
-import type { ComponentStatus, Component } from '../types';
+import type { ComponentStatus, Component, ProjectStage } from '../types';
 import { generateId } from '../utils/auth';
+import { getDefaultStageForEntity } from '../services/stageConfig';
 import ModuleStatusBoard from '../components/ModuleStatusBoard';
 import { addModuleAuditLog } from '../services/audit';
 import { BackButton } from '../components/BackButton';
+import { EnhancedComponentStatusModal } from './ProjectDetail/components/EnhancedComponentStatusModal';
 
 export default function ModuleDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +22,7 @@ export default function ModuleDetail() {
   const [showComponentModal, setShowComponentModal] = useState(false);
   const [showComponentStatusModal, setShowComponentStatusModal] = useState(false);
   const [showComponentReasonModal, setShowComponentReasonModal] = useState(false);
+  const [enhancedStatusModal, setEnhancedStatusModal] = useState(false);
   const [pendingComponent, setPendingComponent] = useState<Component | null>(null);
   const [pendingComponentStatus, setPendingComponentStatus] = useState<ComponentStatus | null>(null);
   const [componentStatusReason, setComponentStatusReason] = useState('');
@@ -37,9 +40,22 @@ export default function ModuleDetail() {
     productionOrderNumber: '',
     holder: '',
     version: 'v1.0',
-    stage: '',
+    stage: getDefaultStageForEntity('component') as string,
   });
   const [logSearchTerm, setLogSearchTerm] = useState('');
+
+  const [isEditingModule, setIsEditingModule] = useState(false);
+  const [editModuleForm, setEditModuleForm] = useState({
+    moduleName: '',
+    moduleNumber: '',
+    productionOrderNumber: '',
+    holder: '',
+    version: '',
+    stage: getDefaultStageForEntity('module') as string,
+    category: '',
+    status: '',
+  });
+  const [moduleFormErrors, setModuleFormErrors] = useState<Record<string, string>>({});
 
   const moduleData = getModule(id!);
   const { project, module } = moduleData || {};
@@ -123,7 +139,7 @@ export default function ModuleDetail() {
     showToast('组件投产成功，状态已更新为投产中', 'success');
     setIsEditingComponent(false);
     setPendingComponent(null);
-    setEditingComponentForm({ componentNumber: '', componentName: '', productionOrderNumber: '', holder: '', version: 'v1.0', stage: '' });
+    setEditingComponentForm({ componentNumber: '', componentName: '', productionOrderNumber: '', holder: '', version: 'v1.0', stage: getDefaultStageForEntity('component') as string });
   };
 
   const handleComponentStatusClick = (component: Component, newStatus: ComponentStatus) => {
@@ -166,11 +182,136 @@ export default function ModuleDetail() {
     setComponentStatusReason('');
   };
 
+  const handleEnhancedStatusChange = async (
+    componentId: string,
+    moduleId: string,
+    newStatus: ComponentStatus,
+    reason: string
+  ): Promise<{ success: boolean; error?: string; errorType?: 'network' | 'permission' | 'validation' | 'unknown' }> => {
+    if (currentUser?.role === 'viewer') {
+      return { success: false, error: '您没有权限更改组件状态', errorType: 'permission' };
+    }
+
+    if (!reason.trim()) {
+      return { success: false, error: '请输入状态变更原因', errorType: 'validation' };
+    }
+
+    try {
+      const component = module.components.find((c: Component) => c.id === componentId);
+      if (!component) {
+        return { success: false, error: '未找到组件', errorType: 'validation' };
+      }
+
+      const beforeState = { status: component.status };
+      updateComponent(project.id, module.id, componentId, {
+        status: newStatus,
+        statusChangeReason: reason,
+      });
+      addModuleAuditLog(
+        currentUser?.id || '',
+        currentUser?.username || currentUser?.name || '未知',
+        'UPDATE',
+        module.id,
+        module.moduleName,
+        `组件状态变更: ${component.componentName} 从 ${component.status} 变更为 ${newStatus}`,
+        beforeState,
+        { status: newStatus },
+        reason,
+        `用户通过模块详情页状态变更功能执行状态变更操作`
+      );
+
+      showToast(`组件状态已从 ${component.status} 变更为 ${newStatus}`, 'success');
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : '状态变更失败',
+        errorType: 'network'
+      };
+    }
+  };
+
   const getComponentStats = () => {
     const total = module.components.length;
     const normal = module.components.filter((c) => c.status === '正常').length;
     const fault = module.components.filter((c) => c.status === '故障').length;
     return { total, normal, fault };
+  };
+
+  const handleOpenModuleEdit = () => {
+    setEditModuleForm({
+      moduleName: module.moduleName || '',
+      moduleNumber: module.moduleNumber || '',
+      productionOrderNumber: module.productionOrderNumber || '',
+      holder: module.holder || '',
+      version: module.version || '',
+      stage: module.stage || '',
+      category: module.category || '',
+      status: module.status || '未投产',
+    });
+    setModuleFormErrors({});
+    setIsEditingModule(true);
+  };
+
+  const validateModuleForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!editModuleForm.moduleName.trim()) {
+      errors.moduleName = '模块名称不能为空';
+    }
+
+    if (!editModuleForm.moduleNumber.trim()) {
+      errors.moduleNumber = '模块编号不能为空';
+    }
+
+    if (!editModuleForm.category.trim()) {
+      errors.category = '种类不能为空';
+    }
+
+    setModuleFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveModuleEdit = () => {
+    if (!validateModuleForm()) {
+      showToast('请填写必填项', 'error');
+      return;
+    }
+
+    try {
+      const beforeState = {
+        moduleName: module.moduleName,
+        moduleNumber: module.moduleNumber,
+        status: module.status,
+      };
+
+      updateModule(project.id, module.id, editModuleForm);
+
+      addModuleAuditLog(
+        currentUser?.id || '',
+        currentUser?.username || currentUser?.name || '未知',
+        'UPDATE',
+        module.id,
+        module.moduleName,
+        `编辑模块信息`,
+        beforeState,
+        { ...editModuleForm },
+        '用户通过编辑功能修改模块信息',
+        `用户通过模块详情页执行模块信息编辑操作`
+      );
+
+      showToast('模块信息更新成功', 'success');
+      setIsEditingModule(false);
+      setModuleFormErrors({});
+    } catch (error) {
+      showToast('保存失败，请重试', 'error');
+      console.error('保存模块信息失败:', error);
+    }
+  };
+
+  const handleCancelModuleEdit = () => {
+    setIsEditingModule(false);
+    setModuleFormErrors({});
   };
 
   const stats = getComponentStats();
@@ -195,6 +336,15 @@ export default function ModuleDetail() {
             <p className={t.textMuted}>{module.moduleNumber}</p>
           </div>
           <div className="flex items-center gap-3">
+            {canEdit && (
+              <button
+                onClick={handleOpenModuleEdit}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:shadow-lg cursor-pointer bg-blue-600 hover:bg-blue-700 text-white`}
+              >
+                <Edit2 size={18} />
+                编辑模块
+              </button>
+            )}
             <span className={`px-3 py-1 rounded-full text-sm font-medium border ${t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors.故障}`}>
               {module.status}
             </span>
@@ -376,26 +526,20 @@ export default function ModuleDetail() {
                       <td className={`px-4 py-3 ${t.textSecondary}`}>{component.productionOrderNumber || '-'}</td>
                       <td className={`px-4 py-3 ${t.textSecondary}`}>{component.stage || '-'}</td>
                       <td className="px-4 py-3">
-                        {canEdit ? (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (canEdit) {
                               setPendingComponent(component);
-                              setShowComponentStatusModal(true);
-                            }}
-                            className={`px-2 py-1 rounded text-xs transition-colors ${
-                              t.statusColors[component.status as keyof typeof t.statusColors] || t.statusColors.故障
-                            }`}
-                          >
-                            {component.status}
-                          </button>
-                        ) : (
-                          <span className={`px-2 py-1 rounded text-xs ${
+                              setEnhancedStatusModal(true);
+                            }
+                          }}
+                          className={`px-2 py-1 rounded text-xs transition-colors ${
                             t.statusColors[component.status as keyof typeof t.statusColors] || t.statusColors.故障
-                          }`}>
-                            {component.status}
-                          </span>
-                        )}
+                          } ${canEdit ? 'hover:opacity-80 cursor-pointer' : ''}`}
+                        >
+                          {component.status}
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -890,21 +1034,188 @@ export default function ModuleDetail() {
                 取消
               </button>
               <button
-                type="button"
-                onClick={handleComponentStatusChangeWithReason}
-                disabled={!componentStatusReason.trim()}
-                className={`flex-1 py-2 rounded-lg font-medium transition-all ${
-                  componentStatusReason.trim()
-                    ? `${t.button} bg-cyan-600 hover:bg-cyan-700 text-white`
-                    : `${t.button} opacity-50 cursor-not-allowed`
-                }`}
-              >
-                确认变更
-              </button>
+              type="button"
+              onClick={handleComponentStatusChangeWithReason}
+              disabled={!componentStatusReason.trim()}
+              className={`flex-1 py-2 rounded-lg font-medium transition-all ${
+                componentStatusReason.trim()
+                  ? `${t.button} bg-cyan-600 hover:bg-cyan-700 text-white`
+                  : `${t.button} opacity-50 cursor-not-allowed`
+              }`}
+            >
+              确认变更
+            </button>
             </div>
           </div>
         </div>
       )}
+
+      {isEditingModule && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelModuleEdit}>
+          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-2xl border ${t.modalBorder} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-semibold ${t.text}`}>编辑模块信息</h2>
+              <button
+                onClick={handleCancelModuleEdit}
+                className={`p-2 rounded-lg hover:${t.hoverBg} ${t.textSecondary}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveModuleEdit(); }} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                    模块名称 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editModuleForm.moduleName}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, moduleName: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${moduleFormErrors.moduleName ? 'border-red-500' : ''} ${t.input}`}
+                    placeholder="请输入模块名称"
+                  />
+                  {moduleFormErrors.moduleName && (
+                    <p className="text-red-500 text-xs mt-1">{moduleFormErrors.moduleName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                    模块编号 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editModuleForm.moduleNumber}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, moduleNumber: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${moduleFormErrors.moduleNumber ? 'border-red-500' : ''} ${t.input}`}
+                    placeholder="如: M001"
+                  />
+                  {moduleFormErrors.moduleNumber && (
+                    <p className="text-red-500 text-xs mt-1">{moduleFormErrors.moduleNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>生产指令号</label>
+                  <input
+                    type="text"
+                    value={editModuleForm.productionOrderNumber}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, productionOrderNumber: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
+                    placeholder="请输入生产指令号"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>负责人</label>
+                  <input
+                    type="text"
+                    value={editModuleForm.holder}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, holder: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
+                    placeholder="请输入负责人姓名"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>版本</label>
+                  <input
+                    type="text"
+                    value={editModuleForm.version}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, version: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
+                    placeholder="如: v1.0"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>阶段</label>
+                  <select
+                    value={editModuleForm.stage}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, stage: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
+                  >
+                    <option value="">请选择阶段</option>
+                    <option value="设计">设计</option>
+                    <option value="开发">开发</option>
+                    <option value="测试">测试</option>
+                    <option value="投产">投产</option>
+                    <option value="维护">维护</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                    种类 <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={editModuleForm.category}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, category: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${moduleFormErrors.category ? 'border-red-500' : ''} ${t.input}`}
+                  >
+                    <option value="">请选择种类</option>
+                    {project.categories?.filter((c: string) => c !== '全部').map((cat: string) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  {moduleFormErrors.category && (
+                    <p className="text-red-500 text-xs mt-1">{moduleFormErrors.category}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>状态</label>
+                  <select
+                    value={editModuleForm.status}
+                    onChange={(e) => setEditModuleForm({ ...editModuleForm, status: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
+                  >
+                    <option value="未投产">未投产</option>
+                    <option value="投产中">投产中</option>
+                    <option value="测试中">测试中</option>
+                    <option value="正常">正常</option>
+                    <option value="故障">故障</option>
+                    <option value="维修中">维修中</option>
+                    <option value="三防中">三防中</option>
+                    <option value="仿真中">仿真中</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCancelModuleEdit}
+                  className={`flex-1 py-2.5 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg} transition-all flex items-center justify-center gap-2`}
+                >
+                  <X size={18} />
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg cursor-pointer bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                >
+                  <Save size={18} />
+                  保存修改
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <EnhancedComponentStatusModal
+        isOpen={enhancedStatusModal}
+        onClose={() => setEnhancedStatusModal(false)}
+        component={pendingComponent}
+        currentStatus={pendingComponent?.status as ComponentStatus || '正常'}
+        onStatusChange={handleEnhancedStatusChange}
+        canEdit={currentUser?.role !== 'viewer'}
+      />
     </div>
   );
 }

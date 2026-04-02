@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, RotateCcw, X, AlertTriangle, Clock, History, Search, Settings, Bell, BellOff } from 'lucide-react';
+import { Trash2, RotateCcw, X, AlertTriangle, Clock, History, Search, Settings } from 'lucide-react';
 import type { TrashTask, DeletionHistory } from '../types/duplicateTask';
 
 interface TrashManagementPanelProps {

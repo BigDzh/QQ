@@ -76,7 +76,7 @@ export function Card({
     : '';
 
   const animatedClasses = animated
-    ? 'transform transition-all duration-200 ease-out hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] active:translate-y-0 active:shadow-md'
+    ? 'transform transition-all duration-300 ease-out hover:scale-[1.02] hover:-translate-y-1 hover:shadow-xl active:scale-[0.98] active:translate-y-0 active:shadow-md shine-sweep'
     : '';
 
   const cursorClass = onClick && !disabled ? 'cursor-pointer' : '';

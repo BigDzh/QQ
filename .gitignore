@@ -48,11 +48,9 @@ Web应用打包/
 dev-dist/
 packaged-webapp/
 scripts/
-src/pages/ProjectDetail/
 src/workers/
 
 # Temp files
 *.tmp
 *.temp
 *.txt (except README)
-ProjectDetail*.tsx

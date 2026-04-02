@@ -184,8 +184,10 @@ export function evaluateProjectHealth(project: {
   modules: Module[];
   systems: System[];
 }): ProjectHealth {
-  const allModuleHealths = project.modules.map(m => evaluateModuleHealth(project.modules, m.id)).filter(Boolean) as ModuleHealth[];
-  const allSystemHealths = project.systems.map(s => evaluateSystemHealth(project.modules, project.systems, s.id)).filter(Boolean) as SystemHealth[];
+  const modules = project.modules || [];
+  const systems = project.systems || [];
+  const allModuleHealths = modules.map(m => evaluateModuleHealth(modules, m.id)).filter(Boolean) as ModuleHealth[];
+  const allSystemHealths = systems.map(s => evaluateSystemHealth(modules, systems, s.id)).filter(Boolean) as SystemHealth[];
 
   const abnormalModules = allModuleHealths.filter(m => !m.isHealthy);
   const abnormalSystems = allSystemHealths.filter(s => !s.isHealthy);
@@ -212,11 +214,11 @@ export function evaluateProjectHealth(project: {
     projectName: project.name,
     healthLevel,
     isHealthy: allModulesHealthy && allSystemsHealthy,
-    systemCount: project.systems.length,
+    systemCount: (project.systems || []).length,
     healthySystemCount: allSystemHealths.length - abnormalSystems.length,
-    moduleCount: project.modules.length,
+    moduleCount: (project.modules || []).length,
     healthyModuleCount: allModuleHealths.length - abnormalModules.length,
-    componentCount: project.modules.reduce((sum, m) => sum + m.components.length, 0),
+    componentCount: (project.modules || []).reduce((sum, m) => sum + (m.components || []).length, 0),
     healthyComponentCount: allModuleHealths.reduce((sum, m) => sum + m.healthyComponentCount, 0),
     systems: allSystemHealths,
     abnormalSystems,
@@ -250,10 +252,12 @@ export function evaluateFullStatus(
   }
 
   let abnormalModules = projectHealth.systems.flatMap(s => s.abnormalModules);
+  const modules = project.modules || [];
+  const systems = project.systems || [];
   if (targetModuleId) {
-    const targetMod = project.modules.find(m => m.id === targetModuleId);
+    const targetMod = modules.find(m => m.id === targetModuleId);
     if (targetMod) {
-      const modHealth = evaluateModuleHealth(project.modules, targetModuleId);
+      const modHealth = evaluateModuleHealth(modules, targetModuleId);
       if (modHealth) {
         abnormalModules = [modHealth];
         abnormalComponents = modHealth.abnormalComponents;
@@ -263,9 +267,9 @@ export function evaluateFullStatus(
 
   let abnormalSystems = projectHealth.abnormalSystems;
   if (targetSystemId) {
-    const targetSys = project.systems.find(s => s.id === targetSystemId);
+    const targetSys = systems.find(s => s.id === targetSystemId);
     if (targetSys) {
-      const sysHealth = evaluateSystemHealth(project.modules, project.systems, targetSystemId);
+      const sysHealth = evaluateSystemHealth(modules, systems, targetSystemId);
       if (sysHealth) {
         abnormalSystems = [sysHealth];
         abnormalModules = sysHealth.abnormalModules;
@@ -287,7 +291,7 @@ export function evaluateFullStatus(
     isHealthy: projectHealth.isHealthy,
     healthLevel: projectHealth.healthLevel,
     timestamp: Date.now(),
-    componentHealth: project.modules.flatMap(m => m.components.map(getComponentHealth)),
+    componentHealth: (project.modules || []).flatMap(m => (m.components || []).map(getComponentHealth)),
     moduleHealth: projectHealth.systems.flatMap(s => s.modules),
     systemHealth: projectHealth.systems,
     abnormalComponents,
@@ -309,13 +313,15 @@ export function buildAbnormalBreadcrumb(
   }
 ): AbnormalBreadcrumb[] {
   const breadcrumb: AbnormalBreadcrumb[] = [];
+  const modules = project.modules || [];
+  const systems = project.systems || [];
 
   if (context.componentId) {
-    const component = project.modules
-      .flatMap(m => m.components)
+    const component = modules
+      .flatMap(m => (m.components || []))
       .find(c => c.id === context.componentId);
-    const module = project.modules.find(m => m.id === component?.moduleId);
-    const system = project.systems.find(s => s.id === module?.systemId);
+    const module = modules.find(m => m.id === component?.moduleId);
+    const system = systems.find(s => s.id === module?.systemId);
 
     if (system) {
       const sysAbnormal = context.abnormalSystems.find(s => s.systemId === system.id);
@@ -352,8 +358,8 @@ export function buildAbnormalBreadcrumb(
       });
     }
   } else if (context.moduleId) {
-    const module = project.modules.find(m => m.id === context.moduleId);
-    const system = project.systems.find(s => s.id === module?.systemId);
+    const module = modules.find(m => m.id === context.moduleId);
+    const system = systems.find(s => s.id === module?.systemId);
 
     if (system) {
       const sysAbnormal = context.abnormalSystems.find(s => s.systemId === system.id);
@@ -386,7 +392,7 @@ export function buildAbnormalBreadcrumb(
       });
     }
   } else if (context.systemId) {
-    const system = project.systems.find(s => s.id === context.systemId);
+    const system = systems.find(s => s.id === context.systemId);
 
     if (system) {
       const sysAbnormal = context.abnormalSystems.find(s => s.systemId === system.id);

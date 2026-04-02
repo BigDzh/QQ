@@ -83,7 +83,7 @@ export default function ProjectList() {
       projectNumber: project.projectNumber,
       stage: project.stage as 'F阶段' | 'C阶段' | 'S阶段' | 'D阶段' | 'P阶段',
       version: project.version,
-      categories: project.categories.join(', '),
+      categories: (project.categories || []).join(', '),
     });
     setShowModal(true);
   };

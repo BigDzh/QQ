@@ -75,21 +75,22 @@ function repeatChar(char: string, len: number): string {
 }
 
 export function generateModuleAssemblyDiagram(project: Project): ModuleAssemblyData {
+  const modules = project.modules || [];
   const moduleData: ModuleAssemblyData = {
     projectName: project.name,
     projectNumber: project.projectNumber,
     projectStage: project.stage,
-    totalModules: project.modules.length,
-    totalComponents: project.modules.reduce((sum, m) => sum + m.components.length, 0),
-    modules: project.modules.map((module: Module) => ({
+    totalModules: modules.length,
+    totalComponents: modules.reduce((sum, m) => sum + (m.components || []).length, 0),
+    modules: modules.map((module: Module) => ({
       id: module.id,
       name: module.moduleName,
       number: module.moduleNumber,
       category: module.category,
       status: module.status,
       stage: module.stage,
-      componentCount: module.components.length,
-      components: module.components.map((comp: Component) => ({
+      componentCount: (module.components || []).length,
+      components: (module.components || []).map((comp: Component) => ({
         id: comp.id,
         number: comp.componentNumber,
         name: comp.componentName,

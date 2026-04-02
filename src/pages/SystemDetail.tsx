@@ -4,11 +4,12 @@ import {
   ArrowLeft, Plus, Package, User, Hash,
   CheckCircle, AlertTriangle, Settings, Layers, FolderTree,
   ChevronRight, ChevronDown, Network, LayoutGrid, GitBranch,
-  Unlink
+  Unlink, Edit2, Save, X
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
+import { getDefaultStageForEntity } from '../services/stageConfig';
 
 interface ModuleTreeNode {
   id: string;
@@ -41,6 +42,18 @@ export default function SystemDetail() {
     moduleNumber: '', moduleName: '', category: '',
     productionOrderNumber: '', holder: '',
   });
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    systemName: '',
+    systemNumber: '',
+    productionOrderNumber: '',
+    holder: '',
+    stage: getDefaultStageForEntity('system'),
+    version: '',
+    status: '',
+  });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const system = useMemo(() => {
     for (const p of projects) {
@@ -430,6 +443,63 @@ export default function SystemDetail() {
     setShowCategoryModal(false);
   };
 
+  const handleOpenEdit = () => {
+    if (!system) return;
+    setEditForm({
+      systemName: system.systemName || '',
+      systemNumber: system.systemNumber || '',
+      productionOrderNumber: system.productionOrderNumber || '',
+      holder: system.holder || '',
+      stage: system.stage || '',
+      version: system.version || '',
+      status: system.status || '未投产',
+    });
+    setFormErrors({});
+    setIsEditing(true);
+  };
+
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!editForm.systemName.trim()) {
+      errors.systemName = '系统名称不能为空';
+    }
+
+    if (!editForm.systemNumber.trim()) {
+      errors.systemNumber = '系统编号不能为空';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveEdit = () => {
+    if (!validateForm()) {
+      showToast('请填写必填项', 'error');
+      return;
+    }
+
+    try {
+      updateProject(project.id, {
+        systems: project.systems?.map((s: any) =>
+          s.id === system.id ? { ...s, ...editForm } : s
+        ),
+      });
+
+      showToast('系统信息更新成功', 'success');
+      setIsEditing(false);
+      setFormErrors({});
+    } catch (error) {
+      showToast('保存失败，请重试', 'error');
+      console.error('保存系统信息失败:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setFormErrors({});
+  };
+
   return (
     <div className={`min-h-screen ${t.bg}`}>
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -489,6 +559,13 @@ export default function SystemDetail() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenEdit}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:shadow-lg cursor-pointer bg-blue-600 hover:bg-blue-700 text-white`}
+                >
+                  <Edit2 size={18} />
+                  编辑系统
+                </button>
                 <button
                   onClick={() => setShowCategoryModal(true)}
                   className={`px-3 py-1.5 text-sm rounded-lg border transition-all ${t.border} ${t.textSecondary} hover:${t.hoverBg}`}
@@ -868,6 +945,143 @@ export default function SystemDetail() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isEditing && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={handleCancelEdit}>
+          <div className="rounded-2xl p-6 w-full max-w-2xl shadow-2xl bg-white max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-semibold ${t.text}`}>编辑系统信息</h2>
+              <button
+                onClick={handleCancelEdit}
+                className={`p-2 rounded-lg hover:${t.hoverBg} ${t.textSecondary}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveEdit(); }} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                    系统名称 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.systemName}
+                    onChange={(e) => setEditForm({ ...editForm, systemName: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${formErrors.systemName ? 'border-red-500' : t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    placeholder="请输入系统名称"
+                  />
+                  {formErrors.systemName && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.systemName}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                    系统编号 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.systemNumber}
+                    onChange={(e) => setEditForm({ ...editForm, systemNumber: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${formErrors.systemNumber ? 'border-red-500' : t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    placeholder="如: SYS001"
+                  />
+                  {formErrors.systemNumber && (
+                    <p className="text-red-500 text-xs mt-1">{formErrors.systemNumber}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>生产指令号</label>
+                  <input
+                    type="text"
+                    value={editForm.productionOrderNumber}
+                    onChange={(e) => setEditForm({ ...editForm, productionOrderNumber: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    placeholder="请输入生产指令号"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>负责人</label>
+                  <input
+                    type="text"
+                    value={editForm.holder}
+                    onChange={(e) => setEditForm({ ...editForm, holder: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    placeholder="请输入负责人姓名"
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>阶段</label>
+                  <select
+                    value={editForm.stage}
+                    onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                  >
+                    <option value="">请选择阶段</option>
+                    <option value="设计">设计</option>
+                    <option value="开发">开发</option>
+                    <option value="测试">测试</option>
+                    <option value="投产">投产</option>
+                    <option value="维护">维护</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>版本</label>
+                  <input
+                    type="text"
+                    value={editForm.version}
+                    onChange={(e) => setEditForm({ ...editForm, version: e.target.value })}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    placeholder="如: v1.0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>状态</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                >
+                  <option value="未投产">未投产</option>
+                  <option value="投产中">投产中</option>
+                  <option value="测试中">测试中</option>
+                  <option value="正常">正常</option>
+                  <option value="故障">故障</option>
+                  <option value="维修中">维修中</option>
+                  <option value="三防中">三防中</option>
+                  <option value="仿真中">仿真中</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className={`flex-1 py-2.5 border rounded-xl ${t.border} ${t.textSecondary} hover:${t.hoverBg} transition-all flex items-center justify-center gap-2`}
+                >
+                  <X size={18} />
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl text-white font-medium transition-all hover:shadow-lg cursor-pointer bg-blue-600 hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <Save size={18} />
+                  保存修改
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

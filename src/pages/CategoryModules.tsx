@@ -23,6 +23,19 @@ export default function CategoryModules() {
     );
   }
 
+  const handleCardClick = (e: React.MouseEvent, moduleId: string) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a') || target.closest('[data-no-navigate]')) {
+      return;
+    }
+    navigate(`/modules/${moduleId}`);
+  };
+
+  const handleViewDetails = (e: React.MouseEvent, moduleId: string) => {
+    e.stopPropagation();
+    navigate(`/modules/${moduleId}`);
+  };
+
   const handleDelete = (e: React.MouseEvent, moduleId: string) => {
     e.stopPropagation();
     if (confirm('确定要删除该模块吗？')) {
@@ -106,7 +119,7 @@ export default function CategoryModules() {
           {categoryModules.map((module) => (
             <div
               key={module.id}
-              onClick={() => navigate(`/modules/${module.id}`)}
+              onClick={(e) => handleCardClick(e, module.id)}
               className={`${t.card} rounded-lg shadow-sm hover:shadow-md transition p-5 border cursor-pointer ${t.border}`}
             >
               <div className="flex justify-between items-start mb-3">

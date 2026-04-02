@@ -55,6 +55,18 @@ code {
   }
 }
 
+/* Toast专用 - 从右侧滑入 */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%) scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -571,17 +583,462 @@ input[type="number"] {
   animation: status-pulse 0.3s ease-in-out;
 }
 
+/* ============================================
+   高级微交互动画系统 v2.0
+   包含: 波纹效果、光泽扫过、弹簧物理、
+         呼吸光晕、浮起投影、粒子飘散
+   ============================================ */
+
+/* --- 波纹点击效果 (Ripple) --- */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::after {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: scale(0);
+  pointer-events: none;
+}
+
+.ripple-effect:active::after {
+  animation: ripple 0.6s ease-out forwards;
+}
+
+/* --- 光泽扫过效果 (Shine Sweep) --- */
+@keyframes shine-sweep {
+  0% {
+    left: -100%;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    left: 150%;
+    opacity: 0;
+  }
+}
+
+.shine-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-sweep::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.15) 45%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.15) 55%,
+    transparent 60%
+  );
+  transform: skewX(-20deg);
+  pointer-events-none: none;
+  transition: none;
+}
+
+.shine-sweep:hover::before {
+  animation: shine-sweep 0.8s ease-out forwards;
+}
+
+.dark .shine-sweep::before {
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.08) 45%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.08) 55%,
+    transparent 60%
+  );
+}
+
+/* --- 弹簧物理进入 (Spring Enter) --- */
+@keyframes spring-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) translateY(20px);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1.08) translateY(-4px);
+  }
+  50% {
+    transform: scale(0.95) translateY(2px);
+  }
+  70% {
+    transform: scale(1.02) translateY(-1px);
+  }
+  85% {
+    transform: scale(0.99) translateY(0.5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-spring-enter {
+  animation: spring-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* --- 浮起阴影效果 (Float Shadow) --- */
+@keyframes float-shadow {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.12), 0 8px 10px -6px rgb(0 0 0 / 0.08);
+  }
+}
+
+.animate-float-shadow {
+  animation: float-shadow 3s ease-in-out infinite;
+}
+
+/* --- 呼吸光晕 (Breathing Glow) --- */
+@keyframes breathing-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(14, 165, 233, 0.2), 0 0 10px rgba(14, 165, 233, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(14, 165, 233, 0.4), 0 0 30px rgba(14, 165, 233, 0.2), 0 0 45px rgba(14, 165, 233, 0.1);
+  }
+}
+
+.animate-breathing-glow {
+  animation: breathing-glow 3s ease-in-out infinite;
+}
+
+/* --- 边框渐变流动 (Border Gradient Flow) --- */
+@keyframes border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.border-gradient-flow {
+  border: 2px solid transparent;
+  background-image: linear-gradient(white, white), linear-gradient(90deg, #0ea5e9, #8b5cf6, #ec4899, #0ea5e9);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: 200% 200%;
+  animation: border-flow 4s linear infinite;
+}
+
+/* --- 数字滚动计数器 (Count Up) --- */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-count-up {
+  animation: count-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* --- 打字机光标 (Typing Cursor) --- */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typing-cursor::after {
+  content: '|';
+  animation: blink-cursor 1s step-end infinite;
+  color: currentColor;
+  margin-left: 2px;
+}
+
+/* --- 脉冲环扩散 (Pulse Ring) --- */
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+.animate-pulse-ring {
+  position: relative;
+}
+
+.animate-pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 2px solid currentColor;
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* --- 3D翻转卡片 (3D Flip Card) --- */
+@keyframes flip-in {
+  0% { transform: perspective(600px) rotateY(-90deg); opacity: 0; }
+  100% { transform: perspective(600px) rotateY(0); opacity: 1; }
+}
+
+.animate-flip-in {
+  animation: flip-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  transform-style: preserve-3d;
+}
+
+/* --- 弹跳指示器 (Bouncy Dot) --- */
+@keyframes bouncy-dot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.bouncy-dot {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.bouncy-dot span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: bouncy-dot 1.4s ease-in-out infinite;
+}
+
+.bouncy-dot span:nth-child(2) { animation-delay: 0.16s; }
+.bouncy-dot span:nth-child(3) { animation-delay: 0.32s; }
+
+/* --- 渐显上滑组合 (Fade Slide Combo) --- */
+@keyframes fade-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-slide-up {
+  animation: fade-slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 交错延迟工具类 */
+.stagger-1 { animation-delay: 0.05s; animation-fill-mode: both; }
+.stagger-2 { animation-delay: 0.1s; animation-fill-mode: both; }
+.stagger-3 { animation-delay: 0.15s; animation-fill-mode: both; }
+.stagger-4 { animation-delay: 0.2s; animation-fill-mode: both; }
+.stagger-5 { animation-delay: 0.25s; animation-fill-mode: both; }
+.stagger-6 { animation-delay: 0.3s; animation-fill-mode: both; }
+
+/* ============================================
+   全局交互增强样式
+   ============================================ */
+
+/* 统一focus-visible样式 - 更精致的聚焦环 */
+*:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--primary-500, #0ea5e9), 0 0 0 4px rgba(14, 165, 233, 0.2);
+  transition: box-shadow 0.2s ease-out;
+}
+
+/* 可点击元素统一cursor */
+button, [role="button"], a[role="button"], input[type="checkbox"], input[type="radio"],
+select, [tabindex]:not([tabindex="-1"]) {
+  cursor: pointer;
+}
+
+[disabled], [aria-disabled="true"] {
+  cursor: not-allowed !important;
+}
+
+/* 选择文本样式优化 */
+::selection {
+  background-color: rgba(14, 165, 233, 0.25);
+  color: inherit;
+}
+
+.dark ::selection {
+  background-color: rgba(14, 165, 233, 0.4);
+}
+
+/* 平滑过渡基础类 - 用于所有交互元素 */
+.interactive-element {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.interactive-element:hover {
+  transition-duration: 0.15s;
+}
+
+.interactive-element:active {
+  transition-duration: 0.08s;
+}
+
 @media print {
   .no-print {
     display: none !important;
   }
-  
+
   body {
     background: white;
   }
-  
+
   .print-container {
     padding: 0;
     margin: 0;
   }
+
+  /* ============================================
+   暗色模式深化优化 v2.0
+   增强层次感、减少视觉疲劳、提升对比度
+   ============================================ */
+
+/* 暗色模式下更精致的卡片层次 */
+.dark .card-elevated {
+  background: linear-gradient(
+    135deg,
+    rgba(55, 65, 81, 0.8) 0%,
+    rgba(31, 41, 55, 0.9) 100%
+  );
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 10px 15px -3px rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* 暗色模式下柔和的边框发光 */
+.dark .border-glow-subtle {
+  border-color: rgba(75, 85, 99, 0.4);
+  box-shadow: 0 0 0 1px rgba(75, 85, 99, 0.1);
+}
+
+/* 暗色模式下的文字阴影 - 提升可读性 */
+.dark .text-shadow-subtle {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.dark .text-shadow-medium {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* 暗色模式下的玻璃态增强 */
+.dark .glass-enhanced {
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+/* 暗色模式下防止过亮元素刺眼 */
+.dark img,
+.dark video,
+.dark canvas {
+  filter: brightness(0.95) contrast(1.05);
+}
+
+/* 暗色模式下的代码块优化 */
+.dark pre,
+.dark code {
+  background: rgba(17, 24, 39, 0.6) !important;
+  border-color: rgba(75, 85, 99, 0.3) !important;
+}
+
+/* 暗色模式下的表格斑马纹优化 */
+.dark .table-striped tr:nth-child(even) {
+  background-color: rgba(55, 65, 81, 0.3);
+}
+
+/* 暗色模式下的选择状态 */
+.dark ::selection {
+  background-color: rgba(59, 130, 246, 0.4);
+  color: #fff;
+}
+
+/* ============================================
+   响应式细节打磨
+   ============================================ */
+
+/* 确保触摸目标符合规范 (最小44x44px) */
+@media (pointer: coarse) {
+  button, [role="button"], a[role="button"],
+  input[type="checkbox"], input[type="radio"],
+  select, [tabindex]:not([tabindex="-1"]) {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* 小型按钮例外 */
+  .btn-xs, .btn-sm {
+    min-height: 32px;
+    min-width: 32px;
+  }
+}
+
+/* 减少动画偏好支持 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 高对比度模式支持 */
+@media (forced-colors: active) {
+  .shine-sweep::before,
+  .ripple-effect::after {
+    display: none !important;
+  }
+
+  *:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+  }
+}
+
+/* 打印时禁用所有动画 */
+*,
+*::before,
+*::after {
+  animation-duration: var(--anim-duration, inherit) !important;
+}
 }

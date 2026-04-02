@@ -85,6 +85,7 @@ export interface ComponentEditForm {
 export interface ReviewForm {
   title: string;
   content: string;
+  systemName?: string;
 }
 
 export interface ComponentCopyForm {
@@ -197,6 +198,7 @@ export function useModalState() {
   const [isCopyingComponent, setIsCopyingComponent] = useState(false);
 
   const [showModuleEditModal, setShowModuleEditModal] = useState(false);
+  const [showModuleEditConfirm, setShowModuleEditConfirm] = useState(false);
   const [editingModule, setEditingModule] = useState<any>(null);
   const [moduleForm, setModuleForm] = useState<ModuleForm>({
     moduleNumber: '', moduleName: '', category: '', productionOrderNumber: '',
@@ -281,6 +283,7 @@ export function useModalState() {
     componentTemplate, setComponentTemplate,
     isCopyingComponent, setIsCopyingComponent,
     showModuleEditModal, setShowModuleEditModal,
+    showModuleEditConfirm, setShowModuleEditConfirm,
     editingModule, setEditingModule,
     moduleForm, setModuleForm,
     moduleEditForm, setModuleEditForm,

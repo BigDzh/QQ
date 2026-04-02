@@ -29,7 +29,7 @@ function buildProjectIndex(projects: Project[]): Map<string, SearchResult[]> {
       score: 0,
     });
 
-    project.modules.forEach((module) => {
+    (project.modules || []).forEach((module) => {
       projectResults.push({
         id: module.id,
         type: 'module',
@@ -39,7 +39,7 @@ function buildProjectIndex(projects: Project[]): Map<string, SearchResult[]> {
         score: 0,
       });
 
-      module.components.forEach((component) => {
+      (module.components || []).forEach((component) => {
         projectResults.push({
           id: component.id,
           type: 'component',
@@ -51,7 +51,7 @@ function buildProjectIndex(projects: Project[]): Map<string, SearchResult[]> {
       });
     });
 
-    project.documents.forEach((doc) => {
+    (project.documents || []).forEach((doc) => {
       projectResults.push({
         id: doc.id,
         type: 'document',
@@ -62,7 +62,7 @@ function buildProjectIndex(projects: Project[]): Map<string, SearchResult[]> {
       });
     });
 
-    project.software.forEach((soft) => {
+    (project.software || []).forEach((soft) => {
       projectResults.push({
         id: soft.id,
         type: 'software',

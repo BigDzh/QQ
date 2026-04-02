@@ -15,3 +15,12 @@ export { Dropdown, SelectDropdown } from './Dropdown';
 export { Tabs, TabPanel } from './Tabs';
 export { Breadcrumb } from './Breadcrumb';
 export { Pagination, SimplePagination } from './Pagination';
+
+// 微交互动效组件 v2.0
+export {
+  Ripple,
+  ShimmerOverlay,
+  MagneticButton,
+  GlowFocus,
+  PressScale
+} from './MicroInteraction';

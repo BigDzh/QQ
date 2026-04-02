@@ -174,6 +174,18 @@ export function ImportWizard({
     }
   }, [templateHeaders, showToast]);
 
+  const handleClose = useCallback(() => {
+    setStep('upload');
+    setFileName('');
+    setImportData([]);
+    setSelectedRows(new Set());
+    setErrors([]);
+    setValidationResult(null);
+    setShowErrorsOnly(false);
+    setImportProgress(0);
+    onClose();
+  }, [onClose]);
+
   const toggleRow = useCallback((index: number) => {
     setSelectedRows((prev) => {
       const next = new Set(prev);
@@ -187,12 +199,14 @@ export function ImportWizard({
   }, []);
 
   const toggleAllRows = useCallback(() => {
-    if (selectedRows.size === importData.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(importData.map((_, index) => index)));
-    }
-  }, [importData, selectedRows]);
+    setSelectedRows(prev => {
+      const allSelected = prev.size === importData.length && importData.length > 0;
+      if (allSelected) {
+        return new Set();
+      }
+      return new Set(importData.map((_, index) => index));
+    });
+  }, [importData]);
 
   const handleImport = useCallback(() => {
     const selectedData = importData.filter((_, index) => selectedRows.has(index));
@@ -214,18 +228,6 @@ export function ImportWizard({
       }
     }, 50);
   }, [importData, selectedRows, onImport, showToast, handleClose]);
-
-  const handleClose = useCallback(() => {
-    setStep('upload');
-    setFileName('');
-    setImportData([]);
-    setSelectedRows(new Set());
-    setErrors([]);
-    setValidationResult(null);
-    setShowErrorsOnly(false);
-    setImportProgress(0);
-    onClose();
-  }, [onClose]);
 
   if (!isOpen) return null;
 
@@ -334,7 +336,7 @@ export function ImportWizard({
                   <FileSpreadsheet size={16} className={isCyberpunk ? 'text-cyan-400' : 'text-blue-500'} />
                   <span className={`text-sm font-medium ${t.text}`}>{fileName}</span>
                   <span className={`text-xs ${t.textSecondary}`}>
-                    (共 {importData.length} 条)
+                    (共 {showErrorsOnly ? filteredData.length : importData.length} 条)
                   </span>
                 </div>
                 <div className="flex items-center gap-2">

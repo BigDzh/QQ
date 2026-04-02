@@ -34,7 +34,7 @@ export default function SystemSearch({ systemId, projectId, onBackupClick }: Sys
   const [isExpanded, setIsExpanded] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
-  const [, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [searchTime, setSearchTime] = useState(0);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'type'>('relevance');

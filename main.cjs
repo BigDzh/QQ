@@ -1,16 +1,84 @@
-const { app, BrowserWindow, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, screen } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
 let mainWindow;
+let monitorWindow = null;
 let devServerProcess = null;
 let serverProcesses = new Map();
+let monitorAlwaysOnTop = true;
 
 function log(level, message, ...args) {
   const timestamp = new Date().toISOString();
   console[level](`[${timestamp}] [MainProcess] ${message}`, ...args);
+}
+
+function createMonitorWindow() {
+  if (monitorWindow) {
+    monitorWindow.focus();
+    return;
+  }
+
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+  monitorWindow = new BrowserWindow({
+    width: 320,
+    height: 480,
+    x: screenWidth - 340,
+    y: 20,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: monitorAlwaysOnTop,
+    resizable: false,
+    skipTaskbar: false,
+    focusable: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      webSecurity: true,
+      preload: path.join(__dirname, 'preload.cjs'),
+    },
+    autoHideMenuBar: true,
+    show: false,
+    backgroundColor: '#1a1a2e',
+  });
+
+  monitorWindow.once('ready-to-show', () => {
+    monitorWindow.show();
+  });
+
+  if (isDev) {
+    monitorWindow.loadURL('http://localhost:5173/#/monitor');
+  } else {
+    const appPath = app.getAppPath();
+    monitorWindow.loadFile(path.join(appPath, 'dist', 'index.html'), { hash: '/monitor' });
+  }
+
+  monitorWindow.on('closed', () => {
+    monitorWindow = null;
+  });
+
+  log('info', 'Monitor window created, alwaysOnTop:', monitorAlwaysOnTop);
+}
+
+function closeMonitorWindow() {
+  if (monitorWindow) {
+    monitorWindow.close();
+    monitorWindow = null;
+    log('info', 'Monitor window closed');
+  }
+}
+
+function setMonitorAlwaysOnTop(value) {
+  monitorAlwaysOnTop = value;
+  if (monitorWindow) {
+    monitorWindow.setAlwaysOnTop(value);
+  }
+  log('info', 'Monitor alwaysOnTop set to:', value);
+  return value;
 }
 
 function createWindow() {
@@ -198,6 +266,48 @@ ipcMain.handle('get-dev-server-status', async () => {
     running: !!devServerProcess,
     pid: devServerProcess?.pid || null,
   };
+});
+
+ipcMain.handle('open-monitor-window', async () => {
+  log('info', 'IPC: open-monitor-window');
+  createMonitorWindow();
+  return { success: true };
+});
+
+ipcMain.handle('close-monitor-window', async () => {
+  log('info', 'IPC: close-monitor-window');
+  closeMonitorWindow();
+  return { success: true };
+});
+
+ipcMain.handle('close-monitor-window-ipc', async () => {
+  log('info', 'IPC: close-monitor-window-ipc');
+  closeMonitorWindow();
+  return { success: true };
+});
+
+ipcMain.handle('toggle-monitor-always-on-top', async (event, value) => {
+  log('info', 'IPC: toggle-monitor-always-on-top', value);
+  return setMonitorAlwaysOnTop(value);
+});
+
+ipcMain.handle('is-monitor-always-on-top', async () => {
+  return monitorAlwaysOnTop;
+});
+
+ipcMain.handle('set-monitor-position', async (event, x, y) => {
+  if (monitorWindow) {
+    monitorWindow.setPosition(x, y);
+    log('info', 'Monitor position set to:', x, y);
+  }
+  return { success: true };
+});
+
+ipcMain.handle('minimize-monitor-window', async () => {
+  if (monitorWindow) {
+    monitorWindow.minimize();
+  }
+  return { success: true };
 });
 
 app.whenReady().then(async () => {

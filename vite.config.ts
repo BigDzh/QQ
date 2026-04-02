@@ -99,9 +99,10 @@ export default defineConfig({
       'react',
       'react-dom',
       'react-router-dom',
+      'recharts',
+      'lodash',
     ],
     exclude: [
-      'recharts',
       'xlsx',
       'jspdf',
       'html2canvas',

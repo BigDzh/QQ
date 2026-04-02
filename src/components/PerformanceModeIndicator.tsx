@@ -1,15 +1,6 @@
 import { Gauge, Activity, Zap } from 'lucide-react';
 import { usePerformanceMode } from '../context/PerformanceModeContext';
 
-interface ModeDisplayInfo {
-  icon: typeof Gauge;
-  label: string;
-  description: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
-}
-
 const modeDisplayConfig = {
   high: {
     icon: Zap,

@@ -39,6 +39,7 @@ const WorkflowDetail = lazy(() => import('./pages/WorkflowDetail'));
 const TestDataInitializer = lazy(() => import('./pages/TestDataInitializer'));
 
 const PerformanceMonitor = lazy(() => import('./components/PerformanceMonitor'));
+const MonitorWindow = lazy(() => import('./pages/MonitorWindow'));
 
 function PageLoader() {
   return (
@@ -157,6 +158,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/monitor" element={<MonitorWindow />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/projects" replace /> : <Login />} />
       <Route
         path="/*"

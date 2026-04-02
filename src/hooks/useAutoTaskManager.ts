@@ -2,6 +2,8 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTaskNotification } from '../components/TaskNotificationPopup';
 import { usePerformanceMode } from '../context/PerformanceModeContext';
+import { duplicateTaskService } from '../services/duplicateTaskService';
+import { addAuditLog } from '../services/audit';
 
 const SET_MAX_SIZE = 500;
 const PROCESS_INTERVAL_HIGH = 10000;
@@ -20,12 +22,22 @@ interface TaskCreationLog {
   reason: string;
 }
 
+interface DuplicateCreationAttemptLog {
+  timestamp: string;
+  type: TaskKey['type'];
+  title: string;
+  duplicateTaskId: string;
+  duplicateTaskTitle: string;
+  reason: string;
+  blocked: boolean;
+}
+
 function createTaskKey(type: TaskKey['type'], id: string): string {
   return `${type}-${id}`;
 }
 
 export function useAutoTaskManager() {
-  const { projects, tasks, addTask, updateTask } = useApp();
+  const { projects, tasks, addTask, updateTask, currentUser } = useApp();
   const { showNotification } = useTaskNotification();
   const { isHighPerformance } = usePerformanceMode();
   const processedItemsRef = useRef<Set<string>>(new Set());
@@ -37,6 +49,7 @@ export function useAutoTaskManager() {
   const taskCreationLogsRef = useRef<TaskCreationLog[]>([]);
   const recentlyCreatedRef = useRef<Set<string>>(new Set());
   const isHighPerformanceRef = useRef<boolean>(isHighPerformance);
+  const duplicateAttemptLogsRef = useRef<DuplicateCreationAttemptLog[]>([]);
 
   useEffect(() => {
     isHighPerformanceRef.current = isHighPerformance;
@@ -59,6 +72,30 @@ export function useAutoTaskManager() {
     console.log(`[AutoTaskManager] Created task: ${type} - ${title} (ID: ${taskId})`, log);
   }, []);
 
+  const logDuplicateAttempt = useCallback((
+    type: TaskKey['type'],
+    title: string,
+    duplicateTaskId: string,
+    duplicateTaskTitle: string,
+    reason: string,
+    blocked: boolean
+  ) => {
+    const log: DuplicateCreationAttemptLog = {
+      timestamp: new Date().toISOString(),
+      type,
+      title,
+      duplicateTaskId,
+      duplicateTaskTitle,
+      reason,
+      blocked,
+    };
+    duplicateAttemptLogsRef.current.push(log);
+    if (duplicateAttemptLogsRef.current.length > 100) {
+      duplicateAttemptLogsRef.current = duplicateAttemptLogsRef.current.slice(-50);
+    }
+    console.log(`[AutoTaskManager] Duplicate task blocked: ${type} - ${title} (Duplicate of: ${duplicateTaskTitle}, ID: ${duplicateTaskId})`, log);
+  }, []);
+
   const cleanupProcessedItems = useCallback(() => {
     if (processedItemsRef.current.size > SET_MAX_SIZE) {
       const itemsArray = Array.from(processedItemsRef.current);
@@ -74,6 +111,7 @@ export function useAutoTaskManager() {
       processedItemsRef.current.clear();
       taskCreationLogsRef.current = [];
       recentlyCreatedRef.current.clear();
+      duplicateAttemptLogsRef.current = [];
     };
   }, []);
 
@@ -124,24 +162,54 @@ export function useAutoTaskManager() {
       return null;
     }
 
+    const targetTitle = `${moduleName} (${moduleNumber}) 故障处理`;
+    const taskInfo = {
+      title: targetTitle,
+      description: `模块 ${moduleName} 当前状态为故障，需要进行检查和维修。`,
+      priority: '紧急' as const,
+      status: '进行中' as const,
+      projectId,
+    };
+
+    const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
+    if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      logDuplicateAttempt(
+        'module-fault',
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Module ${moduleNumber} status is 故障`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          duplicateCheck.duplicateTask.id,
+          duplicateCheck.duplicateTask.title,
+          `自动任务创建被阻止：检测到重复任务`,
+          undefined,
+          { blockedTask: taskInfo } as any
+        );
+      }
+      return null;
+    }
+
     processedItemsRef.current.add(taskKey);
 
-    const taskId = addTask({
-      title: `${moduleName} (${moduleNumber}) 故障处理`,
-      description: `模块 ${moduleName} 当前状态为故障，需要进行检查和维修。`,
-      priority: '紧急',
-      status: '进行中',
-      projectId,
-    });
+    const taskId = addTask(taskInfo);
 
-    logTaskCreation('module-fault', `${moduleName} (${moduleNumber}) 故障处理`, taskId, `Module ${moduleNumber} status is 故障`);
+    logTaskCreation('module-fault', targetTitle, taskId, `Module ${moduleNumber} status is 故障`);
 
     if (isHighPerformanceRef.current) {
       showNotification(`自动创建任务`, `已为故障模块 ${moduleName} 自动创建任务`, 'info');
     }
 
     return taskId;
-  }, [addTask, showNotification, logTaskCreation]);
+  }, [addTask, showNotification, logTaskCreation, logDuplicateAttempt, currentUser]);
 
   const processFaultComponents = useCallback((
     projectId: string,
@@ -156,24 +224,54 @@ export function useAutoTaskManager() {
       return null;
     }
 
+    const targetTitle = `${componentName} (${componentNumber}) 故障处理`;
+    const taskInfo = {
+      title: targetTitle,
+      description: `组件 ${componentName} 当前状态为故障，需要进行检查和维修。所属模块：${moduleName}`,
+      priority: '紧急' as const,
+      status: '进行中' as const,
+      projectId,
+    };
+
+    const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
+    if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      logDuplicateAttempt(
+        'component-fault',
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Component ${componentNumber} status is 故障`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          duplicateCheck.duplicateTask.id,
+          duplicateCheck.duplicateTask.title,
+          `自动任务创建被阻止：检测到重复任务`,
+          undefined,
+          { blockedTask: taskInfo } as any
+        );
+      }
+      return null;
+    }
+
     processedItemsRef.current.add(taskKey);
 
-    const taskId = addTask({
-      title: `${componentName} (${componentNumber}) 故障处理`,
-      description: `组件 ${componentName} 当前状态为故障，需要进行检查和维修。所属模块：${moduleName}`,
-      priority: '紧急',
-      status: '进行中',
-      projectId,
-    });
+    const taskId = addTask(taskInfo);
 
-    logTaskCreation('component-fault', `${componentName} (${componentNumber}) 故障处理`, taskId, `Component ${componentNumber} status is 故障`);
+    logTaskCreation('component-fault', targetTitle, taskId, `Component ${componentNumber} status is 故障`);
 
     if (isHighPerformanceRef.current) {
       showNotification(`自动创建任务`, `已为故障组件 ${componentName} 自动创建任务`, 'info');
     }
 
     return taskId;
-  }, [addTask, showNotification, logTaskCreation]);
+  }, [addTask, showNotification, logTaskCreation, logDuplicateAttempt, currentUser]);
 
   const processIncompleteSoftware = useCallback((
     projectId: string,
@@ -187,22 +285,51 @@ export function useAutoTaskManager() {
       return null;
     }
 
-    processedItemsRef.current.add(taskKey);
-
     const targetTitle = `${sw.name} (${sw.version}) 软件开发`;
-    const taskId = addTask({
+    const taskInfo = {
       title: targetTitle,
       description: `软件 ${sw.name} 尚未完成开发。`,
-      priority: '高',
-      status: '进行中',
+      priority: '高' as const,
+      status: '进行中' as const,
       projectId,
-    });
+    };
+
+    const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
+    if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      logDuplicateAttempt(
+        'software-incomplete',
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Software ${sw.name} status is 未完成`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          duplicateCheck.duplicateTask.id,
+          duplicateCheck.duplicateTask.title,
+          `自动任务创建被阻止：检测到重复任务`,
+          undefined,
+          { blockedTask: taskInfo } as any
+        );
+      }
+      return null;
+    }
+
+    processedItemsRef.current.add(taskKey);
+
+    const taskId = addTask(taskInfo);
 
     logTaskCreation('software-incomplete', targetTitle, taskId, `Software ${sw.name} status is 未完成`);
     showNotification(`自动创建任务`, `已为未完成软件 ${sw.name} 自动创建任务`, 'info');
 
     return taskId;
-  }, [addTask, showNotification, logTaskCreation]);
+  }, [addTask, showNotification, logTaskCreation, logDuplicateAttempt, currentUser]);
 
   const processCompletedSoftware = useCallback((sw: { name: string }, existingTask: { id: string } | undefined) => {
     if (existingTask) {
@@ -225,22 +352,51 @@ export function useAutoTaskManager() {
       return null;
     }
 
-    processedItemsRef.current.add(taskKey);
-
     const targetTitle = `${doc.name} (${doc.documentNumber}) 文档编写`;
-    const taskId = addTask({
+    const taskInfo = {
       title: targetTitle,
       description: `文档 ${doc.name} 尚未完成。`,
-      priority: '中',
-      status: '进行中',
+      priority: '中' as const,
+      status: '进行中' as const,
       projectId,
-    });
+    };
+
+    const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
+    if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      logDuplicateAttempt(
+        'document-incomplete',
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Document ${doc.name} status is 未完成`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          duplicateCheck.duplicateTask.id,
+          duplicateCheck.duplicateTask.title,
+          `自动任务创建被阻止：检测到重复任务`,
+          undefined,
+          { blockedTask: taskInfo } as any
+        );
+      }
+      return null;
+    }
+
+    processedItemsRef.current.add(taskKey);
+
+    const taskId = addTask(taskInfo);
 
     logTaskCreation('document-incomplete', targetTitle, taskId, `Document ${doc.name} status is 未完成`);
     showNotification(`自动创建任务`, `已为未完成文档 ${doc.name} 自动创建任务`, 'info');
 
     return taskId;
-  }, [addTask, showNotification, logTaskCreation]);
+  }, [addTask, showNotification, logTaskCreation, logDuplicateAttempt, currentUser]);
 
   const processCompletedDocument = useCallback((doc: { name: string }, existingTask: { id: string } | undefined) => {
     if (existingTask) {

@@ -42,6 +42,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const getFallbackResponse = () => {
+    return caches.match('/index.html').then((fallback) => {
+      return fallback || new Response('Service Unavailable', {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    });
+  };
+
   if (url.origin === location.origin) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -55,7 +65,7 @@ self.addEventListener('fetch', (event) => {
             }
             return response;
           })
-          .catch(() => cached);
+          .catch(() => getFallbackResponse());
 
         return cached || fetched;
       })
@@ -73,13 +83,13 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return response;
-        });
+        }).catch(() => getFallbackResponse());
       })
     );
   } else {
     event.respondWith(
       fetch(request).catch(() => {
-        return caches.match('/index.html');
+        return getFallbackResponse();
       })
     );
   }

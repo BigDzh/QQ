@@ -45,6 +45,7 @@ export function generateModuleAssemblyForCAD(project: Project): {
 } {
   const lines: string[] = [];
   const width = 120;
+  const modules = project.modules || [];
   
   lines.push(repeatChar('-', width));
   lines.push(padCenter(`MODULE ASSEMBLY DRAWING - ${project.projectNumber}`, width));
@@ -54,8 +55,8 @@ export function generateModuleAssemblyForCAD(project: Project): {
   lines.push('');
 
   let yPos = 100;
-  const moduleCount = project.modules.length;
-  const componentCount = project.modules.reduce((sum, m) => sum + m.components.length, 0);
+  const moduleCount = modules.length;
+  const componentCount = modules.reduce((sum, m) => sum + (m.components || []).length, 0);
 
   lines.push(`0,MODULE_COUNT,${moduleCount}`);
   lines.push(`0,COMPONENT_COUNT,${componentCount}`);
@@ -69,14 +70,14 @@ export function generateModuleAssemblyForCAD(project: Project): {
              padRight('CATEGORY', 15) + padRight('STATUS', 12) + padRight('COMPONENTS', 10));
   lines.push(repeatChar('-', width));
 
-  project.modules.forEach((module, index) => {
+  modules.forEach((module, index) => {
     lines.push(
       padRight((index + 1).toString(), 6) +
       padRight(module.moduleNumber, 20) +
       padRight(module.moduleName, 35) +
       padRight(module.category, 15) +
       padRight(module.status, 12) +
-      padRight(module.components.length.toString(), 10)
+      padRight((module.components || []).length.toString(), 10)
     );
     yPos += 20;
   });
@@ -91,7 +92,7 @@ export function generateModuleAssemblyForCAD(project: Project): {
   const stageOrder: ProjectStage[] = ['F阶段', 'C阶段', 'S阶段', 'D阶段', 'P阶段'];
 
   stageOrder.forEach((stage) => {
-    const stageModules = project.modules.filter((m) => m.stage === stage);
+    const stageModules = modules.filter((m) => m.stage === stage);
     if (stageModules.length === 0) return;
 
     lines.push(padCenter(`[ ${stage} ]`, width));
@@ -106,11 +107,11 @@ export function generateModuleAssemblyForCAD(project: Project): {
       lines.push(`  │ ${padRight(`Category: ${module.category} | Status: ${module.status}`, width - 4)} │`);
       lines.push(`  ├${repeatChar('─', width - 4)}┤`);
       
-      if (module.components.length === 0) {
+      if ((module.components || []).length === 0) {
         lines.push(`  │ ${padCenter('[ NO COMPONENTS ]', width - 4)} │`);
       } else {
         lines.push(`  │ ${padRight('Component List:', width - 4)} │`);
-        module.components.forEach((comp, compIdx) => {
+        (module.components || []).forEach((comp, compIdx) => {
           const swCount = comp.burnedSoftware?.length || 0;
           const swTag = swCount > 0 ? ` [SW:${swCount}]` : '';
           lines.push(`  │   ${padRight(`${compIdx + 1}. ${comp.componentNumber} ${comp.componentName}${swTag}`, width - 6)} │`);
@@ -139,6 +140,7 @@ export function generateComponentAssemblyForCAD(project: Project): {
 } {
   const lines: string[] = [];
   const width = 120;
+  const modules = project.modules || [];
   
   lines.push(repeatChar('-', width));
   lines.push(padCenter(`COMPONENT ASSEMBLY DRAWING - ${project.projectNumber}`, width));
@@ -148,8 +150,8 @@ export function generateComponentAssemblyForCAD(project: Project): {
   lines.push('');
 
   const allComponents: Component[] = [];
-  project.modules.forEach((module) => {
-    allComponents.push(...module.components);
+  modules.forEach((module) => {
+    allComponents.push(...(module.components || []));
   });
 
   lines.push(`0,COMPONENT_COUNT,${allComponents.length}`);
@@ -223,6 +225,7 @@ export async function generateComponentTableForExcel(project: Project): Promise<
 }> {
   const rows: any[] = [];
   let recordCount = 0;
+  const modules = project.modules || [];
 
   rows.push({
     '模块编号': '项目信息',
@@ -237,8 +240,8 @@ export async function generateComponentTableForExcel(project: Project): Promise<
     '烧录软件': '',
   });
 
-  project.modules.forEach((module) => {
-    if (module.components.length === 0) {
+  modules.forEach((module) => {
+    if ((module.components || []).length === 0) {
       rows.push({
         '模块编号': module.moduleNumber,
         '模块名称': module.moduleName,
@@ -253,7 +256,7 @@ export async function generateComponentTableForExcel(project: Project): Promise<
       });
       recordCount++;
     } else {
-      module.components.forEach((comp) => {
+      (module.components || []).forEach((comp) => {
         const swList = comp.burnedSoftware
           ?.map((sw) => `${sw.softwareName}(${sw.softwareVersion})`)
           .join(', ') || '-';
@@ -290,7 +293,7 @@ export async function downloadExcel(project: Project): Promise<void> {
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '组件配套表');
 
-  const stageModules = project.modules.reduce<Record<ProjectStage, Module[]>>(
+  const stageModules = (project.modules || []).reduce<Record<ProjectStage, Module[]>>(
     (acc, module) => {
       const stage = module.stage as ProjectStage;
       if (!acc[stage]) acc[stage] = [];
@@ -353,8 +356,9 @@ export async function downloadExcel(project: Project): Promise<void> {
 export function generateDesignDiagrams(project: Project): DiagramCard[] {
   const cards: DiagramCard[] = [];
   const now = new Date().toISOString();
+  const modules = project.modules || [];
 
-  project.modules.forEach((module) => {
+  modules.forEach((module) => {
     const moduleContent = generateSingleModuleAssemblyForCAD(module, project);
     cards.push({
       id: generateId('module-assembly', module.id),
@@ -366,7 +370,7 @@ export function generateDesignDiagrams(project: Project): DiagramCard[] {
       generatedAt: now,
       statistics: {
         modules: 1,
-        components: module.components.length,
+        components: (module.components || []).length,
       },
     });
 
@@ -404,7 +408,7 @@ export function generateDesignDiagrams(project: Project): DiagramCard[] {
   return cards;
 }
 
-function generateSingleModuleAssemblyForCAD(module: Module, project: Project): string {
+export function generateSingleModuleAssemblyForCAD(module: Module, project: Project): string {
   const lines: string[] = [];
   const width = 120;
 
@@ -452,7 +456,7 @@ function generateSingleModuleAssemblyForCAD(module: Module, project: Project): s
   return lines.join('\n');
 }
 
-function generateSingleComponentAssemblyForCAD(component: Component, module: Module): string {
+export function generateSingleComponentAssemblyForCAD(component: Component, module: Module): string {
   const lines: string[] = [];
   const width = 120;
 
@@ -501,7 +505,7 @@ function generateSingleComponentAssemblyForCAD(component: Component, module: Mod
   return lines.join('\n');
 }
 
-function generateSingleComponentTableForExcel(component: Component, module: Module): string {
+export function generateSingleComponentTableForExcel(component: Component, module: Module): string {
   const lines: string[] = [];
   const width = 120;
 

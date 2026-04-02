@@ -110,7 +110,7 @@ export function AccessibleModal({
               {title}
             </h2>
             {description && (
-              <p id="modal-description" className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p id="modal-description" className="text-[15px] leading-relaxed text-gray-600 dark:text-gray-300 mt-1">
                 {description}
               </p>
             )}
@@ -118,7 +118,7 @@ export function AccessibleModal({
           {showCloseButton && (
             <button
               onClick={onClose}
-              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:text-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100/80 dark:hover:bg-gray-700/80 active:bg-gray-200 dark:active:bg-gray-600 transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-cyan-400 dark:focus:ring-offset-gray-800"
               aria-label="关闭对话框"
             >
               <X size={20} />

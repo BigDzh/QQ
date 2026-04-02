@@ -39,32 +39,101 @@ const TOAST_DURATION = 4000;
 const MAX_NOTIFICATIONS = 50;
 
 function ToastItem({ toast, remove }: { toast: Toast; remove: (id: string) => void }) {
+  const [isExiting, setIsExiting] = useState(false);
+  const [progress, setProgress] = useState(100);
+
+  useEffect(() => {
+    const startTime = Date.now();
+    const duration = TOAST_DURATION - 300; // 留出退出动画时间
+
+    const progressTimer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, 100 - (elapsed / duration) * 100);
+      setProgress(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(progressTimer);
+        handleExit();
+      }
+    }, 50);
+
+    return () => clearInterval(progressTimer);
+  }, []);
+
+  const handleExit = () => {
+    setIsExiting(true);
+    setTimeout(() => remove(toast.id), 300); // 等待退出动画完成
+  };
+
   const icons = {
-    success: <CheckCircle className="text-green-500" size={20} />,
+    success: <CheckCircle className="text-emerald-500" size={20} />,
     error: <AlertCircle className="text-red-500" size={20} />,
     info: <Info className="text-blue-500" size={20} />,
-    warning: <AlertTriangle className="text-yellow-500" size={20} />,
+    warning: <AlertTriangle className="text-amber-500" size={20} />,
   };
 
   const bgColors = {
-    success: 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800',
-    error: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800',
-    info: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800',
-    warning: 'bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800',
+    success: 'bg-white/95 dark:bg-gray-800/95 border-emerald-200 dark:border-emerald-800/50 backdrop-blur-xl',
+    error: 'bg-white/95 dark:bg-gray-800/95 border-red-200 dark:border-red-800/50 backdrop-blur-xl',
+    info: 'bg-white/95 dark:bg-gray-800/95 border-blue-200 dark:border-blue-800/50 backdrop-blur-xl',
+    warning: 'bg-white/95 dark:bg-gray-800/95 border-amber-200 dark:border-amber-800/50 backdrop-blur-xl',
+  };
+
+  const iconBgColors = {
+    success: 'bg-emerald-100 dark:bg-emerald-900/30',
+    error: 'bg-red-100 dark:bg-red-900/30',
+    info: 'bg-blue-100 dark:bg-blue-900/30',
+    warning: 'bg-amber-100 dark:bg-amber-900/30',
   };
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg animate-slide-in ${bgColors[toast.type]}`}
+      className={`
+        relative overflow-hidden rounded-xl border shadow-2xl shadow-black/10 dark:shadow-black/30
+        ${bgColors[toast.type]}
+        transition-all duration-300 ease-out
+        ${isExiting
+          ? 'opacity-0 translate-x-full scale-95'
+          : 'opacity-100 translate-x-0 scale-100'
+        }
+      `}
+      style={{
+        animation: isExiting ? undefined : 'slide-in-right 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+      }}
     >
-      {icons[toast.type]}
-      <span className="text-sm text-gray-700 dark:text-gray-200 flex-1">{toast.message}</span>
-      <button
-        onClick={() => remove(toast.id)}
-        className="ml-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-      >
-        <X size={16} />
-      </button>
+      {/* 进度条 */}
+      <div className="absolute top-0 left-0 h-[2px] bg-gradient-to-r from-primary-500 to-primary-400 transition-all ease-linear"
+        style={{ width: `${progress}%` }}
+      />
+
+      <div className="flex items-center gap-3 px-4 py-3">
+        {/* 图标容器 */}
+        <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${iconBgColors[toast.type]}`}>
+          {icons[toast.type]}
+        </div>
+
+        {/* 消息内容 */}
+        <span className="text-sm font-medium text-gray-800 dark:text-gray-100 flex-1 leading-relaxed">
+          {toast.message}
+        </span>
+
+        {/* 关闭按钮 */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleExit();
+          }}
+          className="
+            flex-shrink-0 p-1 rounded-md
+            text-gray-400 hover:text-gray-600 dark:hover:text-gray-200
+            hover:bg-gray-100 dark:hover:bg-gray-700/50
+            transition-all duration-150 ease-out
+            hover:scale-110 active:scale-95
+          "
+        >
+          <X size={16} strokeWidth={2} />
+        </button>
+      </div>
     </div>
   );
 }

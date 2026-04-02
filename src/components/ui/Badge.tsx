@@ -28,38 +28,38 @@ export function Badge({
 
   const variantClasses = {
     default: isDark || isCosmos
-      ? 'bg-gray-700/50 text-gray-200 border-gray-500/50'
+      ? 'bg-gray-600/50 text-gray-100 border-gray-400/50' // 提升对比度
       : isAnime
-      ? 'bg-pink-100 text-pink-700 border-pink-300'
-      : 'bg-gray-100 text-gray-700 border-gray-300',
+      ? 'bg-pink-200 text-pink-900 border-pink-300' // 提升对比度
+      : 'bg-gray-200 text-gray-800 border-gray-300', // 提升对比度
     success: isCyberpunk || isCosmos
-      ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
+      ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60' // 提升背景透明度和文字亮度
       : isAnime
-      ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400/50'
+      ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60'
       : isDark
-      ? 'bg-green-500/30 text-green-300 border-green-400/50'
-      : 'bg-green-50 text-green-700 border-green-200',
+      ? 'bg-green-500/40 text-green-100 border-green-400/60' // 优化深色模式对比度
+      : 'bg-green-200 text-green-900 border-green-300', // 提升浅色模式对比度
     warning: isCyberpunk || isCosmos
-      ? 'bg-amber-500/30 text-amber-200 border-amber-400/50'
+      ? 'bg-amber-500/40 text-amber-100 border-amber-400/60'
       : isAnime
-      ? 'bg-amber-500/30 text-amber-200 border-amber-400/50'
+      ? 'bg-amber-500/40 text-amber-100 border-amber-400/60'
       : isDark
-      ? 'bg-yellow-500/30 text-yellow-300 border-yellow-400/50'
-      : 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      ? 'bg-yellow-500/40 text-yellow-100 border-yellow-400/60'
+      : 'bg-yellow-200 text-yellow-900 border-yellow-300',
     danger: isCyberpunk || isCosmos
-      ? 'bg-rose-500/30 text-rose-200 border-rose-400/50'
+      ? 'bg-rose-500/40 text-red-100 border-rose-400/60'
       : isAnime
-      ? 'bg-rose-500/30 text-rose-200 border-rose-400/50'
+      ? 'bg-rose-500/40 text-red-100 border-rose-400/60'
       : isDark
-      ? 'bg-red-500/30 text-red-300 border-red-400/50'
-      : 'bg-red-50 text-red-700 border-red-200',
+      ? 'bg-red-500/40 text-red-100 border-red-400/60'
+      : 'bg-red-200 text-red-900 border-red-300',
     info: isCyberpunk || isCosmos
-      ? 'bg-violet-500/30 text-violet-200 border-violet-400/50'
+      ? 'bg-violet-500/40 text-violet-100 border-violet-400/60'
       : isAnime
-      ? 'bg-fuchsia-500/30 text-fuchsia-200 border-fuchsia-400/50'
+      ? 'bg-fuchsia-500/40 text-fuchsia-100 border-fuchsia-400/60'
       : isDark
-      ? 'bg-blue-500/30 text-blue-300 border-blue-400/50'
-      : 'bg-blue-50 text-blue-700 border-blue-200',
+      ? 'bg-blue-500/40 text-blue-100 border-blue-400/60'
+      : 'bg-blue-200 text-blue-900 border-blue-300',
     outline: 'bg-transparent border-current',
   };
 

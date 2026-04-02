@@ -15,6 +15,7 @@ export const SHORTCUTS: Shortcut[] = [
   { key: 'Ctrl + E', description: '导出数据', action: 'export' },
   { key: 'Ctrl + F', description: '页面内搜索', action: 'pageSearch' },
   { key: 'Ctrl + H', description: '显示快捷键帮助', action: 'showHelp' },
+  { key: 'Ctrl + Shift + Delete', description: '清除设计文件', action: 'clearDesignFiles' },
 ];
 
 export function formatShortcut(key: string): string {

@@ -30,7 +30,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Area, AreaChart
 } from 'recharts';
-import { exportToPDF, exportToExcel as exportToExcelLazy } from '../utils/lazyImports';
+import { exportToPDF as exportPDF, exportToExcel as exportToExcelLazy } from '../utils/lazyImports';
 
 interface FileRecord {
   id: string;
@@ -97,12 +97,12 @@ const exportToExcel = async (data: FileRecord[], filename: string) => {
   }
 };
 
-const exportToPDF = async (_data: FileRecord[], _metrics: DashboardMetrics, elementId: string, filename: string) => {
+const exportToPDFHandler = async (_data: FileRecord[], _metrics: DashboardMetrics, elementId: string, filename: string) => {
   const element = document.getElementById(elementId);
   if (!element) return;
 
   try {
-    await exportToPDF({ element, filename, scale: 2 });
+    await exportPDF({ element, filename, scale: 2 });
   } catch (error) {
     console.error('PDF export failed:', error);
     throw error;
@@ -412,7 +412,7 @@ export default function DatabaseManagement() {
           showToast('Excel导出成功', 'success');
           break;
         case 'pdf':
-          await exportToPDF(files, dashboardMetrics, 'dashboard-content', `dashboard_${timestamp}`);
+          await exportToPDFHandler(files, dashboardMetrics, 'dashboard-content', `dashboard_${timestamp}`);
           showToast('PDF导出成功', 'success');
           break;
       }
