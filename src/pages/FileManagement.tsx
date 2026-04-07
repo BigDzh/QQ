@@ -407,13 +407,25 @@ export default function FileManagement() {
   };
 
   const handleDownloadSoftware = async (soft: Software) => {
-    if (!soft.dbId) {
+    if (!soft.dbId && !soft.fileUrl) {
       showToast('文件未存储在数据库中', 'error');
       return;
     }
 
     try {
-      const blob = await getFileBlob(soft.dbId);
+      let blob: Blob | null = null;
+
+      if (soft.dbId) {
+        blob = await getFileBlob(soft.dbId);
+      }
+
+      if (!blob && soft.fileUrl) {
+        const response = await fetch(soft.fileUrl);
+        if (response.ok) {
+          blob = await response.blob();
+        }
+      }
+
       if (!blob) {
         showToast('文件不存在', 'error');
         return;

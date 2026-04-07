@@ -97,12 +97,15 @@ const exportToExcel = async (data: FileRecord[], filename: string) => {
   }
 };
 
-const exportToPDFHandler = async (_data: FileRecord[], _metrics: DashboardMetrics, elementId: string, filename: string) => {
+const exportToPDFHandler = async (_data: FileRecord[], _metrics: DashboardMetrics, elementId: string, filename: string): Promise<boolean> => {
   const element = document.getElementById(elementId);
-  if (!element) return;
+  if (!element) {
+    throw new Error(`PDF导出失败：找不到ID为"${elementId}"的元素`);
+  }
 
   try {
     await exportPDF({ element, filename, scale: 2 });
+    return true;
   } catch (error) {
     console.error('PDF export failed:', error);
     throw error;
@@ -349,7 +352,13 @@ export default function DatabaseManagement() {
 
   const handleLoadCoreData = async () => {
     try {
-      const data = await getCoreData('core');
+      const keys = await getAllCoreDataKeys();
+      const latestKey = keys.length > 0 ? keys[keys.length - 1] : null;
+      if (!latestKey) {
+        showToast('未找到保存的核心数据', 'error');
+        return;
+      }
+      const data = await getCoreData(latestKey);
       if (data) {
         let parsed: Record<string, unknown>;
         try {
@@ -374,7 +383,7 @@ export default function DatabaseManagement() {
         if (parsed.borrowRecords && typeof parsed.borrowRecords === 'string') {
           localStorage.setItem('borrow_records', parsed.borrowRecords);
         }
-        showToast('核心数据已从IndexedDB加载', 'success');
+        showToast(`核心数据已从 ${latestKey} 加载`, 'success');
       } else {
         showToast('未找到保存的核心数据', 'error');
       }
@@ -426,7 +435,29 @@ export default function DatabaseManagement() {
     setImporting(true);
     try {
       const text = await importFile.text();
-      const data = JSON.parse(text);
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        showToast('导入失败：文件格式不正确（无效的JSON）', 'error');
+        setImporting(false);
+        return;
+      }
+      if (!data || typeof data !== 'object') {
+        showToast('导入失败：文件格式不正确', 'error');
+        setImporting(false);
+        return;
+      }
+      if (!Array.isArray(data.files)) {
+        showToast('导入失败：文件数据格式无效', 'error');
+        setImporting(false);
+        return;
+      }
+      if (!data.coreData || typeof data.coreData !== 'object') {
+        showToast('导入失败：核心数据格式无效', 'error');
+        setImporting(false);
+        return;
+      }
       const result = await importDatabase({
         files: data.files,
         coreData: data.coreData,

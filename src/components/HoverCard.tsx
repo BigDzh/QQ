@@ -98,7 +98,7 @@ export default function HoverCard({
             )}
 
             {content && (
-              <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              <div className="text-sm text-gray-700 dark:text-gray-200 mb-3 font-normal leading-relaxed">
                 {content}
               </div>
             )}
@@ -110,10 +110,10 @@ export default function HoverCard({
                     key={index}
                     className="flex justify-between items-center py-1.5 px-2 rounded-lg bg-gray-50 dark:bg-gray-900/50"
                   >
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
                       {item.label}
                     </span>
-                    <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
                       {item.value}
                     </span>
                   </div>

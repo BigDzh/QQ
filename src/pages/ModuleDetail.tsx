@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Plus, Package, Settings, Clock, User, Hash, Tag, CheckCircle, XCircle, FileText, Download, Copy, Search, Edit2, Save, X } from 'lucide-react';
+import { Plus, Package, Settings, Clock, User, Hash, Tag, CheckCircle, XCircle, FileText, Download, Copy, Search, Edit2, Save, X, AlertTriangle, Check } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
@@ -20,12 +20,8 @@ export default function ModuleDetail() {
   const t = useThemeStyles();
   const [activeTab, setActiveTab] = useState<'overview' | 'components' | 'certificates' | 'logs' | 'designFiles' | 'software'>('overview');
   const [showComponentModal, setShowComponentModal] = useState(false);
-  const [showComponentStatusModal, setShowComponentStatusModal] = useState(false);
-  const [showComponentReasonModal, setShowComponentReasonModal] = useState(false);
   const [enhancedStatusModal, setEnhancedStatusModal] = useState(false);
   const [pendingComponent, setPendingComponent] = useState<Component | null>(null);
-  const [pendingComponentStatus, setPendingComponentStatus] = useState<ComponentStatus | null>(null);
-  const [componentStatusReason, setComponentStatusReason] = useState('');
   const [componentForm, setComponentForm] = useState({
     componentNumber: '',
     componentName: '',
@@ -53,9 +49,13 @@ export default function ModuleDetail() {
     version: '',
     stage: getDefaultStageForEntity('module') as string,
     category: '',
-    status: '',
+    systemId: '',
+    systemNumber: '',
+    systemName: '',
+    systemSearch: '',
   });
   const [moduleFormErrors, setModuleFormErrors] = useState<Record<string, string>>({});
+  const [editingCertKey, setEditingCertKey] = useState<string | null>(null);
 
   const moduleData = getModule(id!);
   const { project, module } = moduleData || {};
@@ -142,46 +142,6 @@ export default function ModuleDetail() {
     setEditingComponentForm({ componentNumber: '', componentName: '', productionOrderNumber: '', holder: '', version: 'v1.0', stage: getDefaultStageForEntity('component') as string });
   };
 
-  const handleComponentStatusClick = (component: Component, newStatus: ComponentStatus) => {
-    setPendingComponent(component);
-    setPendingComponentStatus(newStatus);
-    setComponentStatusReason('');
-    setShowComponentReasonModal(true);
-  };
-
-  const handleComponentStatusChangeWithReason = () => {
-    if (!pendingComponent || !pendingComponentStatus) return;
-
-    if (!componentStatusReason.trim()) {
-      showToast('请输入状态变更原因（必填）', 'error');
-      return;
-    }
-
-    const beforeState = { status: pendingComponent.status };
-    updateComponent(project.id, module.id, pendingComponent.id, {
-      status: pendingComponentStatus,
-      statusChangeReason: componentStatusReason,
-    });
-    addModuleAuditLog(
-      currentUser?.id || '',
-      currentUser?.username || currentUser?.name || '未知',
-      'UPDATE',
-      module.id,
-      module.moduleName,
-      `组件状态变更: ${pendingComponent.componentName} 从 ${pendingComponent.status} 变更为 ${pendingComponentStatus}`,
-      beforeState,
-      { status: pendingComponentStatus },
-      componentStatusReason,
-      `用户通过模块详情页状态变更功能执行状态变更操作`
-    );
-
-    showToast(`组件状态已从 ${pendingComponent.status} 变更为 ${pendingComponentStatus}`, 'success');
-    setShowComponentReasonModal(false);
-    setPendingComponent(null);
-    setPendingComponentStatus(null);
-    setComponentStatusReason('');
-  };
-
   const handleEnhancedStatusChange = async (
     componentId: string,
     moduleId: string,
@@ -247,7 +207,10 @@ export default function ModuleDetail() {
       version: module.version || '',
       stage: module.stage || '',
       category: module.category || '',
-      status: module.status || '未投产',
+      systemId: module.systemId || '',
+      systemNumber: module.systemNumber || '',
+      systemName: module.systemName || '',
+      systemSearch: '',
     });
     setModuleFormErrors({});
     setIsEditingModule(true);
@@ -458,7 +421,7 @@ export default function ModuleDetail() {
                 setIsEditingComponent(true);
               } else {
                 setPendingComponent(component);
-                setShowComponentStatusModal(true);
+                setEnhancedStatusModal(true);
               }
             }}
           />
@@ -554,59 +517,98 @@ export default function ModuleDetail() {
         <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
           <h3 className={`text-lg font-semibold ${t.text} mb-4`}>证书签署状态</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className={`p-4 border rounded-lg ${t.border}`}>
-              <div className="flex items-center justify-between mb-3">
-                <span className={`font-medium ${t.text}`}>装配合格证</span>
-                {module.assemblyCertificate?.status === '已签署' ? (
-                  <span className={`flex items-center gap-1 ${t.success}`}>
-                    <CheckCircle size={18} /> 已签署
-                  </span>
-                ) : (
-                  <span className={`flex items-center gap-1 ${t.textMuted}`}>
-                    <XCircle size={18} /> 未签署
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex-1">
-                  <label className={`text-sm ${t.textMuted}`}>证书号</label>
-                  {canEdit ? (
-                    <input
-                      type="text"
-                      value={module.assemblyCertificate?.certificateNumber || ''}
-                      onChange={(e) => {
-                        updateModule(project.id, module.id, {
-                          assemblyCertificate: {
-                            status: module.assemblyCertificate?.status || '未签署',
-                            signedAt: module.assemblyCertificate?.signedAt,
-                            signedBy: module.assemblyCertificate?.signedBy,
-                            certificateNumber: e.target.value,
-                          },
-                        });
-                      }}
-                      placeholder="请输入证书号"
-                      className={`w-full px-3 py-1.5 border rounded-lg ${t.input} mt-1`}
-                    />
-                  ) : (
-                    <div className={`font-medium ${t.text} mt-1`}>
-                      {module.assemblyCertificate?.certificateNumber || '-'}
+            {[
+              { name: '装配合格证', key: 'assembly', cert: module.assemblyCertificate?.status },
+            ].map((certItem) => {
+              const certNumber = module.assemblyCertificate?.certificateNumber || '';
+              const isCertEmpty = !certNumber.trim();
+              const isEditingThis = editingCertKey === certItem.key;
+              const hasSigned = certItem.cert === '已签署' || (!isCertEmpty && certItem.cert !== '未签署');
+
+              return (
+                <div key={certItem.key} className={`p-4 border rounded-lg ${t.border}`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`font-medium ${t.text}`}>{certItem.name}</span>
+                    {hasSigned ? (
+                      <span className={`flex items-center gap-1 ${t.success}`}>
+                        <CheckCircle size={18} /> 已签署
+                      </span>
+                    ) : (
+                      <span className={`flex items-center gap-1 ${t.textMuted}`}>
+                        <XCircle size={18} /> 未签署
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1">
+                      <label className={`text-sm ${t.textMuted}`}>证书号</label>
+                      {canEdit ? (
+                        isEditingThis ? (
+                          <input
+                            type="text"
+                            defaultValue={certNumber}
+                            onBlur={(e) => {
+                              const newValue = e.target.value;
+                              updateModule(project.id, module.id, {
+                                assemblyCertificate: {
+                                  status: newValue.trim() ? '已签署' : (module.assemblyCertificate?.status || '未签署'),
+                                  signedAt: newValue.trim() ? new Date().toISOString() : module.assemblyCertificate?.signedAt,
+                                  signedBy: newValue.trim() ? currentUser?.name || '未知' : module.assemblyCertificate?.signedBy,
+                                  certificateNumber: newValue,
+                                },
+                              });
+                              setEditingCertKey(null);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.currentTarget.blur();
+                              }
+                            }}
+                            autoFocus
+                            placeholder="请输入证书号"
+                            className={`w-full px-3 py-1.5 border rounded-lg ${t.input} mt-1`}
+                          />
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div
+                              onClick={() => setEditingCertKey(certItem.key)}
+                              className={`font-medium ${t.text} mt-1 cursor-pointer ${isCertEmpty ? 'text-gray-400' : 'hover:text-blue-500'}`}
+                            >
+                              {certNumber || '点击添加证书号'}
+                            </div>
+                            {!isCertEmpty && (
+                              <button
+                                onClick={() => setEditingCertKey(certItem.key)}
+                                className={`mt-1 p-1.5 border rounded-lg hover:${t.hoverBg} ${t.border} transition-colors`}
+                                title="编辑证书号"
+                              >
+                                <Edit2 size={14} className={t.textSecondary} />
+                              </button>
+                            )}
+                          </div>
+                        )
+                      ) : (
+                        <div className={`font-medium ${t.text} mt-1`}>
+                          {certNumber || '-'}
+                        </div>
+                      )}
                     </div>
-                  )}
+                    {canEdit && !isEditingThis && certNumber && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(certNumber);
+                          showToast('证书号已复制', 'success');
+                        }}
+                        className={`mt-5 p-2 border rounded-lg hover:${t.hoverBg} ${t.border}`}
+                        title="复制证书号"
+                      >
+                        <Copy size={16} className={t.textSecondary} />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                {module.assemblyCertificate?.certificateNumber && (
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(module.assemblyCertificate?.certificateNumber || '');
-                      showToast('证书号已复制', 'success');
-                    }}
-                    className={`mt-5 p-2 border rounded-lg hover:${t.hoverBg} ${t.border}`}
-                    title="复制证书号"
-                  >
-                    <Copy size={16} className={t.textSecondary} />
-                  </button>
-                )}
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -879,49 +881,6 @@ export default function ModuleDetail() {
         </div>
       )}
 
-      {showComponentStatusModal && pendingComponent && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowComponentStatusModal(false)}>
-          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-md border ${t.modalBorder}`} onClick={(e) => e.stopPropagation()}>
-            <h2 className={`text-xl font-semibold mb-2 ${t.text}`}>更改组件状态</h2>
-            <p className={`text-sm ${t.textMuted} mb-4`}>请选择新的状态（需填写变更原因）</p>
-            <div className={`p-4 rounded-lg mb-4 ${t.emptyBg}`}>
-              <div className={`text-sm ${t.textSecondary} mb-1`}>组件：<span className={`font-medium ${t.text}`}>{pendingComponent.componentName}</span></div>
-              <div className={`text-sm ${t.textSecondary} mb-1`}>编号：<span className={`font-medium ${t.text}`}>{pendingComponent.componentNumber}</span></div>
-              <div className={`text-sm ${t.textSecondary}`}>当前状态：<span className={`font-medium ${t.text}`}>{pendingComponent.status}</span></div>
-            </div>
-            <div className="mb-2">
-              <div className={`text-xs ${t.textMuted} mb-2`}>选择新状态：</div>
-              <div className="grid grid-cols-3 gap-2">
-                {Object.keys(t.statusColors).map((status) => {
-                  const isSelected = status === pendingComponent.status;
-                  const isDisabled = status === '未投产';
-                  return (
-                    <button
-                      key={status}
-                      disabled={isDisabled || isSelected}
-                      onClick={() => !isDisabled && !isSelected && handleComponentStatusClick(pendingComponent, status as ComponentStatus)}
-                      className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all ${
-                        isSelected
-                          ? `${t.statusColors[status as keyof typeof t.statusColors]} ${t.statusColors[status as keyof typeof t.statusColors].split(' ')[0].replace('bg-', 'text-')} border-current opacity-60`
-                          : isDisabled
-                            ? `${t.border} ${t.textMuted} opacity-40 cursor-not-allowed`
-                            : `${t.border} hover:${t.hoverBg} ${t.textSecondary} cursor-pointer hover:scale-105`
-                      }`}
-                      title={isDisabled ? '请通过编辑投产功能更改此状态' : ''}
-                    >
-                      {status}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            <div className={`text-xs ${t.textMuted} mt-4 text-center`}>
-              💡 提示：点击状态按钮后将要求填写变更原因
-            </div>
-          </div>
-        </div>
-      )}
-
       {isEditingComponent && pendingComponent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setIsEditingComponent(false); setPendingComponent(null); }}>
           <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-md border ${t.modalBorder}`} onClick={(e) => e.stopPropagation()}>
@@ -950,12 +909,18 @@ export default function ModuleDetail() {
               </div>
               <div>
                 <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>阶段</label>
-                <input
-                  type="text"
+                <select
                   value={editingComponentForm.stage}
                   onChange={(e) => setEditingComponentForm({ ...editingComponentForm, stage: e.target.value })}
                   className={`w-full px-3 py-2 border rounded-lg ${t.input}`}
-                />
+                >
+                  <option value="">请选择阶段</option>
+                  <option value="F阶段">F阶段</option>
+                  <option value="C阶段">C阶段</option>
+                  <option value="S阶段">S阶段</option>
+                  <option value="D阶段">D阶段</option>
+                  <option value="P阶段">P阶段</option>
+                </select>
               </div>
               <div>
                 <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>版本</label>
@@ -999,205 +964,221 @@ export default function ModuleDetail() {
         </div>
       )}
 
-      {showComponentReasonModal && pendingComponent && pendingComponentStatus && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowComponentReasonModal(false)}>
-          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-md border ${t.modalBorder}`} onClick={(e) => e.stopPropagation()}>
-            <h2 className={`text-xl font-semibold mb-2 ${t.text}`}>填写状态变更原因</h2>
-            <p className={`text-sm ${t.textMuted} mb-4`}>每次状态变更必须记录原因，以便追溯</p>
-            <div className={`p-4 rounded-lg mb-4 ${t.emptyBg}`}>
-              <div className={`text-sm ${t.textSecondary} mb-1`}>组件：<span className={`font-medium ${t.text}`}>{pendingComponent.componentName}</span></div>
-              <div className={`text-sm ${t.textSecondary} mb-1`}>编号：<span className={`font-medium ${t.text}`}>{pendingComponent.componentNumber}</span></div>
-              <div className={`text-sm ${t.textSecondary}`}>状态变更：<span className="font-medium text-red-500">{pendingComponent.status}</span> → <span className="font-medium text-green-500">{pendingComponentStatus}</span></div>
-            </div>
-            <div className="mb-2">
-              <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>
-                变更原因 <span className="text-red-500">*必填</span>
-              </label>
-              <textarea
-                value={componentStatusReason}
-                onChange={(e) => setComponentStatusReason(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-lg ${t.input} focus:ring-2 focus:ring-cyan-500/30`}
-                rows={3}
-                placeholder="请详细描述状态变更的原因..."
-                autoFocus
-              />
-            </div>
-            <div className={`text-xs ${t.textMuted} mb-4`}>
-              提示：常见原因包括：设备故障维修、定期维护检测、安全检查、三防处理、软件升级等
-            </div>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowComponentReasonModal(false)}
-                className={`flex-1 py-2 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg}`}
-              >
-                取消
-              </button>
-              <button
-              type="button"
-              onClick={handleComponentStatusChangeWithReason}
-              disabled={!componentStatusReason.trim()}
-              className={`flex-1 py-2 rounded-lg font-medium transition-all ${
-                componentStatusReason.trim()
-                  ? `${t.button} bg-cyan-600 hover:bg-cyan-700 text-white`
-                  : `${t.button} opacity-50 cursor-not-allowed`
-              }`}
-            >
-              确认变更
-            </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isEditingModule && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelModuleEdit}>
-          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-2xl border ${t.modalBorder} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className={`text-xl font-semibold ${t.text}`}>编辑模块信息</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={handleCancelModuleEdit}>
+          <div className={`${t.modalBg} rounded-2xl p-6 w-full max-w-2xl border ${t.modalBorder} max-h-[90vh] overflow-y-auto shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-amber-200/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-200/50">
+                  <Edit2 size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2 className={`text-xl font-bold ${t.text}`}>编辑模块</h2>
+                  <p className={`text-xs ${t.textMuted} mt-0.5`}>{module.moduleNumber}</p>
+                </div>
+              </div>
               <button
                 onClick={handleCancelModuleEdit}
-                className={`p-2 rounded-lg hover:${t.hoverBg} ${t.textSecondary}`}
+                className={`p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textSecondary} transition-colors`}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveModuleEdit(); }} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
-                    模块名称 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editModuleForm.moduleName}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, moduleName: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${moduleFormErrors.moduleName ? 'border-red-500' : ''} ${t.input}`}
-                    placeholder="请输入模块名称"
-                  />
-                  {moduleFormErrors.moduleName && (
-                    <p className="text-red-500 text-xs mt-1">{moduleFormErrors.moduleName}</p>
-                  )}
-                </div>
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveModuleEdit(); }} className="space-y-6">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-xl p-5 border border-amber-200/40">
+                <h3 className={`text-sm font-semibold ${t.text} mb-4 flex items-center gap-2`}>
+                  <Package size={16} className="text-amber-600" />
+                  基本信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                      模块名称 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editModuleForm.moduleName}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, moduleName: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl ${moduleFormErrors.moduleName ? 'border-red-500 ring-2 ring-red-200' : 'focus:border-amber-400 focus:ring-2 focus:ring-amber-200'} ${t.input} transition-all`}
+                      placeholder="请输入模块名称"
+                    />
+                    {moduleFormErrors.moduleName && (
+                      <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertTriangle size={12} />{moduleFormErrors.moduleName}
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
-                    模块编号 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editModuleForm.moduleNumber}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, moduleNumber: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${moduleFormErrors.moduleNumber ? 'border-red-500' : ''} ${t.input}`}
-                    placeholder="如: M001"
-                  />
-                  {moduleFormErrors.moduleNumber && (
-                    <p className="text-red-500 text-xs mt-1">{moduleFormErrors.moduleNumber}</p>
-                  )}
-                </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                      模块编号 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editModuleForm.moduleNumber}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, moduleNumber: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl ${moduleFormErrors.moduleNumber ? 'border-red-500 ring-2 ring-red-200' : 'focus:border-amber-400 focus:ring-2 focus:ring-amber-200'} ${t.input} transition-all`}
+                      placeholder="如: M001"
+                    />
+                    {moduleFormErrors.moduleNumber && (
+                      <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertTriangle size={12} />{moduleFormErrors.moduleNumber}
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>生产指令号</label>
-                  <input
-                    type="text"
-                    value={editModuleForm.productionOrderNumber}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, productionOrderNumber: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
-                    placeholder="请输入生产指令号"
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>负责人</label>
-                  <input
-                    type="text"
-                    value={editModuleForm.holder}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, holder: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
-                    placeholder="请输入负责人姓名"
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>版本</label>
-                  <input
-                    type="text"
-                    value={editModuleForm.version}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, version: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
-                    placeholder="如: v1.0"
-                  />
-                </div>
-
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>阶段</label>
-                  <select
-                    value={editModuleForm.stage}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, stage: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
-                  >
-                    <option value="">请选择阶段</option>
-                    <option value="设计">设计</option>
-                    <option value="开发">开发</option>
-                    <option value="测试">测试</option>
-                    <option value="投产">投产</option>
-                    <option value="维护">维护</option>
-                  </select>
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                      种类 <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={editModuleForm.category}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, category: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl ${moduleFormErrors.category ? 'border-red-500 ring-2 ring-red-200' : 'focus:border-amber-400 focus:ring-2 focus:ring-amber-200'} ${t.input} transition-all`}
+                    >
+                      <option value="">请选择种类</option>
+                      {project.categories?.filter((c: string) => c !== '全部').map((cat: string) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                    {moduleFormErrors.category && (
+                      <p className="text-red-500 text-xs mt-1.5 flex items-center gap-1">
+                        <AlertTriangle size={12} />{moduleFormErrors.category}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
-                    种类 <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    value={editModuleForm.category}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, category: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${moduleFormErrors.category ? 'border-red-500' : ''} ${t.input}`}
-                  >
-                    <option value="">请选择种类</option>
-                    {project.categories?.filter((c: string) => c !== '全部').map((cat: string) => (
-                      <option key={cat} value={cat}>{cat}</option>
+              <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/60">
+                <h3 className={`text-sm font-semibold ${t.text} mb-4 flex items-center gap-2`}>
+                  <Hash size={16} className="text-gray-500" />
+                  生产信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>生产指令号</label>
+                    <input
+                      type="text"
+                      value={editModuleForm.productionOrderNumber}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, productionOrderNumber: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="请输入生产指令号"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>负责人</label>
+                    <input
+                      type="text"
+                      value={editModuleForm.holder}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, holder: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="请输入负责人姓名"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>版本</label>
+                    <input
+                      type="text"
+                      value={editModuleForm.version}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, version: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="如: v1.0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>阶段</label>
+                    <select
+                      value={editModuleForm.stage}
+                      onChange={(e) => setEditModuleForm({ ...editModuleForm, stage: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                    >
+                      <option value="">请选择阶段</option>
+                      <option value="F阶段">F阶段</option>
+                      <option value="C阶段">C阶段</option>
+                      <option value="S阶段">S阶段</option>
+                      <option value="D阶段">D阶段</option>
+                      <option value="P阶段">P阶段</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/60">
+                <h3 className={`text-sm font-semibold ${t.text} mb-4 flex items-center gap-2`}>
+                  <Settings size={16} className="text-gray-500" />
+                  关联系统
+                </h3>
+                <div className={`p-3 rounded-xl border ${t.border} max-h-48 overflow-y-auto`}>
+                  <input
+                    type="text"
+                    placeholder="搜索系统名称或编号..."
+                    className={`w-full px-3 py-2 border rounded-lg ${t.input} mb-2`}
+                    onChange={(e) => {
+                      const searchValue = e.target.value.toLowerCase();
+                      setEditModuleForm(prev => ({ ...prev, systemSearch: searchValue }));
+                    }}
+                  />
+                  <div className="space-y-1">
+                    <label className={`flex items-center gap-2 p-2 rounded cursor-pointer ${editModuleForm.systemId === '' ? 'bg-amber-50 dark:bg-amber-900/30' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
+                      <input
+                        type="radio"
+                        name="systemSelection"
+                        checked={editModuleForm.systemId === ''}
+                        onChange={() => setEditModuleForm({ ...editModuleForm, systemId: '', systemNumber: '', systemName: '', systemSearch: '' })}
+                        className="w-4 h-4"
+                      />
+                      <span className={t.text}>无关联系统</span>
+                    </label>
+                    {project.systems?.filter((s: any) => {
+                      const search = editModuleForm.systemSearch || '';
+                      return !search || s.systemName.toLowerCase().includes(search.toLowerCase()) || s.systemNumber.toLowerCase().includes(search.toLowerCase());
+                    }).map((sys: any) => (
+                      <label key={sys.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer ${editModuleForm.systemId === sys.id ? 'bg-amber-50 dark:bg-amber-900/30' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
+                        <input
+                          type="radio"
+                          name="systemSelection"
+                          checked={editModuleForm.systemId === sys.id}
+                          onChange={() => setEditModuleForm({ ...editModuleForm, systemId: sys.id, systemNumber: sys.systemNumber, systemName: sys.systemName, systemSearch: '' })}
+                          className="w-4 h-4"
+                        />
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${editModuleForm.systemId === sys.id ? 'bg-amber-500 border-amber-500' : 'border-gray-300'}`}>
+                            {editModuleForm.systemId === sys.id && <Check size={12} className="text-white" />}
+                          </div>
+                          <span className={t.text}>{sys.systemName}</span>
+                          <span className={`text-xs ${t.textMuted}`}>({sys.systemNumber})</span>
+                        </div>
+                      </label>
                     ))}
-                  </select>
-                  {moduleFormErrors.category && (
-                    <p className="text-red-500 text-xs mt-1">{moduleFormErrors.category}</p>
-                  )}
+                  </div>
                 </div>
-
-                <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>状态</label>
-                  <select
-                    value={editModuleForm.status}
-                    onChange={(e) => setEditModuleForm({ ...editModuleForm, status: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-lg ${t.input}`}
-                  >
-                    <option value="未投产">未投产</option>
-                    <option value="投产中">投产中</option>
-                    <option value="测试中">测试中</option>
-                    <option value="正常">正常</option>
-                    <option value="故障">故障</option>
-                    <option value="维修中">维修中</option>
-                    <option value="三防中">三防中</option>
-                    <option value="仿真中">仿真中</option>
-                  </select>
-                </div>
+                {editModuleForm.systemId && (
+                  <div className={`mt-4 p-4 rounded-xl ${t.emptyBg}`}>
+                    <div className="text-xs space-y-1">
+                      <div className={`${t.textSecondary}`}>系统编号: <span className={t.text}>{editModuleForm.systemNumber || '-'}</span></div>
+                      <div className={`${t.textSecondary}`}>系统名称: <span className={t.text}>{editModuleForm.systemName || '-'}</span></div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={handleCancelModuleEdit}
-                  className={`flex-1 py-2.5 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg} transition-all flex items-center justify-center gap-2`}
+                  className={`flex-1 py-3 border-2 rounded-xl ${t.border} ${t.textSecondary} hover:${t.hoverBg} transition-all flex items-center justify-center gap-2 font-medium`}
                 >
                   <X size={18} />
                   取消
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 rounded-lg font-medium transition-all hover:shadow-lg cursor-pointer bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                  className="flex-1 py-3 rounded-xl font-semibold transition-all hover:shadow-lg cursor-pointer bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 hover:from-amber-500 hover:via-orange-400 hover:to-red-400 text-white shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50 flex items-center justify-center gap-2"
                 >
                   <Save size={18} />
                   保存修改

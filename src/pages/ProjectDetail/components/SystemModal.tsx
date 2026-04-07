@@ -126,6 +126,7 @@ export function SystemModal({ show, onClose, onSubmit, form, onChange, editingSy
                 onChange={(e) => onChange('stage', e.target.value)}
                 className={`w-full px-3 py-2 border rounded-lg ${t.input}`}
               >
+                <option value="F阶段">F阶段</option>
                 <option value="C阶段">C阶段</option>
                 <option value="S阶段">S阶段</option>
                 <option value="D阶段">D阶段</option>

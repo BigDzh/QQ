@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft, Search, Download, RotateCcw, Edit2, CheckCircle, Loader2, Plus,
+  Package, Hash, Settings, X, Save, Check, AlertTriangle,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
@@ -26,7 +27,7 @@ import {
   VersionModal,
   SyncModal,
   RollbackModal,
-  ComponentEditModal,
+  ComponentEditPanel,
   ComponentStatusModal,
   ComponentCopyModal,
   CategoryModal,
@@ -380,6 +381,7 @@ export default function ProjectDetail() {
             onBatchUpdateStage={handlers.handleBatchUpdateModuleStage}
             onBatchUpdateVersion={handlers.handleBatchUpdateModuleVersion}
             onBatchDelete={handlers.handleBatchDeleteModule}
+            onModuleStatusChange={handlers.handleModuleStatusChange}
           />
         );
       case 'systems':
@@ -416,18 +418,6 @@ export default function ProjectDetail() {
       case 'reviews':
         return (
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-lg font-semibold ${t.text}`}>评审管理</h2>
-              {canEdit && (
-                <button
-                  onClick={handlers.handleOpenAddReview}
-                  className={`flex items-center gap-2 px-4 py-2 ${t.button} rounded-lg text-white`}
-                >
-                  <Plus size={18} />
-                  新建评审
-                </button>
-              )}
-            </div>
             <ReviewManager
               projectId={project.id}
               reviews={project.reviews || []}
@@ -435,7 +425,9 @@ export default function ProjectDetail() {
               canEdit={canEdit}
               currentUser={currentUser ? { username: currentUser.username, id: currentUser.id } : null}
               onAddReview={handlers.handleOpenAddReview}
+              onOpenAddReviewModal={handlers.handleOpenAddReview}
               onUpdateReview={() => {}}
+              onAddCategory={handlers.handleAddReviewCategory}
               onDeleteReview={handlers.handleDeleteReview}
               onReviewAction={handlers.handleReviewAction}
               onUploadFiles={handlers.handleReviewFileUploadWithDrag}
@@ -470,7 +462,7 @@ export default function ProjectDetail() {
             }}
             onSyncToComponents={handlers.handleSyncSoftwareToComponents}
             onDownloadSoftware={handlers.handleDownloadSoftware}
-            onUploadSoftware={() => {}}
+            onUploadSoftware={handlers.handleUploadSoftware}
             onVersionUpdate={handlers.handleVersionUpdate}
           />
         );
@@ -509,6 +501,7 @@ export default function ProjectDetail() {
             onUpload={handlers.handleUploadDesignFile}
             onSync={handlers.handleUpdateDesignFileSync}
             onDelete={handlers.handleDeleteDesignFile}
+            onClearAll={handlers.handleClearAllDesignFiles}
             onCreateSingle={handlers.handleCreateSingleDesignDiagrams}
             onVersionUpdate={handlers.handleVersionUpdateDesignFile}
           />
@@ -532,25 +525,139 @@ export default function ProjectDetail() {
 
     return (
       <>
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowModuleEditModal(false); setEditingModule(null); }}>
-          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-lg border ${t.modalBorder} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-            <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>编辑模块</h2>
-            <div className="space-y-4">
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>模块编号 *</label>
-                <input type="text" value={moduleEditForm.moduleNumber}
-                  onChange={(e) => setModuleEditForm({ ...moduleEditForm, moduleNumber: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg ${t.input}`} placeholder="如: M-001" required />
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setShowModuleEditModal(false); setEditingModule(null); }}>
+          <div className={`${t.modalBg} rounded-2xl p-6 w-full max-w-2xl border ${t.modalBorder} max-h-[90vh] overflow-y-auto shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-amber-200/40">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-200/50">
+                  <Edit2 size={20} className="text-white" />
+                </div>
+                <div>
+                  <h2 className={`text-xl font-bold ${t.text}`}>编辑模块</h2>
+                  <p className={`text-xs ${t.textMuted} mt-0.5`}>{editingModule.moduleNumber}</p>
+                </div>
               </div>
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>模块名称 *</label>
-                <input type="text" value={moduleEditForm.moduleName}
-                  onChange={(e) => setModuleEditForm({ ...moduleEditForm, moduleName: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg ${t.input}`} required />
+              <button
+                onClick={() => { setShowModuleEditModal(false); setEditingModule(null); }}
+                className={`p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textSecondary} transition-colors`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); setShowModuleEditConfirm(true); }} className="space-y-6">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-900/10 dark:to-orange-900/10 rounded-xl p-5 border border-amber-200/40">
+                <h3 className={`text-sm font-semibold ${t.text} mb-4 flex items-center gap-2`}>
+                  <Package size={16} className="text-amber-600" />
+                  基本信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                      模块名称 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={moduleEditForm.moduleName}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, moduleName: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="请输入模块名称"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                      模块编号 <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={moduleEditForm.moduleNumber}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, moduleNumber: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="如: M001"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>
+                      种类 <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={moduleEditForm.category}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, category: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                    >
+                      <option value="">请选择种类</option>
+                      {project.categories?.filter((c: string) => c !== '全部').map((cat: string) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>关联系统</label>
-                <div className={`p-3 rounded-lg border ${t.border} max-h-48 overflow-y-auto`}>
+
+              <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/60">
+                <h3 className={`text-sm font-semibold ${t.text} mb-4 flex items-center gap-2`}>
+                  <Hash size={16} className="text-gray-500" />
+                  生产信息
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>生产指令号</label>
+                    <input
+                      type="text"
+                      value={moduleEditForm.productionOrderNumber}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, productionOrderNumber: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="请输入生产指令号"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>负责人</label>
+                    <input
+                      type="text"
+                      value={moduleEditForm.holder}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, holder: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="请输入负责人姓名"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>版本</label>
+                    <input
+                      type="text"
+                      value={moduleEditForm.version}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, version: e.target.value })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                      placeholder="如: v1.0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-sm font-medium mb-1.5 ${t.textSecondary}`}>阶段</label>
+                    <select
+                      value={moduleEditForm.stage}
+                      onChange={(e) => setModuleEditForm({ ...moduleEditForm, stage: e.target.value as ProjectStage })}
+                      className={`w-full px-4 py-2.5 border rounded-xl focus:border-amber-400 focus:ring-2 focus:ring-amber-200 ${t.input} transition-all`}
+                    >
+                      <option value="F阶段">F阶段</option>
+                      <option value="C阶段">C阶段</option>
+                      <option value="S阶段">S阶段</option>
+                      <option value="D阶段">D阶段</option>
+                      <option value="P阶段">P阶段</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/50 dark:bg-gray-800/50 rounded-xl p-5 border border-gray-200/60 dark:border-gray-700/60">
+                <h3 className={`text-sm font-semibold ${t.text} mb-4 flex items-center gap-2`}>
+                  <Settings size={16} className="text-gray-500" />
+                  关联系统
+                </h3>
+                <div className={`p-3 rounded-xl border ${t.border} max-h-48 overflow-y-auto`}>
                   <input
                     type="text"
                     placeholder="搜索系统名称或编号..."
@@ -561,7 +668,7 @@ export default function ProjectDetail() {
                     }}
                   />
                   <div className="space-y-1">
-                    <label className={`flex items-center gap-2 p-2 rounded cursor-pointer ${moduleEditForm.systemId === '' ? 'bg-blue-100 dark:bg-blue-900/40' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
+                    <label className={`flex items-center gap-2 p-2 rounded cursor-pointer ${moduleEditForm.systemId === '' ? 'bg-amber-50 dark:bg-amber-900/30' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
                       <input
                         type="radio"
                         name="systemSelection"
@@ -575,7 +682,7 @@ export default function ProjectDetail() {
                       const search = (moduleEditForm as any).systemSearch || '';
                       return !search || s.systemName.toLowerCase().includes(search.toLowerCase()) || s.systemNumber.toLowerCase().includes(search.toLowerCase());
                     }).map((sys: any) => (
-                      <label key={sys.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer ${moduleEditForm.systemId === sys.id ? 'bg-blue-100 dark:bg-blue-900/40' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
+                      <label key={sys.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer ${moduleEditForm.systemId === sys.id ? 'bg-amber-50 dark:bg-amber-900/30' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
                         <input
                           type="radio"
                           name="systemSelection"
@@ -583,56 +690,45 @@ export default function ProjectDetail() {
                           onChange={() => setModuleEditForm({ ...moduleEditForm, systemId: sys.id, systemNumber: sys.systemNumber, systemName: sys.systemName, systemSearch: '' })}
                           className="w-4 h-4"
                         />
-                        <span className={t.text}>{sys.systemName}</span>
-                        <span className={`text-xs ${t.textMuted}`}>({sys.systemNumber})</span>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center ${moduleEditForm.systemId === sys.id ? 'bg-amber-500 border-amber-500' : 'border-gray-300'}`}>
+                            {moduleEditForm.systemId === sys.id && <Check size={12} className="text-white" />}
+                          </div>
+                          <span className={t.text}>{sys.systemName}</span>
+                          <span className={`text-xs ${t.textMuted}`}>({sys.systemNumber})</span>
+                        </div>
                       </label>
                     ))}
                   </div>
                 </div>
-              </div>
-              {moduleEditForm.systemId && (
-                <div className={`p-3 rounded-lg ${t.emptyBg}`}>
-                  <div className="text-xs space-y-1">
-                    <div className={`${t.textSecondary}`}>系统编号: <span className={t.text}>{moduleEditForm.systemNumber || '-'}</span></div>
-                    <div className={`${t.textSecondary}`}>系统名称: <span className={t.text}>{moduleEditForm.systemName || '-'}</span></div>
+                {moduleEditForm.systemId && (
+                  <div className={`mt-4 p-4 rounded-xl ${t.emptyBg}`}>
+                    <div className="text-xs space-y-1">
+                      <div className={`${t.textSecondary}`}>系统编号: <span className={t.text}>{moduleEditForm.systemNumber || '-'}</span></div>
+                      <div className={`${t.textSecondary}`}>系统名称: <span className={t.text}>{moduleEditForm.systemName || '-'}</span></div>
+                    </div>
                   </div>
-                </div>
-              )}
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>生产指令号</label>
-                <input type="text" value={moduleEditForm.productionOrderNumber}
-                  onChange={(e) => setModuleEditForm({ ...moduleEditForm, productionOrderNumber: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg ${t.input}`} placeholder="如: PRD-001" />
+                )}
               </div>
-              <div>
-                <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>负责人</label>
-                <input type="text" value={moduleEditForm.holder}
-                  onChange={(e) => setModuleEditForm({ ...moduleEditForm, holder: e.target.value })}
-                  className={`w-full px-3 py-2 border rounded-lg ${t.input}`} />
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowModuleEditModal(false); setEditingModule(null); }}
+                  className={`flex-1 py-3 border-2 rounded-xl ${t.border} ${t.textSecondary} hover:${t.hoverBg} transition-all flex items-center justify-center gap-2 font-medium`}
+                >
+                  <X size={18} />
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl font-semibold transition-all hover:shadow-lg cursor-pointer bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 hover:from-amber-500 hover:via-orange-400 hover:to-red-400 text-white shadow-lg shadow-amber-200/50 hover:shadow-amber-300/50 flex items-center justify-center gap-2"
+                >
+                  <Save size={18} />
+                  保存修改
+                </button>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>阶段</label>
-                  <select value={moduleEditForm.stage}
-                    onChange={(e) => setModuleEditForm({ ...moduleEditForm, stage: e.target.value as ProjectStage })}
-                    className={`w-full px-3 py-2 border rounded-lg ${t.input}`}>
-                    <option value="F阶段">F阶段</option><option value="C阶段">C阶段</option><option value="S阶段">S阶段</option><option value="D阶段">D阶段</option><option value="P阶段">P阶段</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>版本</label>
-                  <input type="text" value={moduleEditForm.version}
-                    onChange={(e) => setModuleEditForm({ ...moduleEditForm, version: e.target.value })}
-                    className={`w-full px-3 py-2 border rounded-lg ${t.input}`} placeholder="如: v1.0" />
-                </div>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => { setShowModuleEditModal(false); setEditingModule(null); }}
-                  className={`flex-1 py-2 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg}`}>取消</button>
-                <button type="button" onClick={() => setShowModuleEditConfirm(true)}
-                  className={`flex-1 py-2 ${t.button} rounded-lg`}>保存修改</button>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
         <ConfirmModal
@@ -794,14 +890,18 @@ export default function ProjectDetail() {
       )}
 
       {showComponentEditModal && editingComponent && (
-        <ComponentEditModal
+        <ComponentEditPanel
           show={showComponentEditModal}
           onClose={() => { setShowComponentEditModal(false); setEditingComponent(null); }}
-          editingComponent={editingComponent}
-          form={componentEditForm}
-          onChange={setComponentEditForm}
-          modules={project.modules}
+          onCancel={() => { setShowComponentEditModal(false); setEditingComponent(null); }}
           onSubmit={handlers.handleComponentEditSubmit}
+          component={editingComponent}
+          module={project.modules.find((m: any) => m.id === editingComponent.moduleId)}
+          modules={project.modules}
+          project={project}
+          form={componentEditForm}
+          onChange={(field, value) => setComponentEditForm((prev: any) => ({ ...prev, [field]: value }))}
+          errors={{}}
         />
       )}
 

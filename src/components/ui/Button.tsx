@@ -79,26 +79,26 @@ export function Button({
 
   const variantClasses = {
     primary: isCyberpunk
-      ? `bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-lg shadow-cyan-500/20 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-transparent`
+      ? `bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-lg shadow-cyan-500/20 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-transparent hover:brightness-110 hover:font-semibold active:brightness-90 active:font-semibold`
       : isAnime
-      ? `bg-gradient-to-r from-pink-500 to-violet-500 text-white shadow-lg shadow-pink-500/20 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 focus:ring-offset-transparent`
-      : 'bg-primary-600 text-white hover:bg-primary-500 hover:shadow-lg hover:shadow-primary-500/30 active:bg-primary-700 active:shadow-sm focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
+      ? `bg-gradient-to-r from-pink-500 to-violet-500 text-white shadow-lg shadow-pink-500/20 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-pink-400 focus:ring-offset-2 focus:ring-offset-transparent hover:brightness-110 hover:font-semibold active:brightness-90 active:font-semibold`
+      : 'bg-primary-600 text-white hover:bg-primary-500 hover:text-white hover:shadow-lg hover:shadow-primary-500/30 hover:font-semibold active:bg-primary-700 active:text-white active:shadow-sm active:font-semibold focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
     secondary: isDark
-      ? `bg-gray-700 text-white hover:bg-gray-600 hover:shadow-lg hover:shadow-gray-500/20 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-gray-900` // 增强focus可见性
-      : 'bg-gray-200 text-gray-900 hover:bg-gray-300 hover:shadow-lg hover:shadow-gray-500/10 active:bg-gray-400 active:shadow-sm focus:ring-2 focus:ring-gray-400 focus:ring-offset-2', // 提升文本对比度
+      ? `bg-gray-700 text-white hover:bg-gray-600 hover:text-white hover:shadow-lg hover:shadow-gray-500/20 ${getHoverTransform()} ${getActiveTransform()} hover:font-semibold active:font-semibold focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-gray-900`
+      : 'bg-gray-200 text-gray-900 hover:bg-gray-300 hover:text-gray-900 hover:shadow-lg hover:shadow-gray-500/10 hover:font-semibold active:bg-gray-400 active:text-gray-900 active:shadow-sm active:font-semibold focus:ring-2 focus:ring-gray-400 focus:ring-offset-2',
     outline: isCyberpunk
-      ? `border-2 border-cyan-400/70 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-lg hover:shadow-cyan-500/20 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]` // 增强hover和focus效果
+      ? `border-2 border-cyan-400/70 text-cyan-300 hover:bg-cyan-500/20 hover:border-cyan-400 hover:text-cyan-100 hover:shadow-lg hover:shadow-cyan-500/20 ${getHoverTransform()} ${getActiveTransform()} hover:font-semibold active:font-semibold focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]`
       : isAnime
-      ? `border-2 border-pink-400 text-pink-800 hover:bg-pink-50 hover:border-pink-500 hover:text-pink-900 hover:shadow-lg hover:shadow-pink-500/10 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-pink-400 focus:ring-offset-2` // 提升文本对比度
-      : 'border-2 border-gray-400 text-gray-800 hover:bg-gray-50 hover:border-gray-500 hover:text-gray-900 hover:shadow-lg active:bg-gray-100 active:shadow-sm focus:ring-2 focus:ring-primary-500 focus:ring-offset-2', // 提升边框和文本对比度
+      ? `border-2 border-pink-400 text-pink-800 hover:bg-pink-50 hover:border-pink-500 hover:text-pink-900 hover:shadow-lg hover:shadow-pink-500/10 ${getHoverTransform()} ${getActiveTransform()} hover:font-semibold active:font-semibold focus:ring-2 focus:ring-pink-400 focus:ring-offset-2`
+      : 'border-2 border-gray-400 text-gray-800 hover:bg-gray-50 hover:border-gray-500 hover:text-gray-900 hover:shadow-lg hover:font-semibold active:bg-gray-100 active:text-gray-900 active:shadow-sm active:font-semibold focus:ring-2 focus:ring-primary-500 focus:ring-offset-2',
     ghost: isCyberpunk
-      ? `text-cyan-300 hover:bg-cyan-500/25 hover:text-cyan-100 hover:shadow-lg hover:shadow-cyan-500/10 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]` // 增强对比度
+      ? `text-cyan-300 hover:bg-cyan-500/25 hover:text-cyan-100 hover:shadow-lg hover:shadow-cyan-500/10 ${getHoverTransform()} ${getActiveTransform()} hover:font-semibold active:font-semibold focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-[#0a0a0f]`
       : isAnime
-      ? `text-pink-800 hover:bg-pink-100 hover:text-pink-900 hover:shadow-lg hover:shadow-pink-500/10 ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-pink-400 focus:ring-offset-2` // 提升文本对比度
-      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-lg active:bg-gray-200 active:shadow-sm focus:ring-2 focus:ring-gray-400 focus:ring-offset-2', // 提升文本对比度
-    danger: 'bg-danger-600 text-white hover:bg-danger-500 hover:shadow-lg hover:shadow-danger-500/30 active:bg-danger-700 active:shadow-sm focus:ring-2 focus:ring-danger-500 focus:ring-offset-2', // 添加focus状态
-    gradient: `${getGradientClasses()} text-white shadow-lg ${getHoverTransform()} ${getActiveTransform()} focus:ring-2 focus:ring-offset-2 focus:ring-primary-400`,
-    link: 'text-primary-700 hover:text-primary-800 hover:underline hover:shadow-none active:text-primary-900 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:rounded p-0', // 提升链接对比度并添加focus
+      ? `text-pink-800 hover:bg-pink-100 hover:text-pink-900 hover:shadow-lg hover:shadow-pink-500/10 ${getHoverTransform()} ${getActiveTransform()} hover:font-semibold active:font-semibold focus:ring-2 focus:ring-pink-400 focus:ring-offset-2`
+      : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900 hover:shadow-lg hover:font-semibold active:bg-gray-200 active:text-gray-900 active:shadow-sm active:font-semibold focus:ring-2 focus:ring-gray-400 focus:ring-offset-2',
+    danger: 'bg-danger-600 text-white hover:bg-danger-500 hover:text-white hover:shadow-lg hover:shadow-danger-500/30 hover:font-semibold active:bg-danger-700 active:text-white active:shadow-sm active:font-semibold focus:ring-2 focus:ring-danger-500 focus:ring-offset-2',
+    gradient: `${getGradientClasses()} text-white shadow-lg ${getHoverTransform()} ${getActiveTransform()} hover:font-semibold active:font-semibold focus:ring-2 focus:ring-offset-2 focus:ring-primary-400`,
+    link: 'text-primary-700 hover:text-primary-800 hover:underline hover:shadow-none hover:font-semibold active:text-primary-900 active:font-semibold focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:rounded p-0',
   };
 
   const baseClasses = `inline-flex items-center justify-center font-medium rounded-lg

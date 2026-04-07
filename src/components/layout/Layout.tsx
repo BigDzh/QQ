@@ -18,10 +18,10 @@ export function Container({
   className = '',
 }: ContainerProps) {
   const sizeClasses = {
-    sm: 'max-w-640px',
-    md: 'max-w-768px',
-    lg: 'max-w-1024px',
-    xl: 'max-w-1280px',
+    sm: 'max-w-[640px]',
+    md: 'max-w-[768px]',
+    lg: 'max-w-[1024px]',
+    xl: 'max-w-[1280px]',
     full: 'max-w-full',
   };
 
@@ -58,16 +58,18 @@ export function Grid({
   gap = { xs: 'gap-2', sm: 'gap-3', md: 'gap-4', lg: 'gap-6' },
   className = '',
 }: GridProps) {
-  const colClasses = {
-    xs: `grid-cols-${cols.xs || 1}`,
-    sm: `sm:grid-cols-${cols.sm || 2}`,
-    md: `md:grid-cols-${cols.md || 2}`,
-    lg: `lg:grid-cols-${cols.lg || 3}`,
-    xl: `xl:grid-cols-${cols.xl || 4}`,
-  };
+  const colClasses = [
+    cols.xs ? `grid-cols-${cols.xs}` : '',
+    cols.sm ? `sm:grid-cols-${cols.sm}` : '',
+    cols.md ? `md:grid-cols-${cols.md}` : '',
+    cols.lg ? `lg:grid-cols-${cols.lg}` : '',
+    cols.xl ? `xl:grid-cols-${cols.xl}` : '',
+  ].filter(Boolean).join(' ');
+
+  const gapClasses = [gap.xs, gap.sm, gap.md, gap.lg].filter(Boolean).join(' ');
 
   return (
-    <div className={`grid ${colClasses.xs} ${colClasses.sm} ${colClasses.md} ${colClasses.lg} ${colClasses.xl} ${gap.xs} ${gap.sm} ${gap.md} ${gap.lg} ${className}`}>
+    <div className={`grid ${colClasses} ${gapClasses} ${className}`.trim()}>
       {children}
     </div>
   );
@@ -256,8 +258,9 @@ interface AspectRatioProps {
 }
 
 export function AspectRatio({ ratio = 16 / 9, children, className = '' }: AspectRatioProps) {
+  const paddingBottom = `${(1 / ratio) * 100}%`;
   return (
-    <div className={`relative w-full pb-[${100 / ratio}%] ${className}`}>
+    <div className={`relative w-full ${className}`} style={{ paddingBottom }}>
       <div className="absolute inset-0">
         {children}
       </div>

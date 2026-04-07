@@ -4,10 +4,18 @@ import { useTaskNotification } from '../components/TaskNotificationPopup';
 import { usePerformanceMode } from '../context/PerformanceModeContext';
 import { duplicateTaskService } from '../services/duplicateTaskService';
 import { addAuditLog } from '../services/audit';
+import {
+  markPageLoaded,
+  getPageRefreshState,
+  setPendingTaskData,
+  getAndClearPendingTask,
+  isDuplicateSubmission,
+} from './usePageRefreshDetection';
 
 const SET_MAX_SIZE = 500;
 const PROCESS_INTERVAL_HIGH = 10000;
 const PROCESS_INTERVAL_LOW = 30000;
+const PAGE_REFRESH_BLOCK_DURATION = 5000;
 
 interface TaskKey {
   type: 'module-fault' | 'component-fault' | 'software-incomplete' | 'document-incomplete';
@@ -50,6 +58,8 @@ export function useAutoTaskManager() {
   const recentlyCreatedRef = useRef<Set<string>>(new Set());
   const isHighPerformanceRef = useRef<boolean>(isHighPerformance);
   const duplicateAttemptLogsRef = useRef<DuplicateCreationAttemptLog[]>([]);
+  const isPageRefreshRef = useRef<boolean>(false);
+  const pendingTaskBlockedRef = useRef<boolean>(false);
 
   useEffect(() => {
     isHighPerformanceRef.current = isHighPerformance;
@@ -106,12 +116,24 @@ export function useAutoTaskManager() {
 
   useEffect(() => {
     isMountedRef.current = true;
+    markPageLoaded();
+
+    const { isPageRefresh, pendingTaskData } = getPageRefreshState();
+    isPageRefreshRef.current = isPageRefresh;
+
+    if (isPageRefresh && pendingTaskData) {
+      pendingTaskBlockedRef.current = true;
+      console.log('[AutoTaskManager] Page refresh detected, blocking automatic task creation from previous session');
+      getAndClearPendingTask();
+    }
+
     return () => {
       isMountedRef.current = false;
       processedItemsRef.current.clear();
       taskCreationLogsRef.current = [];
       recentlyCreatedRef.current.clear();
       duplicateAttemptLogsRef.current = [];
+      pendingTaskBlockedRef.current = false;
     };
   }, []);
 
@@ -410,6 +432,12 @@ export function useAutoTaskManager() {
 
   useEffect(() => {
     if (!isMountedRef.current) return;
+
+    if (pendingTaskBlockedRef.current) {
+      console.log('[AutoTaskManager] Skipping task processing due to page refresh detection');
+      pendingTaskBlockedRef.current = false;
+      return;
+    }
 
     const now = Date.now();
     if (now - lastProcessTimeRef.current < PROCESS_INTERVAL) {

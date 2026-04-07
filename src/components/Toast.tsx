@@ -113,7 +113,7 @@ function ToastItem({ toast, remove }: { toast: Toast; remove: (id: string) => vo
         </div>
 
         {/* 消息内容 */}
-        <span className="text-sm font-medium text-gray-800 dark:text-gray-100 flex-1 leading-relaxed">
+        <span className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 leading-relaxed">
           {toast.message}
         </span>
 
@@ -125,7 +125,7 @@ function ToastItem({ toast, remove }: { toast: Toast; remove: (id: string) => vo
           }}
           className="
             flex-shrink-0 p-1 rounded-md
-            text-gray-400 hover:text-gray-600 dark:hover:text-gray-200
+            text-gray-400 hover:text-gray-800 dark:hover:text-gray-200
             hover:bg-gray-100 dark:hover:bg-gray-700/50
             transition-all duration-150 ease-out
             hover:scale-110 active:scale-95
@@ -226,8 +226,8 @@ function NotificationCenter({
             onClick={() => setActiveTab('all')}
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'all'
-                ? 'text-cyan-500 border-b-2 border-cyan-500'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? 'text-cyan-600 dark:text-cyan-400 border-b-2 border-cyan-500 font-semibold'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:font-medium'
             }`}
           >
             全部
@@ -236,8 +236,8 @@ function NotificationCenter({
             onClick={() => setActiveTab('unread')}
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === 'unread'
-                ? 'text-cyan-500 border-b-2 border-cyan-500'
-                : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? 'text-cyan-600 dark:text-cyan-400 border-b-2 border-cyan-500 font-semibold'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:font-medium'
             }`}
           >
             未读 {unreadCount > 0 && `(${unreadCount})`}
@@ -260,21 +260,21 @@ function NotificationCenter({
                     !notification.read ? 'bg-cyan-50/50 dark:bg-cyan-900/10' : ''
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className={`flex items-start gap-3`}>
                     <div className="mt-0.5">{typeIcons[notification.type]}</div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className={`text-sm font-medium ${!notification.read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                        <h3 className={`text-sm font-medium ${!notification.read ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-800 dark:text-gray-200'}`}>
                           {notification.title}
                         </h3>
                         {!notification.read && (
                           <span className="w-2 h-2 bg-cyan-500 rounded-full flex-shrink-0" />
                         )}
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-2">
                         {notification.message}
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
                         {formatTime(notification.timestamp)}
                       </p>
                     </div>

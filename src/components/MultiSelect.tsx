@@ -82,12 +82,12 @@ export default function MultiSelect({ options, selected, onChange, placeholder =
           </div>
           <div className="max-h-48 overflow-y-auto">
             {filteredOptions.length === 0 ? (
-              <div className={`px-3 py-2 text-sm ${t.textMuted}`}>未找到匹配项</div>
-            ) : (
+            <div className={`px-3 py-2 text-sm font-normal ${t.textMuted}`}>未找到匹配项</div>
+          ) : (
               filteredOptions.map(opt => (
                 <label
                   key={opt.value}
-                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:${t.hoverBg}`}
+                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:${t.hoverBg} hover:font-medium transition-colors`}
                 >
                   <input
                     type="checkbox"
@@ -95,7 +95,7 @@ export default function MultiSelect({ options, selected, onChange, placeholder =
                     onChange={() => toggleOption(opt.value)}
                     className="rounded"
                   />
-                  <span className={`text-sm ${t.text}`}>{opt.label}</span>
+                  <span className={`text-sm font-normal ${selected.includes(opt.value) ? 'font-semibold' : ''} ${t.text}`}>{opt.label}</span>
                 </label>
               ))
             )}
@@ -105,7 +105,7 @@ export default function MultiSelect({ options, selected, onChange, placeholder =
               <button
                 type="button"
                 onClick={() => onChange([])}
-                className="w-full py-1.5 text-sm rounded text-center btn-interactive"
+                className="w-full py-1.5 text-sm font-medium rounded text-center btn-interactive hover:text-red-600 dark:hover:text-red-400 transition-colors"
               >
                 清除全部
               </button>

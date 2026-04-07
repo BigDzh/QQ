@@ -96,11 +96,11 @@ export function Modal({
       : 'bg-black/40 backdrop-blur-sm';
 
   const modalClasses = isCyberpunk
-    ? 'bg-[#161b22]/95 backdrop-blur-2xl border-white/10 shadow-2xl shadow-cyan-500/10'
+    ? 'bg-[#0d1117]/95 backdrop-blur-2xl border-cyan-500/20 shadow-2xl shadow-cyan-500/20'
     : isAnime
-      ? 'bg-white/95 backdrop-blur-2xl border-pink-200/50 shadow-xl shadow-pink-500/10'
+      ? 'bg-white/95 backdrop-blur-2xl border-pink-300/50 shadow-xl shadow-pink-500/20'
       : isDark
-        ? 'bg-gray-800/95 backdrop-blur-2xl border-gray-700 shadow-xl'
+        ? 'bg-gray-800/95 backdrop-blur-2xl border-gray-600 shadow-xl'
         : 'bg-white/95 backdrop-blur-2xl border-gray-200 shadow-xl';
 
   // 动画状态类
@@ -155,8 +155,8 @@ export function Modal({
                 disabled={isClosing}
                 className={`p-2 rounded-lg transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   isDark
-                    ? 'text-gray-300 hover:text-white hover:bg-gray-700/80 active:bg-gray-600 focus:ring-cyan-400 focus:ring-offset-gray-800 disabled:opacity-50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 active:bg-gray-200 focus:ring-primary-500 focus:ring-offset-white disabled:opacity-50'
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-700/80 hover:font-semibold active:bg-gray-600 active:text-white focus:ring-cyan-400 focus:ring-offset-gray-800 disabled:opacity-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/80 hover:font-semibold active:bg-gray-200 active:text-gray-900 focus:ring-primary-500 focus:ring-offset-white disabled:opacity-50'
                 } hover:scale-110 active:scale-95`}
                 aria-label="关闭"
               >
@@ -233,7 +233,7 @@ export function ConfirmModal({
             </svg>
           </span>
         </div>
-        <p className={`text-[15px] leading-relaxed ${isDark ? 'text-gray-200' : 'text-gray-700'} animate-fade-slide-up stagger-1`}>
+        <p className={`text-[15px] leading-relaxed font-normal ${isDark ? 'text-gray-100' : 'text-gray-800'} animate-fade-slide-up stagger-1`}>
           {message}
         </p>
       </div>
@@ -243,8 +243,8 @@ export function ConfirmModal({
           disabled={loading}
           className={`flex-1 px-4 py-2.5 text-sm font-medium rounded-lg border transition-all duration-200 ease-out focus:outline-none focus:ring-2 focus:ring-offset-2 ${
             isDark
-              ? 'border-gray-600 text-gray-200 hover:bg-gray-700/80 active:bg-gray-600 focus:ring-gray-400 focus:ring-offset-gray-800 disabled:opacity-50 hover:shadow-md'
-              : 'border-gray-300 text-gray-800 hover:bg-gray-50 active:bg-gray-100 focus:ring-primary-500 focus:ring-offset-white disabled:opacity-50 hover:shadow-md'
+              ? 'border-gray-600 text-gray-100 hover:bg-gray-700/80 hover:text-white hover:font-semibold active:bg-gray-600 active:text-white focus:ring-gray-400 focus:ring-offset-gray-800 disabled:opacity-50 hover:shadow-md'
+              : 'border-gray-300 text-gray-800 hover:bg-gray-50 hover:text-gray-900 hover:font-semibold active:bg-gray-100 active:text-gray-900 focus:ring-primary-500 focus:ring-offset-white disabled:opacity-50 hover:shadow-md'
           }`}
         >
           {cancelText}

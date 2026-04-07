@@ -60,11 +60,13 @@ export async function initDB(): Promise<IDBPDatabase> {
         if (!database.objectStoreNames.contains('coreData')) {
           database.createObjectStore('coreData', { keyPath: 'id' });
         }
-      } else if (oldVersion < 2) {
+      }
+      if (oldVersion < 2) {
         if (!database.objectStoreNames.contains('coreData')) {
           database.createObjectStore('coreData', { keyPath: 'id' });
         }
-      } else if (oldVersion < 3) {
+      }
+      if (oldVersion < 3) {
         if (!database.objectStoreNames.contains('files')) {
           const fileStore = database.createObjectStore('files', { keyPath: 'id' });
           fileStore.createIndex('projectId', 'projectId');
@@ -191,9 +193,10 @@ export async function searchFiles(
     results = results.filter((f) => f.name.toLowerCase().includes(lowerKeyword));
   }
 
-  if (options.type && options.type !== 'all' && options.projectId) {
+  if (options.type && options.type !== 'all') {
     results = results.filter((f) => f.type === options.type);
-  } else if (options.projectId && options.projectId !== 'all' && options.type) {
+  }
+  if (options.projectId && options.projectId !== 'all') {
     results = results.filter((f) => f.projectId === options.projectId);
   }
 
@@ -234,12 +237,15 @@ export async function clearAllFiles(): Promise<void> {
 
 export async function saveCoreData(key: string, data: string): Promise<void> {
   const database = await initDB();
-  await database.put('coreData', {
+  const tx = database.transaction('coreData', 'readwrite');
+  const record: CoreDataRecord = {
     id: key,
     data,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  } as CoreDataRecord);
+  };
+  await tx.store.put(record);
+  await tx.done;
 }
 
 export async function getCoreData(key: string): Promise<string | undefined> {
@@ -251,7 +257,8 @@ export async function getCoreData(key: string): Promise<string | undefined> {
 export async function getAllCoreDataKeys(): Promise<string[]> {
   const database = await initDB();
   const all = await database.getAll('coreData');
-  return all.map((item) => item.id);
+  const sorted = all.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return sorted.map((item) => item.id);
 }
 
 export async function deleteCoreData(key: string): Promise<void> {
@@ -287,26 +294,28 @@ export async function importDatabase(data: {
   const database = await initDB();
   let filesImported = 0;
   let coreDataImported = 0;
-  
+
   if (data.clearFirst) {
-    await database.clear('files');
-    await database.clear('coreData');
+    const clearTx = database.transaction(['files', 'coreData'], 'readwrite');
+    await clearTx.objectStore('files').clear();
+    await clearTx.objectStore('coreData').clear();
+    await clearTx.done;
   }
-  
+
   if (data.files && data.files.length > 0) {
     const tx = database.transaction('files', 'readwrite');
     await Promise.all(data.files.map((f) => tx.store.put(f)));
     await tx.done;
     filesImported = data.files.length;
   }
-  
+
   if (data.coreData && data.coreData.length > 0) {
     const tx = database.transaction('coreData', 'readwrite');
     await Promise.all(data.coreData.map((c) => tx.store.put(c)));
     await tx.done;
     coreDataImported = data.coreData.length;
   }
-  
+
   return { filesImported, coreDataImported };
 }
 

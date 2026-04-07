@@ -5,6 +5,7 @@ import { useThemeStyles } from '../../../hooks/useThemeStyles';
 import { useToast } from '../../../components/Toast';
 import { BatchOperationsBar } from '../../../components/BatchOperationsBar';
 import { ConfirmModal } from './ConfirmModal';
+import { ModuleStatusChangeModal } from './ModuleStatusChangeModal';
 import type { Module, ProjectStage } from '../../../types';
 import { STAGE_OPTIONS, getDefaultStageForEntity } from '../../../services/stageConfig';
 
@@ -20,6 +21,7 @@ interface ModuleListProps {
   onBatchUpdateStage?: (moduleIds: string[], stage: ProjectStage) => Promise<void>;
   onBatchUpdateVersion?: (moduleIds: string[], version: string) => Promise<void>;
   onBatchDelete?: (moduleIds: string[]) => Promise<void>;
+  onModuleStatusChange?: (moduleId: string, newStatus: string, reason: string) => Promise<void>;
 }
 
 const STATUS_LIST = ['未投产', '投产中', '正常', '维修中', '三防中', '测试中', '仿真中', '借用中', '故障'] as const;
@@ -36,6 +38,7 @@ export function ModuleList({
   onBatchUpdateStage,
   onBatchUpdateVersion,
   onBatchDelete,
+  onModuleStatusChange,
 }: ModuleListProps) {
   const t = useThemeStyles();
   const { showToast } = useToast();
@@ -53,6 +56,8 @@ export function ModuleList({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [batchStage, setBatchStage] = useState<ProjectStage>(getDefaultStageForEntity('module'));
   const [batchVersion, setBatchVersion] = useState('');
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [statusChangeModule, setStatusChangeModule] = useState<Module | null>(null);
   const MODULE_PAGE_SIZE = 15;
   const [sortField, setSortField] = useState<keyof Module>('moduleNumber');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -289,6 +294,27 @@ export function ModuleList({
 
   const handleEditModule = (module: Module) => {
     onEditModule(module);
+  };
+
+  const handleStatusModuleClick = (module: Module) => {
+    setStatusChangeModule(module);
+    setShowStatusModal(true);
+  };
+
+  const handleStatusModalConfirm = async (newStatus: StatusType, reason: string) => {
+    if (!onModuleStatusChange || !statusChangeModule) return;
+    try {
+      await onModuleStatusChange(statusChangeModule.id, newStatus, reason);
+      setShowStatusModal(false);
+      setStatusChangeModule(null);
+    } catch (error) {
+      showToast('状态变更失败', 'error');
+    }
+  };
+
+  const handleStatusModalCancel = () => {
+    setShowStatusModal(false);
+    setStatusChangeModule(null);
   };
 
   if (modules.length === 0) {
@@ -528,7 +554,6 @@ export function ModuleList({
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>
                     <button onClick={() => handleSort('moduleName')} className={`flex items-center gap-1 hover:text-blue-500 cursor-pointer transition-colors ${t.textSecondary}`}>模块名称<SortIndicator field='moduleName' /></button>
                   </th>
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>种类</th>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>阶段</th>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>版本</th>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>状态</th>
@@ -572,20 +597,19 @@ export function ModuleList({
                         {module.moduleName}
                       </Link>
                     </td>
-                    <td className={`px-4 py-3`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${categoryColors[module.category] || 'bg-gray-500'}`} />
-                        <span className={`${t.textSecondary}`}>{module.category || '-'}</span>
-                      </div>
-                    </td>
                     <td className={`px-4 py-3 ${t.textSecondary}`}>{module.stage || '-'}</td>
                     <td className={`px-4 py-3 ${t.textSecondary}`}>{module.version || '-'}</td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors['故障']
-                      }`}>
+                      <button
+                        onClick={() => canEdit && onModuleStatusChange && handleStatusModuleClick(module)}
+                        disabled={!canEdit || !onModuleStatusChange}
+                        className={`px-2 py-1 rounded text-xs transition-all ${
+                          t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors['故障']
+                        } ${canEdit && onModuleStatusChange ? 'hover:ring-2 hover:ring-offset-1 cursor-pointer' : 'cursor-default'}`}
+                        title={canEdit && onModuleStatusChange ? '点击变更状态' : module.status}
+                      >
                         {module.status}
-                      </span>
+                      </button>
                     </td>
                     <td className={`px-4 py-3 ${t.textSecondary}`}>{module.components?.length || 0}</td>
                     <td className="px-4 py-3">
@@ -733,13 +757,26 @@ export function ModuleList({
         </>
       )}
 
+      {statusChangeModule && (
+        <ModuleStatusChangeModal
+          show={showStatusModal}
+          moduleName={statusChangeModule.moduleName}
+          currentStatus={statusChangeModule.status}
+          onConfirm={handleStatusModalConfirm}
+          onCancel={handleStatusModalCancel}
+        />
+      )}
+
       <div
-        className={`fixed inset-0 z-40 bg-black/30 ${showStageModal || showVersionModal || showDeleteConfirm ? 'block' : 'hidden'}`}
+        className={`fixed inset-0 z-40 bg-black/30 ${showStageModal || showVersionModal || showDeleteConfirm || showStatusModal ? 'block' : 'hidden'}`}
         onClick={() => {
           if (!isLoading) {
             setShowStageModal(false);
             setShowVersionModal(false);
             setShowDeleteConfirm(false);
+            if (!isLoading) {
+              setShowStatusModal(false);
+            }
           }
         }}
       />

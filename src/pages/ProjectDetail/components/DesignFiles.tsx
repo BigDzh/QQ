@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   FileText, Edit2, Upload, RefreshCw, Download, Trash2, Layout, FileCode, Table,
   Sparkles, X, CheckCircle, AlertCircle, File, Loader2, Plus, Search, FileSearch
@@ -54,6 +54,7 @@ interface DesignFilesProps {
   onUpload: (e: React.ChangeEvent<HTMLInputElement>, designFileId: string) => void;
   onSync: (file: DesignFile) => void;
   onDelete: (fileId: string) => void;
+  onClearAll?: () => void;
   onEditFile?: (file: DesignFile) => void;
   onCreateSingle: (options: CreateDesignOptions) => void;
   onVersionUpdate?: (file: DesignFile) => void;
@@ -88,6 +89,7 @@ export function DesignFiles({
   onUpload,
   onSync,
   onDelete,
+  onClearAll,
   onEditFile,
   onCreateSingle,
   onVersionUpdate,
@@ -127,6 +129,15 @@ export function DesignFiles({
   const [searchQuery, setSearchQuery] = useState('');
 
   const [filterTypeLocal, setFilterTypeLocal] = useState<'all' | 'assembly' | 'table'>('all');
+  const [moduleNameFilter, setModuleNameFilter] = useState<string>('');
+  const [componentNameFilter, setComponentNameFilter] = useState<string>('');
+
+  useEffect(() => {
+    if (filterCategory === 'all') {
+      setModuleNameFilter('');
+      setComponentNameFilter('');
+    }
+  }, [filterCategory]);
 
   const filteredFiles = useMemo(() => {
     return designFiles.filter(df => {
@@ -140,9 +151,24 @@ export function DesignFiles({
         const query = searchQuery.toLowerCase();
         if (!df.name.toLowerCase().includes(query)) return false;
       }
+      if (df.category === 'module' && df.moduleId && moduleNameFilter) {
+        const module = modules.find(m => m.id === df.moduleId);
+        if (!module || module.moduleName !== moduleNameFilter) return false;
+      }
+      if (df.category === 'component' && df.componentId && componentNameFilter) {
+        let componentName = '';
+        for (const mod of modules) {
+          const comp = mod.components.find(c => c.id === df.componentId);
+          if (comp) {
+            componentName = comp.componentName;
+            break;
+          }
+        }
+        if (componentName !== componentNameFilter) return false;
+      }
       return true;
     });
-  }, [designFiles, filterCategory, filterType, filterStage, filterVersion, searchQuery]);
+  }, [designFiles, filterCategory, filterType, filterStage, filterVersion, searchQuery, moduleNameFilter, componentNameFilter, modules]);
 
   const filteredModules = useMemo(() => {
     if (!createForm.searchTerm) return modules;
@@ -266,32 +292,67 @@ export function DesignFiles({
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const fileName = syncModalFile?.name || '';
-    const searchTerm = fileName.replace(/ 装配图| 配套表/g, '').trim();
+    if (!syncModalFile) return;
 
-    const matchingModules = modules.filter(m =>
-      m.moduleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      searchTerm.toLowerCase().includes(m.moduleName.toLowerCase())
-    ).map(m => m.id);
+    const fileModuleId = syncModalFile.moduleId;
+    const fileComponentId = syncModalFile.componentId;
+    const isModuleFile = syncModalFile.category === 'module';
 
-    const matchingComponents = modules.flatMap(m =>
-      (m.components || []).filter(c =>
-        c.componentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        searchTerm.toLowerCase().includes(c.componentName.toLowerCase())
-      )
-    ).map(c => c.id);
+    let matchingModuleIds: string[] = [];
+    let matchingComponentIds: string[] = [];
 
-    const totalMatching = matchingModules.length + matchingComponents.length;
+    if (isModuleFile && fileModuleId) {
+      const module = modules.find(m => m.id === fileModuleId);
+      if (module) {
+        const searchTerm = module.moduleName.toLowerCase();
+        matchingModuleIds = modules.filter(m =>
+          m.moduleName.toLowerCase().includes(searchTerm) ||
+          searchTerm.includes(m.moduleName.toLowerCase())
+        ).map(m => m.id);
+
+        matchingComponentIds = modules.flatMap(m =>
+          (m.components || []).filter(c =>
+            c.componentName.toLowerCase().includes(searchTerm) ||
+            searchTerm.includes(c.componentName.toLowerCase())
+          )
+        ).map(c => c.id);
+      }
+    } else if (!isModuleFile && fileComponentId) {
+      let moduleName = '';
+      for (const mod of modules) {
+        const comp = mod.components.find(c => c.id === fileComponentId);
+        if (comp) {
+          moduleName = comp.componentName;
+          break;
+        }
+      }
+      if (moduleName) {
+        const searchTerm = moduleName.toLowerCase();
+        matchingModuleIds = modules.filter(m =>
+          m.moduleName.toLowerCase().includes(searchTerm) ||
+          searchTerm.includes(m.moduleName.toLowerCase())
+        ).map(m => m.id);
+
+        matchingComponentIds = modules.flatMap(m =>
+          (m.components || []).filter(c =>
+            c.componentName.toLowerCase().includes(searchTerm) ||
+            searchTerm.includes(c.componentName.toLowerCase())
+          )
+        ).map(c => c.id);
+      }
+    }
+
+    const totalMatching = matchingModuleIds.length + matchingComponentIds.length;
     const allSelected = totalMatching > 0 &&
-      matchingModules.every(id => syncModuleIds.includes(id)) &&
-      matchingComponents.every(id => syncComponentIds.includes(id));
+      matchingModuleIds.every(id => syncModuleIds.includes(id)) &&
+      matchingComponentIds.every(id => syncComponentIds.includes(id));
 
     if (allSelected) {
       setSyncModuleIds([]);
       setSyncComponentIds([]);
     } else {
-      setSyncModuleIds(matchingModules);
-      setSyncComponentIds(matchingComponents);
+      setSyncModuleIds(matchingModuleIds);
+      setSyncComponentIds(matchingComponentIds);
     }
   }, [syncModalFile, syncModuleIds, syncComponentIds, modules]);
 
@@ -502,6 +563,19 @@ export function DesignFiles({
     return null;
   }, [createForm.targetId, createForm.targetType, modules]);
 
+  const existingDesignFileInfo = useMemo(() => {
+    if (!createForm.targetId || !createForm.targetType) return null;
+    const category = createForm.targetType;
+    const fileType = createForm.fileType;
+    return designFiles.find(df =>
+      df.isAutoGenerated &&
+      df.category === category &&
+      ((category === 'module' && df.moduleId === createForm.targetId) ||
+       (category === 'component' && df.componentId === createForm.targetId)) &&
+      df.type === fileType
+    );
+  }, [createForm.targetId, createForm.targetType, createForm.fileType, designFiles]);
+
   const renderCreateModal = () => {
     if (!showCreateModal) return null;
 
@@ -655,8 +729,18 @@ export function DesignFiles({
                     : (selectedTarget as { module: Module; component: Component }).component.componentName}
                 </div>
                 <div className={`text-xs text-center mt-1 ${t.textMuted}`}>
-                  将创建: {createForm.fileType} ({createForm.fileType === '装配图' ? 'AutoCAD' : 'Excel'})
+                  将{existingDesignFileInfo ? '更新' : '创建'}: {createForm.fileType} ({createForm.fileType === '装配图' ? 'AutoCAD' : 'Excel'})
                 </div>
+                {existingDesignFileInfo && (
+                  <div className={`mt-2 p-2 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800`}>
+                    <div className="text-xs text-amber-700 dark:text-amber-400 text-center">
+                      ⚠️ 已存在同名文件，将执行更新而非创建
+                    </div>
+                    <div className={`text-xs text-center mt-1 ${t.textMuted}`}>
+                      当前版本: {existingDesignFileInfo.version} | 上次更新: {existingDesignFileInfo.uploadDate}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -673,19 +757,21 @@ export function DesignFiles({
               disabled={!createForm.targetId || isCreating}
               className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
                 createForm.targetId && !isCreating
-                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  ? existingDesignFileInfo
+                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                    : 'bg-purple-600 hover:bg-purple-700 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
               {isCreating ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  创建中...
+                  {existingDesignFileInfo ? '更新中...' : '创建中...'}
                 </>
               ) : (
                 <>
                   <Plus size={16} />
-                  创建
+                  {existingDesignFileInfo ? '更新' : '创建'}
                 </>
               )}
             </button>
@@ -777,9 +863,27 @@ export function DesignFiles({
   const renderSyncModal = () => {
     if (!syncModalFile) return null;
 
-    const fileName = syncModalFile.name || '';
-    const searchTerm = fileName.replace(/ 装配图| 配套表/g, '').trim();
     const isModuleFile = syncModalFile.category === 'module';
+
+    let searchTerm = '';
+    if (isModuleFile && syncModalFile.moduleId) {
+      const module = modules.find(m => m.id === syncModalFile.moduleId);
+      if (module) {
+        searchTerm = module.moduleName;
+      }
+    } else if (!isModuleFile && syncModalFile.componentId) {
+      for (const mod of modules) {
+        const comp = mod.components.find(c => c.id === syncModalFile.componentId);
+        if (comp) {
+          searchTerm = comp.componentName;
+          break;
+        }
+      }
+    }
+
+    if (!searchTerm) {
+      searchTerm = syncModalFile.name.replace(/ 装配图| 配套表/g, '').trim();
+    }
 
     const matchingModules = modules.filter(m =>
       m.moduleName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1026,6 +1130,19 @@ export function DesignFiles({
                   )}
                 </button>
               )}
+              {canEdit && onClearAll && (
+                <button
+                  onClick={() => {
+                    if (confirm('确定要清除所有设计文件吗？此操作不可撤销。')) {
+                      onClearAll();
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700`}
+                >
+                  <Trash2 size={18} />
+                  清除全部
+                </button>
+              )}
               {canEdit && (
                 <button
                   onClick={handleOpenCreateModal}
@@ -1138,13 +1255,43 @@ export function DesignFiles({
           <div className="flex items-center gap-2">
             <select
               value={filterCategory}
-              onChange={(e) => onFilterCategoryChange(e.target.value as 'all' | 'module' | 'component')}
+              onChange={(e) => {
+                onFilterCategoryChange(e.target.value as 'all' | 'module' | 'component');
+                setModuleNameFilter('');
+                setComponentNameFilter('');
+              }}
               className={`px-3 py-2 border rounded-lg text-sm ${t.input}`}
             >
               <option value="all">全部分类</option>
               <option value="module">模块</option>
               <option value="component">组件</option>
             </select>
+
+            {filterCategory === 'module' && (
+              <select
+                value={moduleNameFilter}
+                onChange={(e) => setModuleNameFilter(e.target.value)}
+                className={`px-3 py-2 border rounded-lg text-sm ${t.input}`}
+              >
+                <option value="">全部模块名称</option>
+                {Array.from(new Set(modules.map(m => m.moduleName))).map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            )}
+
+            {filterCategory === 'component' && (
+              <select
+                value={componentNameFilter}
+                onChange={(e) => setComponentNameFilter(e.target.value)}
+                className={`px-3 py-2 border rounded-lg text-sm ${t.input}`}
+              >
+                <option value="">全部组件名称</option>
+                {Array.from(new Set(modules.flatMap(m => (m.components || []).map(c => c.componentName)))).map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
+            )}
 
             <select
               value={filterVersion}
@@ -1204,6 +1351,19 @@ export function DesignFiles({
                     自动生成
                   </>
                 )}
+              </button>
+            )}
+            {canEdit && onClearAll && (
+              <button
+                onClick={() => {
+                  if (confirm('确定要清除所有设计文件吗？此操作不可撤销。')) {
+                    onClearAll();
+                  }
+                }}
+                className={`flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700`}
+              >
+                <Trash2 size={18} />
+                清除全部
               </button>
             )}
             {canEdit && (

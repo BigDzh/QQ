@@ -12,6 +12,29 @@ import type {
 } from '../types/duplicateTask';
 import { DEFAULT_DUPLICATE_RULE, DEFAULT_DELETION_CONFIG } from '../types/duplicateTask';
 
+export interface TaskUniquenessKey {
+  title: string;
+  description?: string;
+  priority: string;
+  dueDate?: string;
+  createdAt: string;
+}
+
+export interface TaskValidationResult {
+  isValid: boolean;
+  error?: string;
+  existingTask?: Task;
+  isDuplicate?: boolean;
+  reason?: string;
+}
+
+interface SubmissionToken {
+  token: string;
+  taskData: TaskUniquenessKey;
+  timestamp: number;
+  used: boolean;
+}
+
 export class DuplicateTaskService {
   private rules: DuplicateRule[] = [];
   private trash: TrashTask[] = [];
@@ -19,6 +42,7 @@ export class DuplicateTaskService {
   private config: DeletionConfig;
   private listeners: Set<() => void> = new Set();
   private cachedTasks: Task[] = [];
+  private submissionTokens: Map<string, SubmissionToken> = new Map();
 
   constructor() {
     this.loadFromStorage();
@@ -67,6 +91,84 @@ export class DuplicateTaskService {
 
   updateTaskCache(tasks: Task[]): void {
     this.cachedTasks = tasks;
+  }
+
+  generateSubmissionToken(taskData: Omit<Task, 'id' | 'createdAt'>): string {
+    const token = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const uniquenessKey: TaskUniquenessKey = {
+      title: taskData.title,
+      description: taskData.description,
+      priority: taskData.priority,
+      dueDate: taskData.dueDate,
+      createdAt: new Date().toISOString(),
+    };
+    this.submissionTokens.set(token, {
+      token,
+      taskData: uniquenessKey,
+      timestamp: Date.now(),
+      used: false,
+    });
+    this.cleanupExpiredTokens();
+    return token;
+  }
+
+  validateTaskUniqueness(taskData: Omit<Task, 'id' | 'createdAt'>, token?: string): TaskValidationResult {
+    if (token) {
+      const storedToken = this.submissionTokens.get(token);
+      if (storedToken && !storedToken.used) {
+        const tokenAge = Date.now() - storedToken.timestamp;
+        if (tokenAge < 30000) {
+          return { isValid: true };
+        }
+      }
+    }
+
+    const enabledRules = this.rules.filter(r => r.enabled);
+    if (enabledRules.length === 0) {
+      return { isValid: true };
+    }
+
+    for (const rule of enabledRules) {
+      for (const existingTask of this.cachedTasks || []) {
+        if (existingTask.status === '已完成') continue;
+        if (rule.protectedTaskIds.includes(existingTask.id)) continue;
+        if (!this.matchesCriteria(existingTask, rule, rule.timeWindowDays)) continue;
+
+        const isMatch = this.isTasksMatch(taskData, existingTask, rule);
+        if (isMatch) {
+          return {
+            isValid: false,
+            isDuplicate: true,
+            existingTask,
+            reason: `任务 "${existingTask.title}" 与现有任务重复（匹配规则：${rule.name}）`,
+          };
+        }
+      }
+    }
+
+    return { isValid: true };
+  }
+
+  consumeSubmissionToken(token: string): boolean {
+    const storedToken = this.submissionTokens.get(token);
+    if (storedToken && !storedToken.used) {
+      const tokenAge = Date.now() - storedToken.timestamp;
+      if (tokenAge < 30000) {
+        storedToken.used = true;
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private cleanupExpiredTokens(): void {
+    const now = Date.now();
+    const expiryTime = 60000;
+    for (const [token, data] of this.submissionTokens.entries()) {
+      if (now - data.timestamp > expiryTime) {
+        this.submissionTokens.delete(token);
+      }
+    }
   }
 
   getRules(): DuplicateRule[] {

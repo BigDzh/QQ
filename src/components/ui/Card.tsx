@@ -67,12 +67,12 @@ export function Card({
 
   const hoverClasses = hover || animated
     ? isCyberpunk
-      ? 'hover:bg-[#1a2028]/80 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/20'
+      ? 'hover:bg-[#1a2028]/80 hover:border-cyan-500/30 hover:shadow-lg hover:shadow-cyan-500/20 hover:font-semibold'
       : isAnime
-      ? 'hover:bg-white/90 hover:border-pink-300/50 hover:shadow-lg hover:shadow-pink-500/20'
+      ? 'hover:bg-white/90 hover:border-pink-300/50 hover:shadow-lg hover:shadow-pink-500/20 hover:font-semibold'
       : isDark
-      ? 'hover:bg-gray-700/80 hover:border-gray-600 hover:shadow-lg'
-      : 'hover:bg-white hover:border-gray-300 hover:shadow-lg'
+      ? 'hover:bg-gray-700/80 hover:border-gray-600 hover:shadow-lg hover:font-semibold'
+      : 'hover:bg-white hover:border-gray-300 hover:shadow-lg hover:font-semibold'
     : '';
 
   const animatedClasses = animated
@@ -98,7 +98,7 @@ export function Card({
     </>
   );
 
-  const selectedClass = selected ? 'z-10 ring-2 ring-primary-500/50 ring-offset-2 ring-offset-transparent' : '';
+  const selectedClass = selected ? 'z-10 ring-2 ring-primary-500/60 ring-offset-2 ring-offset-transparent' : '';
 
   return (
     <div

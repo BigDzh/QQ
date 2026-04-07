@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { Plus, Package, Edit2, Trash2, RefreshCw, Download, Upload, Copy, Search, X, Loader2, Check, FileSearch } from 'lucide-react';
+import { Plus, Package, Edit2, Trash2, RefreshCw, Download, Upload, Copy, Search, X, Loader2, Check, FileSearch, Eye } from 'lucide-react';
 import { useThemeStyles } from '../../../hooks/useThemeStyles';
 import { useToast } from '../../../components/Toast';
 import type { Module, Software, Component } from '../../../types';
@@ -199,36 +199,84 @@ function SyncSoftwareModal({ show, software, modules, onClose, onSync }: SyncMod
   const { showToast } = useToast();
   const [selectedComponentIds, setSelectedComponentIds] = useState<string[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   React.useEffect(() => {
     if (software) {
-      const uniqueIds = [...new Set(software.adaptedComponentIds || [])];
-      setSelectedComponentIds(uniqueIds);
+      const targetNames = new Set<string>();
+      const adaptedIds = new Set(software.adaptedComponentIds || []);
+      const adaptedNames = (software.adaptedComponents || [])
+        .map(a => a?.name)
+        .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
+
+      modules.forEach(mod => {
+        (mod.components || []).forEach(comp => {
+          if (adaptedIds.has(comp.id)) {
+            targetNames.add(comp.componentName);
+          }
+        });
+      });
+      adaptedNames.forEach(name => targetNames.add(name));
+
+      const availableIds: string[] = [];
+      modules.forEach(mod => {
+        (mod.components || []).forEach(comp => {
+          if (targetNames.has(comp.componentName) && !availableIds.includes(comp.id)) {
+            availableIds.push(comp.id);
+          }
+        });
+      });
+
+      setSelectedComponentIds(availableIds);
+      setSearchQuery('');
     }
-  }, [software]);
+  }, [software, modules]);
 
   const adaptedComponentIds = software?.adaptedComponentIds || [];
+  const adaptedNames = (software?.adaptedComponents || [])
+    .map(a => a?.name)
+    .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
 
-  const adaptedComponentsByModule = useMemo(() => {
-    if (!software || adaptedComponentIds.length === 0) return {};
+  const allMatchedComponents = useMemo(() => {
+    if (!software) return [];
 
-    const seenIds = new Set<string>();
-    const groups: Record<string, Component[]> = {};
-    modules.forEach(module => {
-      const adaptedInModule = (module.components || []).filter(c => {
-        if (seenIds.has(c.id)) return false;
-        if (adaptedComponentIds.includes(c.id)) {
-          seenIds.add(c.id);
-          return true;
+    const targetNames = new Set<string>();
+    const adaptedIds = new Set(adaptedComponentIds);
+
+    modules.forEach(mod => {
+      (mod.components || []).forEach(comp => {
+        if (adaptedIds.has(comp.id)) {
+          targetNames.add(comp.componentName);
         }
-        return false;
       });
-      if (adaptedInModule.length > 0) {
-        groups[module.moduleName] = adaptedInModule;
-      }
     });
-    return groups;
-  }, [modules, software, adaptedComponentIds]);
+    adaptedNames.forEach(name => targetNames.add(name));
+
+    if (targetNames.size === 0) return [];
+
+    const matched: (Component & { isOriginalAdapted: boolean })[] = [];
+    modules.forEach(mod => {
+      (mod.components || []).forEach(comp => {
+        if (targetNames.has(comp.componentName)) {
+          matched.push({
+            ...comp,
+            isOriginalAdapted: adaptedIds.has(comp.id)
+          });
+        }
+      });
+    });
+    return matched;
+  }, [modules, software, adaptedComponentIds, adaptedNames]);
+
+  const filteredComponents = useMemo(() => {
+    if (!searchQuery.trim()) return allMatchedComponents;
+    const query = searchQuery.toLowerCase();
+    return allMatchedComponents.filter(comp =>
+      comp.componentName.toLowerCase().includes(query) ||
+      comp.componentNumber.toLowerCase().includes(query) ||
+      comp.productionOrderNumber?.toLowerCase().includes(query)
+    );
+  }, [allMatchedComponents, searchQuery]);
 
   const handleToggleComponent = useCallback((componentId: string) => {
     setSelectedComponentIds(prev => {
@@ -241,13 +289,13 @@ function SyncSoftwareModal({ show, software, modules, onClose, onSync }: SyncMod
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const allAdaptedIds = Object.values(adaptedComponentsByModule).flat().map(c => c.id);
-    if (selectedComponentIds.length === allAdaptedIds.length && allAdaptedIds.length > 0) {
+    const allIds = filteredComponents.map(c => c.id);
+    if (selectedComponentIds.length === allIds.length && allIds.length > 0) {
       setSelectedComponentIds([]);
     } else {
-      setSelectedComponentIds(allAdaptedIds);
+      setSelectedComponentIds(allIds);
     }
-  }, [selectedComponentIds, adaptedComponentsByModule]);
+  }, [selectedComponentIds, filteredComponents]);
 
   const handleSync = useCallback(async () => {
     if (!software) return;
@@ -267,23 +315,35 @@ function SyncSoftwareModal({ show, software, modules, onClose, onSync }: SyncMod
 
   if (!show || !software) return null;
 
-  const allAdaptedComponents = Object.values(adaptedComponentsByModule).flat();
-  const allAdaptedIds = allAdaptedComponents.map(c => c.id);
-  const isAllSelected = selectedComponentIds.length === allAdaptedIds.length && allAdaptedIds.length > 0;
-  const isIndeterminate = selectedComponentIds.length > 0 && selectedComponentIds.length < allAdaptedIds.length;
-
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
       <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-2xl border ${t.modalBorder} max-h-[90vh] overflow-y-auto shadow-xl`} onClick={(e) => e.stopPropagation()}>
-        <h2 className={`text-xl font-bold mb-3 ${t.text}`}>同步软件到组件</h2>
-        <div className={`text-sm mb-4 ${t.textSecondary}`}>
-          <span className="mr-2">软件:</span>
-          <span className={`font-semibold ${t.text}`}>{software.name}</span>
-          <span className="mx-2">|</span>
-          <span>版本: {software.version}</span>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`text-xl font-bold ${t.text}`}>同步软件到组件</h2>
+          <div className={`flex items-center gap-2 text-sm ${t.textSecondary}`}>
+            <span>软件:</span>
+            <span className={`font-semibold ${t.text}`}>{software.name}</span>
+            <span className="text-gray-400">|</span>
+            <span>v{software.version}</span>
+          </div>
         </div>
 
-        {allAdaptedComponents.length === 0 ? (
+        <div className={`p-3 rounded-lg mb-4 border ${t.border} ${t.card}`}>
+          <div className="flex items-center gap-6 text-sm">
+            <div className="flex items-center gap-2">
+              <Package size={16} className={t.textMuted} />
+              <span className={t.textSecondary}>适配组件:</span>
+              <span className={`font-semibold ${t.accentText}`}>{allMatchedComponents.length} 个</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Check size={16} className="text-emerald-500" />
+              <span className={t.textSecondary}>已选:</span>
+              <span className="font-semibold text-emerald-600">{selectedComponentIds.length} 个</span>
+            </div>
+          </div>
+        </div>
+
+        {allMatchedComponents.length === 0 ? (
           <div className={`text-center py-12 rounded-lg ${t.hoverBg}`}>
             <div className="mb-4">
               <RefreshCw size={48} className="mx-auto opacity-40" />
@@ -293,61 +353,79 @@ function SyncSoftwareModal({ show, software, modules, onClose, onSync }: SyncMod
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between mb-4">
+            <div className="mb-4">
+              <div className="relative">
+                <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${t.textMuted}`} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="搜索组件名称、编号或指令号..."
+                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg ${t.input} text-sm`}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between mb-3">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={isAllSelected}
-                  ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+                  checked={selectedComponentIds.length === filteredComponents.length && filteredComponents.length > 0}
+                  ref={(el) => { if (el) el.indeterminate = selectedComponentIds.length > 0 && selectedComponentIds.length < filteredComponents.length; }}
                   onChange={handleSelectAll}
                   className="checkbox-interactive rounded w-5 h-5"
                 />
                 <span className={`text-base font-medium ${t.text}`}>全选</span>
               </label>
               <div className={`text-sm ${t.textMuted}`}>
-                已选择 <span className={`font-semibold ${t.accentText}`}>{selectedComponentIds.length}</span> / {allAdaptedIds.length} 个组件
+                已选择 <span className={`font-semibold ${t.accentText}`}>{selectedComponentIds.length}</span> / {filteredComponents.length} 个组件
               </div>
             </div>
 
             <div className={`border rounded-lg ${t.border} max-h-80 overflow-y-auto`}>
-              {Object.entries(adaptedComponentsByModule).map(([moduleName, moduleComponents]) => (
-                <div key={moduleName} className={`border-b last:border-b-0 ${t.border}`}>
-                  <div className={`px-4 py-2.5 text-sm font-semibold border-b ${t.border} bg-gray-100 dark:bg-gray-800 ${t.text}`}>
-                    {moduleName}
-                  </div>
-                  <div className="p-2">
-                    {moduleComponents.map(comp => {
-                      const isSelected = selectedComponentIds.includes(comp.id);
-                      return (
-                        <label
-                          key={comp.id}
-                          className={`flex items-center gap-3 py-2.5 px-3 rounded-lg cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'bg-blue-100 dark:bg-blue-900/30'
-                              : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => handleToggleComponent(comp.id)}
-                            className="checkbox-interactive rounded w-4 h-4"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className={`text-sm font-medium truncate ${t.text}`}>{comp.componentName}</div>
-                            <div className={`text-xs truncate ${t.textSecondary}`}>
-                              编号: <span className="font-mono">{comp.componentNumber}</span>
-                            </div>
-                          </div>
-                          {isSelected && (
-                            <Check size={16} className={`${t.accentText} flex-shrink-0`} />
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
+              {filteredComponents.map(comp => {
+                const isSelected = selectedComponentIds.includes(comp.id);
+                return (
+                  <label
+                    key={comp.id}
+                    onClick={() => handleToggleComponent(comp.id)}
+                    className={`flex items-center gap-3 py-3 px-4 border-b last:border-b-0 cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-emerald-100 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-700 shadow-sm'
+                        : 'bg-white dark:bg-gray-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-transparent'
+                    } ${t.border}`}
+                  >
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                      isSelected
+                        ? 'bg-emerald-500 border-emerald-500'
+                        : 'border-gray-300 dark:border-gray-500'
+                    }`}>
+                      {isSelected && <Check size={14} className="text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-semibold truncate flex items-center gap-2 ${isSelected ? 'text-emerald-800 dark:text-emerald-100' : 'text-gray-900 dark:text-gray-100'}`}>
+                        {comp.componentName}
+                        {comp.isOriginalAdapted && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-500 text-white">
+                            原始适配
+                          </span>
+                        )}
+                      </div>
+                      <div className={`text-xs mt-0.5 flex items-center gap-4 ${isSelected ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-400'}`}>
+                        <span>编号: <span className="font-mono">{comp.componentNumber}</span></span>
+                        {comp.productionOrderNumber && (
+                          <span>指令号: <span className="font-mono">{comp.productionOrderNumber}</span></span>
+                        )}
+                      </div>
+                    </div>
+                  </label>
+                );
+              })}
+              {filteredComponents.length === 0 && (
+                <div className={`py-8 text-center text-sm ${t.textMuted}`}>
+                  未找到匹配的组件
                 </div>
-              ))}
+              )}
             </div>
 
             <div className="flex gap-3 pt-4 mt-4 border-t">
@@ -407,6 +485,7 @@ export function SoftwareList({
   const [versionUpdateSoftware, setVersionUpdateSoftware] = useState<Software | null>(null);
   const [versionInput, setVersionInput] = useState('');
   const [isUpdatingVersion, setIsUpdatingVersion] = useState(false);
+  const [selectedSoftware, setSelectedSoftware] = useState<Software | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const incrementVersion = useCallback((version: string): string => {
@@ -733,7 +812,14 @@ export function SoftwareList({
             <tbody>
               {filteredSoftware.map((soft) => (
                 <tr key={soft.id} className={`border-t ${t.border} ${t.hoverBg}`}>
-                  <td className={`px-4 py-3 ${t.text}`}>{soft.name}</td>
+                  <td className={`px-4 py-3 ${t.text}`}>
+                    <button
+                      onClick={() => setSelectedSoftware(soft)}
+                      className={`hover:${t.accentText} underline cursor-pointer`}
+                    >
+                      {soft.name}
+                    </button>
+                  </td>
                   <td className={`px-4 py-3 ${t.textSecondary}`}>{soft.version}</td>
                   <td className={`px-4 py-3 ${t.textSecondary}`}>
                     {soft.fileSize ? `${(soft.fileSize / 1024 / 1024).toFixed(2)} MB` : '-'}
@@ -753,11 +839,23 @@ export function SoftwareList({
                     ) : '-'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      soft.status === '已完成' ? t.success : t.badge
-                    }`}>
-                      {soft.status}
-                    </span>
+                    {soft.status === '上传中' && soft.uploadProgress !== undefined ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-blue-500 transition-all"
+                            style={{ width: `${soft.uploadProgress}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-gray-500">{soft.uploadProgress}%</span>
+                      </div>
+                    ) : (
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        soft.status === '已完成' ? t.success : t.badge
+                      }`}>
+                        {soft.status}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -825,7 +923,7 @@ export function SoftwareList({
       </div>
 
       <EditSoftwareModal
-        key={editingSoftware?.id || 'new'}
+        key={editingSoftware?.id || 'edit-new'}
         show={editingSoftware !== null}
         software={editingSoftware}
         modules={modules}
@@ -834,7 +932,7 @@ export function SoftwareList({
       />
 
       <SyncSoftwareModal
-        key={syncingSoftware?.id || 'new'}
+        key={syncingSoftware?.id || 'sync-new'}
         show={syncingSoftware !== null}
         software={syncingSoftware}
         modules={modules}
@@ -896,6 +994,124 @@ export function SoftwareList({
                 ) : (
                   '确认更新'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedSoftware && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setSelectedSoftware(null)}>
+          <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-2xl border ${t.modalBorder} max-h-[90vh] overflow-y-auto shadow-xl`} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className={`text-xl font-bold ${t.text}`}>软件详细信息</h2>
+              <button
+                onClick={() => setSelectedSoftware(null)}
+                className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>软件名称</label>
+                  <div className={`text-lg font-semibold ${t.text}`}>{selectedSoftware.name}</div>
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>版本号</label>
+                  <div className={`text-lg ${t.text}`}>{selectedSoftware.version}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>大小</label>
+                  <div className={t.text}>
+                    {selectedSoftware.fileSize ? `${(selectedSoftware.fileSize / 1024 / 1024).toFixed(2)} MB` : '-'}
+                  </div>
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>状态</label>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    selectedSoftware.status === '已完成' ? t.success : t.badge
+                  }`}>
+                    {selectedSoftware.status}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>上传日期</label>
+                  <div className={t.text}>{selectedSoftware.uploadDate || '-'}</div>
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>完成日期</label>
+                  <div className={t.text}>{selectedSoftware.completionDate || '-'}</div>
+                </div>
+              </div>
+              {selectedSoftware.md5 && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>MD5码</label>
+                  <div className="flex items-center gap-2">
+                    <code className={`text-sm bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono ${t.text}`}>{selectedSoftware.md5}</code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(selectedSoftware.md5 || '');
+                        showToast('MD5已复制到剪贴板', 'success');
+                      }}
+                      className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}
+                      title="复制MD5"
+                    >
+                      <Copy size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+              {selectedSoftware.fileName && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>文件名</label>
+                  <div className={`text-sm ${t.text}`}>{selectedSoftware.fileName}</div>
+                </div>
+              )}
+              {selectedSoftware.productionOrderNumber && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>生产指令号</label>
+                  <div className={`text-sm ${t.text}`}>{selectedSoftware.productionOrderNumber}</div>
+                </div>
+              )}
+              {selectedSoftware.固化日期 && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>固化日期</label>
+                  <div className={`text-sm ${t.text}`}>{selectedSoftware.固化日期}</div>
+                </div>
+              )}
+              {selectedSoftware.固化指令号 && selectedSoftware.固化指令号.length > 0 && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>固化指令号</label>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedSoftware.固化指令号.map((cmd, idx) => (
+                      <span key={idx} className={`px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs ${t.text}`}>{cmd}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedSoftware.adaptedComponents && selectedSoftware.adaptedComponents.length > 0 && (
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>适配组件</label>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedSoftware.adaptedComponents.map((comp) => (
+                      <span key={comp.id} className={`px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-xs`}>{comp.name}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-3 pt-6 mt-6 border-t">
+              <button
+                onClick={() => setSelectedSoftware(null)}
+                className={`flex-1 py-2 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg}`}
+              >
+                关闭
               </button>
             </div>
           </div>

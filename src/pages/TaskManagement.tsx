@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, Trash2, Edit, Zap, Clock, AlertTriangle, Copy, Trash, History, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { CheckCircle, Trash2, Edit, Zap, Clock, AlertTriangle, Copy, Trash, History, X, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useTheme } from '../context/ThemeContext';
@@ -9,6 +9,14 @@ import { DuplicateTaskRulePanel } from '../components/DuplicateTaskRulePanel';
 import { TrashManagementPanel } from '../components/TrashManagementPanel';
 import { ConfirmModal } from '../components/ui/Modal';
 import type { Task, TaskStatus, Module, Component } from '../types';
+import {
+  markPageLoaded,
+  getPageRefreshState,
+  setPendingTaskData,
+  getAndClearPendingTask,
+  isDuplicateSubmission,
+} from '../hooks/usePageRefreshDetection';
+import { duplicateTaskService } from '../services/duplicateTaskService';
 
 const taskThemeExt = {
   priorityColors: {
@@ -63,6 +71,10 @@ export default function TaskManagement() {
     count: 0,
     ruleId: '',
   });
+  const [pageRefreshDetected, setPageRefreshDetected] = useState(false);
+  const [blockedTaskMessage, setBlockedTaskMessage] = useState<string | null>(null);
+  const submissionTokenRef = useRef<string | null>(null);
+  const isInitializedRef = useRef(false);
 
   const {
     rules,
@@ -99,6 +111,26 @@ export default function TaskManagement() {
     updateTaskCache(tasks);
   }, [tasks, updateTaskCache]);
 
+  useEffect(() => {
+    if (isInitializedRef.current) return;
+    isInitializedRef.current = true;
+
+    markPageLoaded();
+
+    const { isPageRefresh, pendingTaskData } = getPageRefreshState();
+    if (isPageRefresh && pendingTaskData) {
+      setPageRefreshDetected(true);
+      setBlockedTaskMessage(
+        `检测到页面刷新事件，已阻止重复任务创建。\n如果您在刷新前正在创建任务 "${pendingTaskData.title || '未知'}"，该任务已存在于系统中。`
+      );
+      getAndClearPendingTask();
+      setTimeout(() => {
+        setPageRefreshDetected(false);
+        setBlockedTaskMessage(null);
+      }, 8000);
+    }
+  }, []);
+
   const filteredTasks = tasks.filter((task) => {
     // 状态筛选
     if (filter !== 'all' && task.status !== filter) return false;
@@ -112,13 +144,27 @@ export default function TaskManagement() {
       updateTask(editingTask.id, formData);
       showToast('任务更新成功', 'success');
     } else {
+      const token = submissionTokenRef.current;
+      if (token) {
+        const tokenValid = duplicateTaskService.consumeSubmissionToken(token);
+        if (!tokenValid) {
+          showToast('检测到重复提交，已阻止任务创建。请刷新页面后重试。', 'error');
+          submissionTokenRef.current = null;
+          return;
+        }
+      }
+
       const duplicateCheck = checkDuplicate(formData);
       if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
         showToast(`检测到重复任务: "${duplicateCheck.duplicateTask.title}"，请修改任务名称或内容`, 'warning');
+        submissionTokenRef.current = null;
         return;
       }
+
+      setPendingTaskData({ title: formData.title, description: formData.description });
       addTask(formData);
       showToast('任务创建成功', 'success');
+      submissionTokenRef.current = null;
     }
     setShowModal(false);
     setEditingTask(null);
@@ -305,6 +351,31 @@ export default function TaskManagement() {
         ))}
       </div>
 
+      {pageRefreshDetected && blockedTaskMessage && (
+        <div className="mb-4 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/50">
+          <div className="flex items-start gap-3">
+            <RefreshCw size={20} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-1">
+                重复创建已阻止
+              </h4>
+              <p className="text-xs text-amber-600 dark:text-amber-400 whitespace-pre-line">
+                {blockedTaskMessage}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setPageRefreshDetected(false);
+                setBlockedTaskMessage(null);
+              }}
+              className="p-1 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-500"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <div className="flex flex-col gap-2 flex-1">
           <div className={`flex gap-1 p-1 rounded-xl ${isDark ? 'bg-white/5 border border-white/5' : 'bg-white border border-gray-200'}`}>
@@ -381,6 +452,7 @@ export default function TaskManagement() {
               onClick={() => {
                 setEditingTask(null);
                 setFormData({ title: '', description: '', priority: '中', status: '进行中', dueDate: '' });
+                submissionTokenRef.current = duplicateTaskService.generateSubmissionToken(formData);
                 setShowModal(true);
               }}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white transition-all ${

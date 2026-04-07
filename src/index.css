@@ -584,6 +584,146 @@ input[type="number"] {
 }
 
 /* ============================================
+   WCAG AA 文字清晰度增强系统 v2.0
+   确保所有交互状态下文字对比度 ≥ 4.5:1
+   ============================================ */
+
+/* 全局文字渲染优化 - 提升所有文字清晰度 */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 统一hover状态文字对比度 - 防止文字变淡 */
+button:hover:not(:disabled),
+[role="button"]:hover:not(:disabled),
+a:hover:not(:disabled),
+label:hover:not(:disabled) {
+  text-rendering: optimizeLegibility;
+}
+
+/* 所有交互元素hover时文字加粗增强可见性 */
+.interactive-hover:hover,
+button.interactive-hover,
+a.interactive-hover {
+  font-weight: 500;
+}
+
+/* 悬浮交互元素 - 文字增强规则 */
+button:hover, [role="button"]:hover, a[role="button"]:hover,
+select:hover, [tabindex]:not([tabindex="-1"]):hover,
+label:hover, .interactive-element:hover {
+  text-rendering: optimizeLegibility;
+}
+
+/* 选中状态UI元素 - 文字强制可见 */
+button:active, [role="button"]:active, a[role="button"]:active,
+button:focus-visible, [role="button"]:focus-visible,
+input[type="checkbox"]:checked + label,
+input[type="radio"]:checked + label {
+  text-rendering: optimizeLegibility;
+}
+
+/* 禁用状态文字仍需可读（不低于3:1） */
+[disabled] *, [aria-disabled="true"] * {
+  opacity: 0.55;
+}
+
+/* ============================================
+   全局交互状态文字对比度强制规则
+   ============================================ */
+
+/* 鼠标悬浮状态 - 文字必须清晰可见 */
+*:hover {
+  text-shadow: none !important;
+}
+
+/* 深色模式悬浮增强 */
+.dark button:hover:not(:disabled),
+.dark [role="button"]:hover:not(:disabled),
+.dark a:hover:not(:disabled) {
+  color: inherit;
+  filter: brightness(1.05);
+}
+
+/* 浅色模式悬浮增强 */
+.light button:hover:not(:disabled),
+.light [role="button"]:hover:not(:disabled),
+.light a:hover:not(:disabled) {
+  color: inherit;
+  filter: brightness(1.02);
+}
+
+/* 选中/激活状态文字强制全对比度 */
+.active-text,
+[aria-selected="true"],
+[aria-pressed="true"],
+.is-selected {
+  font-weight: 500 !important;
+  text-shadow: none !important;
+}
+
+/* 表格行悬浮 - 文字清晰 */
+tbody tr:hover td {
+  text-rendering: optimizeLegibility;
+}
+
+/* 菜单项悬浮 - 强制高对比度 */
+[role="menuitem"]:hover,
+[role="option"]:hover,
+select option:hover,
+li[role="option"]:hover {
+  color: inherit;
+  font-weight: 500;
+}
+
+/* 选项卡选中态 - 文字加粗+高对比 */
+[role="tab"][aria-selected="true"] {
+  font-weight: 600;
+}
+
+/* 弹窗/模态框内文字强制高对比度 */
+[role="dialog"] h1, [role="dialog"] h2, [role="dialog"] h3,
+[role="dialog"] h4, [role="dialog"] h5, [role="dialog"] h6,
+[aria-modal="true"] h1, [aria-modal="true"] h2, [aria-modal="true"] h3,
+[aria-modal="true"] h4, [aria-modal="true"] h5, [aria-modal="true"] h6 {
+  color: inherit;
+  text-shadow: none;
+}
+
+/* Toast/通知类组件文字增强 */
+[role="alert"], [role="status"], [role="log"] {
+  text-rendering: optimizeLegibility;
+}
+
+/* Tooltip/Popover 内文字强制清晰 */
+[role="tooltip"], [data-tooltip] {
+  text-rendering: optimizeLegibility;
+  font-weight: 500;
+}
+
+/* ============================================
+   文字对比度增强工具类
+   ============================================ */
+
+/* 高对比度文字 - 用于深色背景 */
+.text-contrast-high {
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.text-contrast-medium {
+  color: #f3f4f6 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* 深色模式文字增强 */
+.dark .text-enhanced {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================
    高级微交互动画系统 v2.0
    包含: 波纹效果、光泽扫过、弹簧物理、
          呼吸光晕、浮起投影、粒子飘散
@@ -1040,5 +1180,61 @@ select, [tabindex]:not([tabindex="-1"]) {
 *::before,
 *::after {
   animation-duration: var(--anim-duration, inherit) !important;
+}
+
+/* ============================================
+   WCAG AA 对比度增强 - 全局交互状态规则
+   确保hover/active/selected/focus下文字清晰可辨
+   ============================================ */
+
+/* 所有可点击元素悬浮时文字不褪色、保持清晰 */
+a:hover:not(:disabled), button:hover:not(:disabled),
+[role="button"]:hover:not([aria-disabled="true"]) {
+  filter: none;
+}
+
+/* 选中/激活状态下文字加粗增强可见性 */
+.btn-active, [aria-pressed="true"], [aria-selected="true"],
+input:checked + label {
+  font-weight: 500;
+}
+
+/* 下拉菜单项悬浮 - 强制高对比度 */
+[role="menuitem"]:hover, [role="option"]:hover,
+select option:hover, li[role="option"]:hover {
+  color: inherit;
+  font-weight: 500;
+}
+
+/* 表格行悬浮 - 文字清晰 */
+tbody tr:hover td {
+  text-rendering: optimizeLegibility;
+}
+
+/* 选项卡选中态 - 文字加粗+高对比 */
+[role="tab"][aria-selected="true"] {
+  font-weight: 600;
+}
+
+/* 复选框/单选框标签选中态 */
+input[type="checkbox"]:checked + label,
+input[type="radio"]:checked + label {
+  font-weight: 500;
+}
+
+/* 模态框内所有文字确保对比度 */
+[role="dialog"] *, [aria-modal="true"] * {
+  text-shadow: none;
+}
+
+/* Toast/通知类组件文字增强 */
+[role="alert"], [role="status"], [role="log"] {
+  text-rendering: optimizeLegibility;
+}
+
+/* Tooltip/Popover 内文字强制清晰 */
+[role="tooltip"], [data-tooltip] {
+  text-rendering: optimizeLegibility;
+  font-weight: 500;
 }
 }

@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Hash, Copy, Upload, Loader2, GitCompare, Crop, Binary, X, Trash2, Settings, CheckCircle, ExternalLink, Download, History, Sliders, Link2, AlertTriangle } from 'lucide-react';
+import { Hash, Copy, Upload, Loader2, GitCompare, Crop, Binary, X, Trash2, Settings, CheckCircle, ExternalLink, Download, History, Sliders, Link2, AlertTriangle, FileText } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { generateMD5, calculateFileMD5, copyToClipboard } from '../utils/md5';
 import { deleteFile } from '../services/database';
 import JumpSkillConfig from './Tools/JumpSkillConfig';
+import ChineseSymbolConverter from './Tools/ChineseSymbolConverter';
 import {
   compareFilesOptimized,
   compareFilesParallel,
@@ -17,7 +18,7 @@ import {
 export default function Tools() {
   const { showToast } = useToast();
   const t = useThemeStyles();
-  const [activeTab, setActiveTab] = useState<'md5' | 'ocr' | 'diff' | 'jump'>('md5');
+  const [activeTab, setActiveTab] = useState<'md5' | 'ocr' | 'diff' | 'jump' | 'symbol'>('md5');
   
   const [md5Input, setMd5Input] = useState('');
   const [md5Result, setMd5Result] = useState('');
@@ -994,6 +995,17 @@ export default function Tools() {
           <Link2 size={18} className="inline mr-2" />
           跳转技能
         </button>
+        <button
+          onClick={() => setActiveTab('symbol')}
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'symbol'
+              ? `${t.button} text-white`
+              : `${t.border} ${t.textSecondary} hover:${t.hoverBg}`
+          }`}
+        >
+          <FileText size={18} className="inline mr-2" />
+          符号转换
+        </button>
       </div>
 
       {activeTab === 'md5' && (
@@ -1742,6 +1754,12 @@ export default function Tools() {
       {activeTab === 'jump' && (
         <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
           <JumpSkillConfig />
+        </div>
+      )}
+
+      {activeTab === 'symbol' && (
+        <div className={`${t.card} rounded-lg shadow-sm p-6 border ${t.border}`}>
+          <ChineseSymbolConverter />
         </div>
       )}
     </div>

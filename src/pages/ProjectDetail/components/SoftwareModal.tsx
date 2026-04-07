@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { useThemeStyles } from '../../../hooks/useThemeStyles';
 import type { Software, Component } from '../../../types';
 
@@ -23,10 +24,18 @@ export function SoftwareModal({ show, onClose, onSubmit, form, onChange, editing
 
   if (!show) return null;
 
+  const handleToggleComponent = (compId: string) => {
+    if (form.adaptedComponentIds.includes(compId)) {
+      onChange('adaptedComponentIds', form.adaptedComponentIds.filter(id => id !== compId));
+    } else {
+      onChange('adaptedComponentIds', [...form.adaptedComponentIds, compId]);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-lg border ${t.modalBorder} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-        <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>{editingSoftware ? '编辑软件' : '新建软件'}</h2>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-lg border ${t.modalBorder} max-h-[90vh] overflow-y-auto shadow-xl`} onClick={(e) => e.stopPropagation()}>
+        <h2 className={`text-xl font-bold mb-4 ${t.text}`}>{editingSoftware ? '编辑软件' : '新建软件'}</h2>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>软件名称 *</label>
@@ -58,31 +67,37 @@ export function SoftwareModal({ show, onClose, onSubmit, form, onChange, editing
                 )}
               </label>
               <div className={`max-h-48 overflow-y-auto border rounded-lg p-3 ${t.border}`}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {components.map((comp) => (
-                    <label key={comp.id} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded px-2 -mx-2">
-                      <input
-                        type="checkbox"
-                        checked={form.adaptedComponentIds.includes(comp.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            onChange('adaptedComponentIds', [...form.adaptedComponentIds, comp.id]);
-                          } else {
-                            onChange('adaptedComponentIds', form.adaptedComponentIds.filter(id => id !== comp.id));
-                          }
-                        }}
-                        className="checkbox-interactive rounded"
-                      />
-                      <span className={`text-sm ${t.text} flex-1 truncate`}>{comp.componentName}</span>
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        form.adaptedComponentIds.includes(comp.id)
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                          : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
-                        {form.adaptedComponentIds.includes(comp.id) ? '已选' : '未选'}
-                      </span>
-                    </label>
-                  ))}
+                <div className="grid grid-cols-1 gap-2">
+                  {components.map((comp) => {
+                    const isSelected = form.adaptedComponentIds.includes(comp.id);
+                    return (
+                      <label
+                        key={comp.id}
+                        onClick={() => handleToggleComponent(comp.id)}
+                        className={`flex items-center gap-3 py-2 px-3 rounded-lg cursor-pointer transition-all ${
+                          isSelected
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                          isSelected
+                            ? 'bg-emerald-500 border-emerald-500'
+                            : 'border-gray-300 dark:border-gray-500'
+                        }`}>
+                          {isSelected && <Check size={14} className="text-white" />}
+                        </div>
+                        <span className={`text-sm flex-1 truncate ${t.text}`}>{comp.componentName}</span>
+                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                          isSelected
+                            ? 'bg-emerald-500 text-white'
+                            : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                        }`}>
+                          {isSelected ? '已选' : '未选'}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
               {form.adaptedComponentIds.length > 0 && (
@@ -91,7 +106,7 @@ export function SoftwareModal({ show, onClose, onSubmit, form, onChange, editing
                   {form.adaptedComponentIds.map(id => {
                     const comp = components.find(c => c.id === id);
                     return comp ? (
-                      <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded text-xs">
+                      <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded text-xs">
                         {comp.componentName}
                         <button
                           type="button"
@@ -111,10 +126,10 @@ export function SoftwareModal({ show, onClose, onSubmit, form, onChange, editing
             <p className={`text-sm ${t.textMuted}`}>暂无可选组件</p>
           )}
           <div className="flex gap-3 pt-4">
-            <button type="button" onClick={onClose} className={`flex-1 py-2 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg}`}>
+            <button type="button" onClick={onClose} className={`flex-1 py-2.5 border rounded-lg ${t.border} ${t.textSecondary} hover:${t.hoverBg} transition-opacity`}>
               取消
             </button>
-            <button type="submit" className={`flex-1 py-2 ${t.button} rounded-lg`}>
+            <button type="submit" className={`flex-1 py-2.5 ${t.button} rounded-lg`}>
               {editingSoftware ? '保存' : '创建'}
             </button>
           </div>

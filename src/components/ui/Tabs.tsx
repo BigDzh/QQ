@@ -76,8 +76,8 @@ export function Tabs({
                 aria-selected={isActive}
                 className={`${baseClasses} ${
                   isActive
-                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                    : `border-transparent ${t.textSecondary} hover:${t.text}`
+                    ? 'border-primary-500 text-primary-600 dark:text-primary-400 font-semibold'
+                    : `border-transparent ${t.textSecondary} hover:${t.text} hover:font-semibold`
                 } ${tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 <span className="flex items-center gap-2">
@@ -89,19 +89,19 @@ export function Tabs({
           }
 
           return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => handleTabClick(tab.key, tab.disabled)}
-              disabled={tab.disabled}
-              role="tab"
-              aria-selected={isActive}
-              className={`${baseClasses} ${
-                isActive
-                  ? `${t.card} ${t.text} shadow-sm`
-                  : `${t.textSecondary} hover:${t.text}`
-              } ${tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-            >
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => handleTabClick(tab.key, tab.disabled)}
+                disabled={tab.disabled}
+                role="tab"
+                aria-selected={isActive}
+                className={`${baseClasses} ${
+                  isActive
+                    ? `${t.card} ${t.text} shadow-sm font-semibold`
+                    : `${t.textSecondary} hover:${t.text} hover:font-semibold`
+                } ${tab.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
               <span className="flex items-center gap-2">
                 {tab.icon && <span className="w-4 h-4">{tab.icon}</span>}
                 {tab.label}

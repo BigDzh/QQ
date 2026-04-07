@@ -10,6 +10,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { getDefaultStageForEntity } from '../services/stageConfig';
+import { SystemLogs } from './ProjectDetail/components/SystemLogs';
 
 interface ModuleTreeNode {
   id: string;
@@ -835,9 +836,14 @@ export default function SystemDetail() {
         )}
       </div>
 
+      <SystemLogs
+        systemId={id}
+        title="系统日志"
+      />
+
       {showModuleModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowModuleModal(false)}>
-          <div className="rounded-2xl p-6 w-full max-w-md shadow-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+          <div className={`rounded-2xl p-6 w-full max-w-md shadow-2xl ${t.modalBg} ${t.modalBorder} border`} onClick={(e) => e.stopPropagation()}>
             <h2 className={`text-xl font-semibold mb-6 ${t.text}`}>新建模块</h2>
             <form onSubmit={handleCreateModule} className="space-y-4">
               <div>
@@ -846,7 +852,7 @@ export default function SystemDetail() {
                   type="text"
                   value={moduleForm.moduleNumber}
                   onChange={(e) => setModuleForm({ ...moduleForm, moduleNumber: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
                   placeholder="如: M001"
                 />
               </div>
@@ -856,7 +862,7 @@ export default function SystemDetail() {
                   type="text"
                   value={moduleForm.moduleName}
                   onChange={(e) => setModuleForm({ ...moduleForm, moduleName: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
                   placeholder="请输入模块名称"
                 />
               </div>
@@ -865,7 +871,7 @@ export default function SystemDetail() {
                 <select
                   value={moduleForm.category}
                   onChange={(e) => setModuleForm({ ...moduleForm, category: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
                 >
                   <option value="">请选择种类</option>
                   {categories.filter(c => c !== '全部').map((cat) => (
@@ -879,7 +885,7 @@ export default function SystemDetail() {
                   type="text"
                   value={moduleForm.productionOrderNumber || system.productionOrderNumber}
                   onChange={(e) => setModuleForm({ ...moduleForm, productionOrderNumber: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
                   placeholder={system.productionOrderNumber}
                 />
               </div>
@@ -889,7 +895,7 @@ export default function SystemDetail() {
                   type="text"
                   value={moduleForm.holder || system.holder}
                   onChange={(e) => setModuleForm({ ...moduleForm, holder: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
                   placeholder={system.holder}
                 />
               </div>
@@ -915,7 +921,7 @@ export default function SystemDetail() {
 
       {showCategoryModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowCategoryModal(false)}>
-          <div className="rounded-2xl p-6 w-full max-w-md shadow-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+          <div className={`rounded-2xl p-6 w-full max-w-md shadow-2xl ${t.modalBg} ${t.modalBorder} border`} onClick={(e) => e.stopPropagation()}>
             <h2 className={`text-xl font-semibold mb-6 ${t.text}`}>新建种类</h2>
             <div className="space-y-4">
               <div>
@@ -924,7 +930,7 @@ export default function SystemDetail() {
                   type="text"
                   value={newCategory}
                   onChange={(e) => setNewCategory(e.target.value)}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all`}
                   placeholder="如: 控制类"
                 />
               </div>
@@ -951,7 +957,7 @@ export default function SystemDetail() {
 
       {isEditing && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={handleCancelEdit}>
-          <div className="rounded-2xl p-6 w-full max-w-2xl shadow-2xl bg-white max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className={`rounded-2xl p-6 w-full max-w-2xl shadow-2xl ${t.modalBg} ${t.modalBorder} border max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className={`text-xl font-semibold ${t.text}`}>编辑系统信息</h2>
               <button
@@ -972,7 +978,7 @@ export default function SystemDetail() {
                     type="text"
                     value={editForm.systemName}
                     onChange={(e) => setEditForm({ ...editForm, systemName: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-xl ${formErrors.systemName ? 'border-red-500' : t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${formErrors.systemName ? 'border-red-500' : t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                     placeholder="请输入系统名称"
                   />
                   {formErrors.systemName && (
@@ -988,7 +994,7 @@ export default function SystemDetail() {
                     type="text"
                     value={editForm.systemNumber}
                     onChange={(e) => setEditForm({ ...editForm, systemNumber: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-xl ${formErrors.systemNumber ? 'border-red-500' : t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${formErrors.systemNumber ? 'border-red-500' : t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                     placeholder="如: SYS001"
                   />
                   {formErrors.systemNumber && (
@@ -1002,7 +1008,7 @@ export default function SystemDetail() {
                     type="text"
                     value={editForm.productionOrderNumber}
                     onChange={(e) => setEditForm({ ...editForm, productionOrderNumber: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                     placeholder="请输入生产指令号"
                   />
                 </div>
@@ -1013,7 +1019,7 @@ export default function SystemDetail() {
                     type="text"
                     value={editForm.holder}
                     onChange={(e) => setEditForm({ ...editForm, holder: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                     placeholder="请输入负责人姓名"
                   />
                 </div>
@@ -1023,14 +1029,14 @@ export default function SystemDetail() {
                   <select
                     value={editForm.stage}
                     onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                   >
                     <option value="">请选择阶段</option>
-                    <option value="设计">设计</option>
-                    <option value="开发">开发</option>
-                    <option value="测试">测试</option>
-                    <option value="投产">投产</option>
-                    <option value="维护">维护</option>
+                    <option value="F阶段">F阶段</option>
+                    <option value="C阶段">C阶段</option>
+                    <option value="S阶段">S阶段</option>
+                    <option value="D阶段">D阶段</option>
+                    <option value="P阶段">P阶段</option>
                   </select>
                 </div>
 
@@ -1040,7 +1046,7 @@ export default function SystemDetail() {
                     type="text"
                     value={editForm.version}
                     onChange={(e) => setEditForm({ ...editForm, version: e.target.value })}
-                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                    className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                     placeholder="如: v1.0"
                   />
                 </div>
@@ -1051,7 +1057,7 @@ export default function SystemDetail() {
                 <select
                   value={editForm.status}
                   onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.text} ${t.card} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
+                  className={`w-full px-3 py-2.5 border rounded-xl ${t.border} ${t.input} focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all`}
                 >
                   <option value="未投产">未投产</option>
                   <option value="投产中">投产中</option>

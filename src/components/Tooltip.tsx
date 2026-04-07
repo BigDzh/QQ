@@ -92,10 +92,10 @@ export default function Tooltip({
 
     if (variant === 'glass') {
       return `
-        px-3 py-2 rounded-lg text-xs font-medium whitespace-normal
-        bg-gray-800/85 dark:bg-gray-200/90
+        px-3 py-2 rounded-lg text-xs font-semibold whitespace-normal
+        bg-gray-800/90 dark:bg-gray-200/95
         backdrop-blur-md
-        text-white dark:text-gray-800
+        text-white dark:text-gray-900
         shadow-xl shadow-black/10 dark:shadow-black/20
         border border-white/10 dark:border-black/10
         ${baseTransform}
@@ -105,7 +105,7 @@ export default function Tooltip({
 
     if (variant === 'solid') {
       return `
-        px-3 py-2 rounded-lg text-xs font-medium whitespace-normal
+        px-3 py-2 rounded-lg text-xs font-semibold whitespace-normal
         bg-gray-900 dark:bg-gray-100
         text-white dark:text-gray-900
         shadow-lg
@@ -116,7 +116,7 @@ export default function Tooltip({
 
     // default
     return `
-      px-2.5 py-1.5 rounded-lg text-xs whitespace-normal
+      px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-normal
       bg-gray-700/95 dark:bg-gray-200/95
       backdrop-blur-sm
       text-white dark:text-gray-800

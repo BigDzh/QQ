@@ -117,8 +117,8 @@ export function Dropdown({
                   item.disabled
                     ? 'text-gray-400 cursor-not-allowed'
                     : item.danger
-                    ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20'
-                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 hover:font-semibold hover:text-red-700 dark:hover:text-red-300'
+                    : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:font-semibold hover:text-gray-900 dark:hover:text-white'
                 }`}
                 role="menuitem"
               >
@@ -199,8 +199,8 @@ export function SelectDropdown({
                 option.disabled
                   ? 'text-gray-400 cursor-not-allowed'
                   : option.value === value
-                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
-                  : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 font-semibold'
+                  : 'text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 hover:font-semibold hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               {option.label}

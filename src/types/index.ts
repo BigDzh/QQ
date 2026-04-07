@@ -5,7 +5,7 @@ export type ProjectVersion = 'A版' | 'B版' | 'C版' | 'D版' | 'E版' | 'F版'
 export type ModuleStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '借用中' | '故障';
 export type ComponentStatus = '未投产' | '投产中' | '正常' | '维修中' | '三防中' | '测试中' | '仿真中' | '借用中' | '故障';
 export type DocumentStatus = '未完成' | '已完成';
-export type SoftwareStatus = '未完成' | '已完成';
+export type SoftwareStatus = '未完成' | '已完成' | '上传中';
 export type TaskStatus = '进行中' | '已完成' | '已过期';
 export type TaskPriority = '低' | '中' | '高' | '紧急';
 
@@ -135,6 +135,8 @@ export interface Software {
   adaptedComponentIds?: string[];
   adaptedComponents?: { id: string; name: string }[];
   dbId?: string;
+  uploadProgress?: number;
+  uploadStage?: 'md5' | 'uploading' | 'complete';
 }
 
 export interface DesignFile {

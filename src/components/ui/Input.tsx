@@ -65,17 +65,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
 
   const inputClasses = {
     default: isDark
-      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:placeholder-gray-300' // 提升focus时placeholder的可见性
+      ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:placeholder-gray-300'
       : isCyberpunk
       ? 'bg-[#0d1117] border-white/20 text-white placeholder-gray-400 focus:placeholder-gray-300'
       : isAnime
-      ? 'bg-pink-50/95 border-pink-400 text-pink-950 placeholder:fuchsia-500 focus:placeholder:fuchsia-600' // 提升对比度
+      ? 'bg-pink-50/95 border-pink-400 text-pink-950 placeholder:fuchsia-500 focus:placeholder:fuchsia-600'
       : isCosmos
       ? 'bg-[#030012]/90 border-violet-500/40 text-white placeholder-gray-400 focus:placeholder-gray-300'
-      : 'bg-white border-gray-400 text-gray-900 placeholder-gray-500 focus:placeholder-gray-600', // 提升边框和placeholder对比度
+      : 'bg-white border-gray-400 text-gray-900 placeholder-gray-500 focus:placeholder-gray-600',
     error: isDark
       ? 'bg-red-950/40 border-red-500 text-white placeholder-red-300/70'
-      : 'bg-red-50 border-red-500 text-red-950 placeholder-red-400', // 提升文本对比度
+      : 'bg-red-50 border-red-500 text-red-950 placeholder-red-400',
     disabled: isDark ? 'bg-gray-700/50 text-gray-400' : 'bg-gray-100 text-gray-500',
   };
 
@@ -115,7 +115,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
   return (
     <div className={`${fullWidth ? 'w-full' : ''} ${className}`}>
       {label && (
-        <label className={`block text-sm font-medium mb-1.5 transition-colors duration-200 ${isDark ? 'text-gray-200' : 'text-gray-700'} ${isFocused ? getFocusIconColor() : ''}`}>
+        <label className={`block text-sm font-medium mb-1.5 transition-colors duration-200 ${isDark ? 'text-gray-100' : 'text-gray-800'} ${isFocused ? getFocusIconColor() : ''}`}>
           {label}
         </label>
       )}
@@ -266,7 +266,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         </div>
       )}
       <div className="flex justify-between mt-1.5">
-        <p className={`text-xs transition-colors duration-200 ${error ? 'text-red-600' : isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className={`text-xs transition-colors duration-200 font-normal ${error ? 'text-red-600 dark:text-red-400' : isDark ? 'text-gray-300' : 'text-gray-600'}`}>
           {error || helperText}
         </p>
         {showCount && maxLength && (

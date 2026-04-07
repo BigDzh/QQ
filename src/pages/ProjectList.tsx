@@ -209,71 +209,70 @@ export default function ProjectList() {
         </button>
       </div>
 
-      {filteredProjects.length > 0 && (
-        <div className={`flex items-center justify-between mb-4 p-3 rounded-xl border ${t.card} ${isDark ? 'border-white/10' : 'border-gray-200'}`}>
+      <div className={`flex items-center justify-between mb-4 p-3 rounded-xl border transition-all duration-200 ${t.card} ${isDark ? 'border-white/10' : 'border-gray-200'} ${selectedProjects.size > 0 ? 'ring-2 ring-cyan-500/30 dark:ring-cyan-400/30' : ''}`}>
           <div className="flex items-center gap-3">
             <button
               onClick={toggleSelectAll}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                 selectedProjects.size === filteredProjects.length && filteredProjects.length > 0
-                  ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                  : `${isDark ? 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'}`
+                  ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/40 font-medium'
+                  : `${isDark ? 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:border-white/20' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'}`
               }`}
             >
               {selectedProjects.size === filteredProjects.length && filteredProjects.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
-              全选
+              <span>全选</span>
             </button>
-            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              已选择 {selectedProjects.size} / {filteredProjects.length} 项
+            <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              已选择 <span className={selectedProjects.size > 0 ? 'text-cyan-600 dark:text-cyan-400 font-semibold' : ''}>{selectedProjects.size}</span> / {filteredProjects.length} 项
             </span>
           </div>
-          {selectedProjects.size > 0 && (
-            <div className="flex items-center gap-2">
+          {selectedProjects.size > 0 ? (
+            <div className="flex items-center gap-2 animate-fade-in">
               <button
                 onClick={handleBatchUpdateStage}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   isCyberpunk
-                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30 hover:bg-purple-500/30'
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 hover:bg-purple-500/30 font-medium'
                     : `${isDark ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20' : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'}`
                 }`}
               >
                 <ArrowRightLeft size={14} />
-                批量更新阶段
+                <span>批量更新阶段</span>
               </button>
               <button
                 onClick={handleExportSelected}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   isCyberpunk
-                    ? 'bg-green-500/20 text-green-400 border border-green-500/30 hover:bg-green-500/30'
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/40 hover:bg-green-500/30 font-medium'
                     : `${isDark ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20' : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100'}`
                 }`}
               >
                 <Download size={14} />
-                导出
+                <span>导出</span>
               </button>
               {canEdit && (
                 <button
                   onClick={handleBatchDelete}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                     isCyberpunk
-                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 hover:bg-rose-500/30'
+                      ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30 font-medium'
                       : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                   }`}
                 >
                   <Trash2 size={14} />
-                  批量删除
+                  <span>批量删除</span>
                 </button>
               )}
               <button
                 onClick={() => setSelectedProjects(new Set())}
-                className={`p-1.5 rounded-lg transition-colors ${isDark ? 'text-gray-500 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                className={`p-1.5 rounded-lg transition-all duration-200 ${isDark ? 'text-gray-500 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                title="取消选择"
               >
                 <X size={16} />
               </button>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
 
       {filteredProjects.length === 0 ? (
         <div className={`text-center py-20 ${t.emptyBg} rounded-2xl border ${t.border}`}>

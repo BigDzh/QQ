@@ -22,57 +22,65 @@ export default function SoftwareDetail() {
   const software = projects.flatMap(p => p.software).find(s => s.id === id);
   const project = projects.find(p => p.software.some(s => s.id === id));
 
-  const allAdaptedComponents = useMemo(() => {
+  const allProjectComponents = useMemo(() => {
     if (!software || !project) return [];
-    const adaptedIds = software.adaptedComponentIds || [];
-    const adaptedNames = (software.adaptedComponents || []).map(a => a.name).filter(Boolean);
-    if (adaptedIds.length === 0 && adaptedNames.length === 0) return [];
 
-    const components: (Component & { moduleName: string; matchSource: 'id' | 'name' })[] = [];
-    const seenIds = new Set<string>();
+    const adaptedIds = new Set(software.adaptedComponentIds || []);
+    const adaptedNames = (software.adaptedComponents || [])
+      .map(a => a?.name)
+      .filter((name): name is string => typeof name === 'string' && name.trim().length > 0);
 
-    project.modules.forEach(mod => {
+    console.log('[DEBUG Sync] adaptedIds:', [...adaptedIds]);
+    console.log('[DEBUG Sync] adaptedNames:', adaptedNames);
+    console.log('[DEBUG Sync] project.modules count:', project.modules?.length || 0);
+    if (project.modules?.length > 0) {
+      const allComps = project.modules.flatMap(m => m.components || []);
+      console.log('[DEBUG Sync] project all components:', allComps.map(c => ({ id: c.id, name: c.componentName })));
+    }
+
+    if (adaptedNames.length === 0 && adaptedIds.size === 0) {
+      console.log('[DEBUG Sync] early return: no adapted data');
+      return [];
+    }
+
+    const targetNames = new Set<string>();
+
+    project.modules?.forEach(mod => {
       (mod.components || []).forEach(comp => {
-        if (seenIds.has(comp.id)) return;
-        let matchSource: 'id' | 'name' | null = null;
-
-        if (adaptedIds.includes(comp.id)) {
-          matchSource = 'id';
-        } else if (adaptedNames.some(name =>
-          name === comp.componentName ||
-          name === comp.componentNumber ||
-          comp.componentName.includes(name) ||
-          name.includes(comp.componentName)
-        )) {
-          matchSource = 'name';
-        }
-
-        if (matchSource) {
-          seenIds.add(comp.id);
-          components.push({ ...comp, moduleName: mod.moduleName, matchSource });
+        if (adaptedIds.has(comp.id)) {
+          targetNames.add(comp.componentName);
         }
       });
     });
 
-    adaptedIds.forEach(id => {
-      if (!seenIds.has(id)) {
-        projects.forEach(p => {
-          p.modules.forEach(mod => {
-            (mod.components || []).forEach(comp => {
-              if (comp.id === id && !seenIds.has(comp.id)) {
-                seenIds.add(comp.id);
-                components.push({ ...comp, moduleName: `${mod.moduleName} (跨项目)`, matchSource: 'id' });
-              }
-            });
-          });
-        });
-      }
+    adaptedNames.forEach(name => {
+      if (name) targetNames.add(name);
     });
 
-    return components;
-  }, [software, project, projects]);
+    console.log('[DEBUG Sync] targetNames:', [...targetNames]);
 
-  const totalAdaptedCount = allAdaptedComponents.length;
+    if (targetNames.size === 0) {
+      console.log('[DEBUG Sync] early return: no target names');
+      return [];
+    }
+
+    const components: (Component & { moduleName: string; isOriginalAdapted: boolean })[] = [];
+
+    project.modules?.forEach(mod => {
+      (mod.components || []).forEach(comp => {
+        if (targetNames.has(comp.componentName)) {
+          const isOriginalAdapted = adaptedIds.has(comp.id);
+          components.push({ ...comp, moduleName: mod.moduleName, isOriginalAdapted });
+        }
+      });
+    });
+
+    console.log('[DEBUG Sync] final components:', components.map(c => ({ id: c.id, name: c.componentName, module: c.moduleName })));
+    return components;
+  }, [software, project]);
+
+  const totalMatchCount = allProjectComponents.length;
+  const originalAdaptedCount = allProjectComponents.filter(c => c.isOriginalAdapted).length;
 
   if (!software || !project) {
     return (
@@ -122,11 +130,10 @@ export default function SoftwareDetail() {
   };
 
   const handleOpenSyncModal = useCallback(() => {
-    const availableIds = allAdaptedComponents.map(c => c.id);
-    const defaultSelected = availableIds;
+    const defaultSelected = allProjectComponents.filter(c => c.isOriginalAdapted).map(c => c.id);
     setSelectedComponentIds(defaultSelected);
     setShowSyncModal(true);
-  }, [allAdaptedComponents]);
+  }, [allProjectComponents]);
 
   const handleToggleComponent = useCallback((componentId: string) => {
     setSelectedComponentIds(prev => {
@@ -139,13 +146,13 @@ export default function SoftwareDetail() {
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const allIds = allAdaptedComponents.map(c => c.id);
+    const allIds = allProjectComponents.map(c => c.id);
     if (selectedComponentIds.length === allIds.length && allIds.length > 0) {
       setSelectedComponentIds([]);
     } else {
       setSelectedComponentIds(allIds);
     }
-  }, [selectedComponentIds, allAdaptedComponents]);
+  }, [selectedComponentIds, allProjectComponents]);
 
   const handleSync = useCallback(async () => {
     if (!software || selectedComponentIds.length === 0) return;
@@ -154,7 +161,7 @@ export default function SoftwareDetail() {
     try {
       await new Promise(resolve => setTimeout(resolve, 800));
 
-      const selectedComponents = allAdaptedComponents.filter(c => selectedComponentIds.includes(c.id));
+      const selectedComponents = allProjectComponents.filter(c => selectedComponentIds.includes(c.id));
       const syncedComponentNames = selectedComponents.map(c => c.componentName).join('、');
 
       updateProject(project.id, {
@@ -178,7 +185,7 @@ export default function SoftwareDetail() {
     } finally {
       setIsSyncing(false);
     }
-  }, [software, selectedComponentIds, allAdaptedComponents, project, updateProject, showToast]);
+  }, [software, selectedComponentIds, allProjectComponents, project, updateProject, showToast]);
 
   const getUpdateButtonStyles = () => {
     if (isCyberpunk) {
@@ -191,19 +198,19 @@ export default function SoftwareDetail() {
   };
 
   const componentsByModule = useMemo(() => {
-    const groups: Record<string, typeof allAdaptedComponents> = {};
-    allAdaptedComponents.forEach(comp => {
+    const groups: Record<string, typeof allProjectComponents> = {};
+    allProjectComponents.forEach(comp => {
       if (!groups[comp.moduleName]) {
         groups[comp.moduleName] = [];
       }
       groups[comp.moduleName].push(comp);
     });
     return groups;
-  }, [allAdaptedComponents]);
+  }, [allProjectComponents]);
 
-  const allAdaptedIds = allAdaptedComponents.map(c => c.id);
-  const isAllSelected = selectedComponentIds.length === allAdaptedIds.length && allAdaptedIds.length > 0;
-  const isIndeterminate = selectedComponentIds.length > 0 && selectedComponentIds.length < allAdaptedIds.length;
+  const allComponentIds = allProjectComponents.map(c => c.id);
+  const isAllSelected = selectedComponentIds.length === allComponentIds.length && allComponentIds.length > 0;
+  const isIndeterminate = selectedComponentIds.length > 0 && selectedComponentIds.length < allComponentIds.length;
 
   return (
     <div>
@@ -220,13 +227,13 @@ export default function SoftwareDetail() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleOpenSyncModal}
-              disabled={totalAdaptedCount === 0}
+              disabled={totalMatchCount === 0}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:shadow-lg cursor-pointer ${
-                totalAdaptedCount === 0
+                totalMatchCount === 0
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white'
               }`}
-              title={totalAdaptedCount === 0 ? '该软件暂无适配组件，无法同步' : `同步到 ${totalAdaptedCount} 个适配组件`}
+              title={totalMatchCount === 0 ? '该软件暂无适配组件，无法同步' : `同步到 ${totalMatchCount} 个同名组件（原始适配 ${originalAdaptedCount} 个）`}
             >
               <RefreshCw size={16} />
               同步
@@ -330,9 +337,23 @@ export default function SoftwareDetail() {
         <div className="flex items-center justify-between mb-4">
           <h3 className={`text-lg font-semibold ${t.text}`}>软件文件</h3>
           <button
-            onClick={() => {
+            onClick={async () => {
               if (software.fileUrl) {
                 window.open(software.fileUrl, '_blank');
+              } else if (software.dbId) {
+                try {
+                  const { getFileBlob } = await import('../services/database');
+                  const blob = await getFileBlob(software.dbId);
+                  if (blob) {
+                    const url = URL.createObjectURL(blob);
+                    window.open(url, '_blank');
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                  } else {
+                    showToast('文件不存在', 'error');
+                  }
+                } catch {
+                  showToast('文件读取失败', 'error');
+                }
               } else {
                 showToast('暂无可下载文件', 'info');
               }
@@ -393,13 +414,18 @@ export default function SoftwareDetail() {
                 </div>
                 <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
                 <div>
-                  <div className={`text-xs ${t.textMuted}`}>适配组件总数</div>
-                  <div className={`font-medium ${t.accentText}`}>{totalAdaptedCount} 个</div>
+                  <div className={`text-xs ${t.textMuted}`}>同名组件总数</div>
+                  <div className={`font-medium ${t.accentText}`}>{totalMatchCount} 个</div>
+                </div>
+                <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
+                <div>
+                  <div className={`text-xs ${t.textMuted}`}>原始适配</div>
+                  <div className={`font-medium text-emerald-600`}>{originalAdaptedCount} 个</div>
                 </div>
               </div>
             </div>
 
-            {totalAdaptedCount === 0 ? (
+            {totalMatchCount === 0 ? (
               <div className={`text-center py-12 rounded-lg ${t.hoverBg}`}>
                 <RefreshCw size={48} className="mx-auto opacity-30 mb-4" />
                 <p className={`text-base font-medium mb-2 ${t.text}`}>该软件尚未配置适配组件</p>
@@ -426,7 +452,7 @@ export default function SoftwareDetail() {
                       : `${t.emptyBg} ${t.textMuted}`
                   }`}>
                     <Check size={14} className={selectedComponentIds.length > 0 ? 'text-emerald-600' : ''} />
-                    已选择 <span className="font-bold">{selectedComponentIds.length}</span> / {allAdaptedIds.length} 个组件
+                    已选择 <span className="font-bold">{selectedComponentIds.length}</span> / {allComponentIds.length} 个组件
                   </div>
                 </div>
 
@@ -443,15 +469,16 @@ export default function SoftwareDetail() {
                       <div className="p-1.5">
                         {moduleComponents.map(comp => {
                           const isSelected = selectedComponentIds.includes(comp.id);
-                          const isCrossProject = comp.moduleName.includes('(跨项目)');
                           return (
                             <label
                               key={comp.id}
                               className={`flex items-center gap-3 py-2.5 px-3 mx-0.5 rounded-lg cursor-pointer transition-all duration-150 ${
                                 isSelected
                                   ? 'bg-emerald-50 dark:bg-emerald-900/25 ring-1 ring-emerald-300 dark:ring-emerald-700'
-                                  : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
-                              } ${isCrossProject ? 'ring-1 ring-amber-200 dark:ring-amber-800' : ''}`}
+                                  : comp.isOriginalAdapted
+                                    ? 'bg-blue-50 dark:bg-blue-900/10 hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                              }`}
                             >
                               <input
                                 type="checkbox"
@@ -463,17 +490,19 @@ export default function SoftwareDetail() {
                                 <div className={`text-sm font-medium truncate ${isSelected ? 'text-emerald-800 dark:text-emerald-100' : t.text}`}>
                                   {comp.componentName}
                                 </div>
-                                <div className={`text-xs truncate flex items-center gap-2 ${isSelected ? 'text-emerald-600/70 dark:text-emerald-400/70' : t.textMuted}`}>
-                                  <Tag size={11} />
-                                  编号：<span className="font-mono">{comp.componentNumber}</span>
-                                  {isCrossProject && (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                      跨项目
+                                <div className={`text-xs truncate flex items-center gap-3 ${isSelected ? 'text-emerald-600/70 dark:text-emerald-400/70' : t.textMuted}`}>
+                                  <span className="flex items-center gap-1">
+                                    <Tag size={11} />
+                                    编号：<span className="font-mono">{comp.componentNumber}</span>
+                                  </span>
+                                  {comp.productionOrderNumber && (
+                                    <span className="flex items-center gap-1">
+                                      指令号：<span className="font-mono">{comp.productionOrderNumber}</span>
                                     </span>
                                   )}
-                                  {comp.matchSource === 'name' && !isCrossProject && (
-                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                      名称匹配
+                                  {comp.isOriginalAdapted && (
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                                      原始适配
                                     </span>
                                   )}
                                 </div>

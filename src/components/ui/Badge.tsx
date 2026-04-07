@@ -28,39 +28,39 @@ export function Badge({
 
   const variantClasses = {
     default: isDark || isCosmos
-      ? 'bg-gray-600/50 text-gray-100 border-gray-400/50' // 提升对比度
+      ? 'bg-gray-600/50 text-gray-100 border-gray-400/50 hover:bg-gray-500/60 hover:text-white hover:font-semibold'
       : isAnime
-      ? 'bg-pink-200 text-pink-900 border-pink-300' // 提升对比度
-      : 'bg-gray-200 text-gray-800 border-gray-300', // 提升对比度
+      ? 'bg-pink-200 text-pink-900 border-pink-300 hover:bg-pink-300 hover:text-pink-950 hover:font-semibold'
+      : 'bg-gray-200 text-gray-800 border-gray-300 hover:bg-gray-300 hover:text-gray-900 hover:font-semibold',
     success: isCyberpunk || isCosmos
-      ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60' // 提升背景透明度和文字亮度
+      ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60 hover:bg-emerald-500/60 hover:text-emerald-50 hover:font-semibold'
       : isAnime
-      ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60'
+      ? 'bg-emerald-500/40 text-emerald-100 border-emerald-400/60 hover:bg-emerald-500/60 hover:text-emerald-50 hover:font-semibold'
       : isDark
-      ? 'bg-green-500/40 text-green-100 border-green-400/60' // 优化深色模式对比度
-      : 'bg-green-200 text-green-900 border-green-300', // 提升浅色模式对比度
+      ? 'bg-green-500/40 text-green-100 border-green-400/60 hover:bg-green-500/60 hover:text-green-50 hover:font-semibold'
+      : 'bg-green-200 text-green-900 border-green-300 hover:bg-green-300 hover:text-green-950 hover:font-semibold',
     warning: isCyberpunk || isCosmos
-      ? 'bg-amber-500/40 text-amber-100 border-amber-400/60'
+      ? 'bg-amber-500/40 text-amber-100 border-amber-400/60 hover:bg-amber-500/60 hover:text-amber-50 hover:font-semibold'
       : isAnime
-      ? 'bg-amber-500/40 text-amber-100 border-amber-400/60'
+      ? 'bg-amber-500/40 text-amber-100 border-amber-400/60 hover:bg-amber-500/60 hover:text-amber-50 hover:font-semibold'
       : isDark
-      ? 'bg-yellow-500/40 text-yellow-100 border-yellow-400/60'
-      : 'bg-yellow-200 text-yellow-900 border-yellow-300',
+      ? 'bg-yellow-500/40 text-yellow-100 border-yellow-400/60 hover:bg-yellow-500/60 hover:text-yellow-50 hover:font-semibold'
+      : 'bg-yellow-200 text-yellow-900 border-yellow-300 hover:bg-yellow-300 hover:text-yellow-950 hover:font-semibold',
     danger: isCyberpunk || isCosmos
-      ? 'bg-rose-500/40 text-red-100 border-rose-400/60'
+      ? 'bg-rose-500/40 text-red-100 border-rose-400/60 hover:bg-rose-500/60 hover:text-rose-50 hover:font-semibold'
       : isAnime
-      ? 'bg-rose-500/40 text-red-100 border-rose-400/60'
+      ? 'bg-rose-500/40 text-red-100 border-rose-400/60 hover:bg-rose-500/60 hover:text-rose-50 hover:font-semibold'
       : isDark
-      ? 'bg-red-500/40 text-red-100 border-red-400/60'
-      : 'bg-red-200 text-red-900 border-red-300',
+      ? 'bg-red-500/40 text-red-100 border-red-400/60 hover:bg-red-500/60 hover:text-red-50 hover:font-semibold'
+      : 'bg-red-200 text-red-900 border-red-300 hover:bg-red-300 hover:text-red-950 hover:font-semibold',
     info: isCyberpunk || isCosmos
-      ? 'bg-violet-500/40 text-violet-100 border-violet-400/60'
+      ? 'bg-violet-500/40 text-violet-100 border-violet-400/60 hover:bg-violet-500/60 hover:text-violet-50 hover:font-semibold'
       : isAnime
-      ? 'bg-fuchsia-500/40 text-fuchsia-100 border-fuchsia-400/60'
+      ? 'bg-fuchsia-500/40 text-fuchsia-100 border-fuchsia-400/60 hover:bg-fuchsia-500/60 hover:text-fuchsia-50 hover:font-semibold'
       : isDark
-      ? 'bg-blue-500/40 text-blue-100 border-blue-400/60'
-      : 'bg-blue-200 text-blue-900 border-blue-300',
-    outline: 'bg-transparent border-current',
+      ? 'bg-blue-500/40 text-blue-100 border-blue-400/60 hover:bg-blue-500/60 hover:text-blue-50 hover:font-semibold'
+      : 'bg-blue-200 text-blue-900 border-blue-300 hover:bg-blue-300 hover:text-blue-950 hover:font-semibold',
+    outline: 'bg-transparent border-current font-medium hover:font-semibold',
   };
 
   const dotColors = {
@@ -155,42 +155,42 @@ export function StatusBadge({ status, className = '' }: StatusBadgeProps) {
   const statusConfig: Record<string, { bg: string; text: string; dot: string }> = {
     正常: {
       bg: isCyberpunk ? 'bg-emerald-500/40 border-emerald-400/50' : isAnime ? 'bg-emerald-500/50 border-emerald-400/70' : isCosmos ? 'bg-emerald-500/50 border-emerald-400/70' : isDark ? 'bg-emerald-500/40 border-emerald-400/50' : 'bg-emerald-50 border-emerald-200',
-      text: isCyberpunk || isCosmos ? 'text-emerald-200' : isAnime ? 'text-emerald-800' : isDark ? 'text-emerald-200' : 'text-emerald-700',
+      text: isCyberpunk || isCosmos ? 'text-emerald-100' : isAnime ? 'text-emerald-800' : isDark ? 'text-emerald-100' : 'text-emerald-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-emerald-400' : 'bg-emerald-500',
     },
     未投产: {
       bg: isCyberpunk ? 'bg-gray-500/40 border-gray-400/50' : isAnime ? 'bg-gray-500/50 border-gray-400/70' : isCosmos ? 'bg-gray-500/50 border-gray-400/70' : isDark ? 'bg-gray-500/40 border-gray-400/50' : 'bg-gray-100 border-gray-200',
-      text: isCyberpunk || isCosmos ? 'text-gray-200' : isAnime ? 'text-gray-800' : isDark ? 'text-gray-200' : 'text-gray-600',
+      text: isCyberpunk || isCosmos ? 'text-gray-100' : isAnime ? 'text-gray-800' : isDark ? 'text-gray-100' : 'text-gray-600',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-gray-400' : 'bg-gray-500',
     },
     投产中: {
       bg: isCyberpunk ? 'bg-violet-500/40 border-violet-400/50' : isAnime ? 'bg-pink-500/50 border-pink-400/70' : isCosmos ? 'bg-violet-500/50 border-violet-400/70' : isDark ? 'bg-violet-500/40 border-violet-400/50' : 'bg-violet-50 border-violet-200',
-      text: isCyberpunk || isCosmos ? 'text-violet-200' : isAnime ? 'text-pink-800' : isDark ? 'text-violet-200' : 'text-violet-700',
+      text: isCyberpunk || isCosmos ? 'text-violet-100' : isAnime ? 'text-pink-800' : isDark ? 'text-violet-100' : 'text-violet-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-violet-400' : 'bg-violet-500',
     },
     维修中: {
       bg: isCyberpunk ? 'bg-orange-500/40 border-orange-400/50' : isAnime ? 'bg-orange-500/50 border-orange-400/70' : isCosmos ? 'bg-orange-500/50 border-orange-400/70' : isDark ? 'bg-orange-500/40 border-orange-400/50' : 'bg-orange-50 border-orange-200',
-      text: isCyberpunk || isCosmos ? 'text-orange-200' : isAnime ? 'text-orange-800' : isDark ? 'text-orange-200' : 'text-orange-700',
+      text: isCyberpunk || isCosmos ? 'text-orange-100' : isAnime ? 'text-orange-800' : isDark ? 'text-orange-100' : 'text-orange-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-orange-400' : 'bg-orange-500',
     },
     三防中: {
       bg: isCyberpunk ? 'bg-purple-500/40 border-purple-400/50' : isAnime ? 'bg-purple-500/50 border-purple-400/70' : isCosmos ? 'bg-purple-500/50 border-purple-400/70' : isDark ? 'bg-purple-500/40 border-purple-400/50' : 'bg-purple-50 border-purple-200',
-      text: isCyberpunk || isCosmos ? 'text-purple-200' : isAnime ? 'text-purple-800' : isDark ? 'text-purple-200' : 'text-purple-700',
+      text: isCyberpunk || isCosmos ? 'text-purple-100' : isAnime ? 'text-purple-800' : isDark ? 'text-purple-100' : 'text-purple-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-purple-400' : 'bg-purple-500',
     },
     测试中: {
       bg: isCyberpunk ? 'bg-amber-500/40 border-amber-400/50' : isAnime ? 'bg-amber-500/50 border-amber-400/70' : isCosmos ? 'bg-amber-500/50 border-amber-400/70' : isDark ? 'bg-amber-500/40 border-amber-400/50' : 'bg-amber-50 border-amber-200',
-      text: isCyberpunk || isCosmos ? 'text-amber-200' : isAnime ? 'text-amber-800' : isDark ? 'text-amber-200' : 'text-amber-700',
+      text: isCyberpunk || isCosmos ? 'text-amber-100' : isAnime ? 'text-amber-800' : isDark ? 'text-amber-100' : 'text-amber-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-amber-400' : 'bg-amber-500',
     },
     仿真中: {
       bg: isCyberpunk ? 'bg-cyan-500/40 border-cyan-400/50' : isAnime ? 'bg-cyan-500/50 border-cyan-400/70' : isCosmos ? 'bg-cyan-500/50 border-cyan-400/70' : isDark ? 'bg-cyan-500/40 border-cyan-400/50' : 'bg-cyan-50 border-cyan-200',
-      text: isCyberpunk || isCosmos ? 'text-cyan-200' : isAnime ? 'text-cyan-800' : isDark ? 'text-cyan-200' : 'text-cyan-700',
+      text: isCyberpunk || isCosmos ? 'text-cyan-100' : isAnime ? 'text-cyan-800' : isDark ? 'text-cyan-100' : 'text-cyan-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-cyan-400' : 'bg-cyan-500',
     },
     故障: {
       bg: isCyberpunk ? 'bg-rose-500/40 border-rose-400/50' : isAnime ? 'bg-rose-500/50 border-rose-400/70' : isCosmos ? 'bg-rose-500/50 border-rose-400/70' : isDark ? 'bg-rose-500/40 border-rose-400/50' : 'bg-rose-50 border-rose-200',
-      text: isCyberpunk || isCosmos ? 'text-rose-200' : isAnime ? 'text-rose-800' : isDark ? 'text-rose-200' : 'text-rose-700',
+      text: isCyberpunk || isCosmos ? 'text-rose-100' : isAnime ? 'text-rose-800' : isDark ? 'text-rose-100' : 'text-rose-700',
       dot: isCyberpunk || isAnime || isCosmos ? 'bg-rose-400' : 'bg-rose-500',
     },
   };

@@ -59,6 +59,7 @@ export interface ModuleForm {
 export interface ModuleEditForm {
   moduleNumber: string;
   moduleName: string;
+  category: string;
   systemId: string;
   systemNumber: string;
   systemName: string;
@@ -205,8 +206,9 @@ export function useModalState() {
     holder: '', status: '未投产', stage: 'C阶段', version: 'v1.0',
   });
   const [moduleEditForm, setModuleEditForm] = useState<ModuleEditForm>({
-    moduleNumber: '', moduleName: '', systemId: '',
-    systemNumber: '', systemName: '', productionOrderNumber: '', holder: '',
+    moduleNumber: '', moduleName: '', category: '',
+    systemId: '', systemNumber: '', systemName: '',
+    productionOrderNumber: '', holder: '',
     status: '未投产', stage: 'C阶段', version: 'v1.0',
   });
 

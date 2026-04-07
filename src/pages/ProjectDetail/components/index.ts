@@ -16,7 +16,7 @@ export { DiagramModal } from './DiagramModal';
 export { VersionModal } from './VersionModal';
 export { SyncModal } from './SyncModal';
 export { RollbackModal } from './RollbackModal';
-export { ComponentEditModal } from './ComponentEditModal';
+export { ComponentEditPanel } from './ComponentEditPanel';
 export { ComponentStatusModal } from './ComponentStatusModal';
 export { ComponentCopyModal } from './ComponentCopyModal';
 export { CategoryModal } from './CategoryModal';

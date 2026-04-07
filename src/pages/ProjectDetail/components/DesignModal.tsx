@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 import { useThemeStyles } from '../../../hooks/useThemeStyles';
 import type { ProjectStage, ProjectVersion } from '../../../types';
 import { STAGE_OPTIONS, getDefaultStageForEntity } from '../../../services/stageConfig';
@@ -29,10 +30,18 @@ export function DesignModal({ show, onClose, onSubmit, form, onChange, editingDe
 
   if (!show) return null;
 
+  const handleToggleModule = (moduleId: string) => {
+    if (form.adaptedModuleIds.includes(moduleId)) {
+      onChange('adaptedModuleIds', form.adaptedModuleIds.filter(id => id !== moduleId));
+    } else {
+      onChange('adaptedModuleIds', [...form.adaptedModuleIds, moduleId]);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-lg border ${t.modalBorder} max-h-[90vh] overflow-y-auto`} onClick={(e) => e.stopPropagation()}>
-        <h2 className={`text-xl font-semibold mb-4 ${t.text}`}>{editingDesignFile ? '编辑设计文件' : '新建设计文件'}</h2>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" onClick={onClose}>
+      <div className={`${t.modalBg} rounded-lg p-6 w-full max-w-lg border ${t.modalBorder} max-h-[90vh] overflow-y-auto shadow-xl`} onClick={(e) => e.stopPropagation()}>
+        <h2 className={`text-xl font-bold mb-4 ${t.text}`}>{editingDesignFile ? '编辑设计文件' : '新建设计文件'}</h2>
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className={`block text-sm font-medium mb-1 ${t.textSecondary}`}>文件名称 *</label>
@@ -101,24 +110,30 @@ export function DesignModal({ show, onClose, onSubmit, form, onChange, editingDe
               {modules.length === 0 ? (
                 <p className={`text-sm ${t.textMuted}`}>无模块</p>
               ) : (
-                modules.map((module) => (
-                  <label key={module.id} className="flex items-center gap-2 py-1 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.adaptedModuleIds.includes(module.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          onChange('adaptedModuleIds', [...form.adaptedModuleIds, module.id]);
-                        } else {
-                          onChange('adaptedModuleIds', form.adaptedModuleIds.filter(id => id !== module.id));
-                        }
-                      }}
-                      className="checkbox-interactive rounded"
-                    />
-                    <span className={t.text}>{module.moduleName}</span>
-                    <span className={`text-xs ${t.textMuted}`}>({module.moduleNumber})</span>
-                  </label>
-                ))
+                modules.map((module) => {
+                  const isSelected = form.adaptedModuleIds.includes(module.id);
+                  return (
+                    <label
+                      key={module.id}
+                      onClick={() => handleToggleModule(module.id)}
+                      className={`flex items-center gap-3 py-1.5 px-2 rounded-lg cursor-pointer transition-all ${
+                        isSelected
+                          ? 'bg-emerald-100 dark:bg-emerald-900/30'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                    >
+                      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${
+                        isSelected
+                          ? 'bg-emerald-500 border-emerald-500'
+                          : 'border-gray-300 dark:border-gray-500'
+                      }`}>
+                        {isSelected && <Check size={14} className="text-white" />}
+                      </div>
+                      <span className={t.text}>{module.moduleName}</span>
+                      <span className={`text-xs ${t.textMuted}`}>({module.moduleNumber})</span>
+                    </label>
+                  );
+                })
               )}
             </div>
           </div>

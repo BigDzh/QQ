@@ -27,6 +27,7 @@ interface AppContextType extends AppState {
   logout: () => void;
   addProject: (project: Omit<Project, 'id' | 'createdAt' | 'logs'>) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
+  forceSyncProject: (id: string) => void;
   deleteProject: (id: string) => void;
   addModule: (projectId: string, module: Omit<Module, 'id' | 'logs' | 'statusChanges'>) => void;
   updateModule: (projectId: string, moduleId: string, updates: Partial<Module> & { statusChangeReason?: string }) => void;
@@ -307,6 +308,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
+  const forceSyncProject = useCallback((id: string) => {
+    setProjects(prev => {
+      const project = prev.find(p => p.id === id);
+      if (project) {
+        safeSetObject(PROJECTS_KEY, prev);
+      }
+      return prev;
+    });
+  }, []);
+
   const deleteProject = useCallback((id: string) => {
     setProjects((prev) => {
       const project = prev.find((p) => p.id === id);
@@ -542,120 +553,189 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [currentUser]);
 
-  const updateComponent = useCallback((projectId: string, moduleId: string, componentId: string, updates: Partial<Component> & { statusChangeReason?: string }) => {
+  const updateComponent = useCallback((projectId: string, moduleId: string, componentId: string, updates: Partial<Component> & { statusChangeReason?: string; newModuleId?: string }) => {
     const currentProject = projects.find(p => p.id === projectId);
     const currentModule = currentProject?.modules.find(m => m.id === moduleId);
     const currentComponent = currentModule?.components.find(c => c.id === componentId);
 
     const previousState = currentComponent?.status || '未知';
     const newStatus = updates.status;
+    const newModuleId = updates.newModuleId;
+    const isMovingModule = newModuleId && newModuleId !== moduleId;
 
     setProjects((prev) => prev.map((p) => {
       if (p.id !== projectId) return p;
 
-      const updatedModules = p.modules.map((m) => {
-        if (m.id !== moduleId) return m;
+      let updatedModules: typeof p.modules;
 
-        const component = m.components.find(c => c.id === componentId);
-        const changes: string[] = [];
-        if (updates.componentName && updates.componentName !== component?.componentName) changes.push(`组件名称: ${component?.componentName} → ${updates.componentName}`);
-        if (updates.componentNumber && updates.componentNumber !== component?.componentNumber) changes.push(`组件编号: ${component?.componentNumber} → ${updates.componentNumber}`);
-        if (updates.productionOrderNumber && updates.productionOrderNumber !== component?.productionOrderNumber) changes.push(`生产指令号: ${component?.productionOrderNumber || '-'} → ${updates.productionOrderNumber}`);
-        if (updates.holder && updates.holder !== component?.holder) changes.push(`持有人: ${component?.holder || '-'} → ${updates.holder}`);
-        if (updates.stage && updates.stage !== component?.stage) changes.push(`阶段: ${component?.stage} → ${updates.stage}`);
-        if (updates.version && updates.version !== component?.version) changes.push(`版本: ${component?.version} → ${updates.version}`);
-        if (updates.status && updates.status !== component?.status) changes.push(`状态: ${component?.status} → ${updates.status}`);
+      if (isMovingModule) {
+        const oldModule = p.modules.find(m => m.id === moduleId);
+        const targetModule = p.modules.find(m => m.id === newModuleId);
 
-        let updatedLogs = component?.logs || [];
-        let updatedStatusChanges = component?.statusChanges || [];
-
-        if (updates.status && updates.status !== component?.status) {
-          if (isReasonMandatory('COMPONENT', component?.status || '', updates.status)) {
-            const validation = validateReason(updates.statusChangeReason);
-            if (!validation.isValid) {
-              console.error('Invalid status change reason:', validation.errors);
-            }
-          }
-
-          if (updates.statusChangeReason) {
-            try {
-              addStateChangeLog(
-                currentUser?.id || null,
-                currentUser?.username || currentUser?.name || '系统',
-                'COMPONENT',
-                componentId,
-                currentComponent?.componentName || '未知组件',
-                previousState,
-                newStatus,
-                updates.statusChangeReason,
-                { metadata: { projectId, moduleId, projectName: currentProject?.name, moduleName: currentModule?.moduleName } }
-              );
-            } catch (error) {
-              console.error('Failed to add state change log:', error);
-            }
-          }
-
-          const newLog = {
-            id: generateId(),
-            action: `状态从 ${component?.status} 变更为 ${updates.status}`,
-            timestamp: new Date().toISOString(),
-            userId: currentUser?.id || '',
-            username: currentUser?.username || currentUser?.name || '未知',
-            details: updates.statusChangeReason || '无',
-          };
-          updatedLogs = [...updatedLogs, newLog];
-
-          updatedStatusChanges = [
-            ...updatedStatusChanges,
-            {
-              id: generateId(),
-              fromStatus: component?.status || '未知',
-              toStatus: updates.status,
-              changedAt: new Date().toISOString(),
-              changedBy: currentUser?.username || currentUser?.name || '未知',
-              reason: updates.statusChangeReason || '无',
-            },
-          ];
-        } else if (changes.length > 0) {
-          const newLog = {
-            id: generateId(),
-            action: `组件信息更新: ${changes.join(', ')}`,
-            timestamp: new Date().toISOString(),
-            userId: currentUser?.id || '',
-            username: currentUser?.username || currentUser?.name || '未知',
-            details: JSON.stringify(updates),
-          };
-          updatedLogs = [...updatedLogs, newLog];
+        if (!oldModule || !targetModule) {
+          return p;
         }
 
-        const { statusChangeReason, ...restUpdates } = updates;
+        const component = oldModule.components.find(c => c.id === componentId);
+        if (!component) {
+          return p;
+        }
 
-        const updatedComponents = m.components.map((c) => (c.id === componentId ? {
-          ...c,
-          ...restUpdates,
-          logs: updatedLogs,
-          statusChanges: updatedStatusChanges,
-        } : c));
+        const changes: string[] = [];
+        if (updates.componentName && updates.componentName !== component.componentName) changes.push(`组件名称: ${component.componentName} → ${updates.componentName}`);
+        if (updates.componentNumber && updates.componentNumber !== component.componentNumber) changes.push(`组件编号: ${component.componentNumber} → ${updates.componentNumber}`);
+        if (updates.productionOrderNumber && updates.productionOrderNumber !== component.productionOrderNumber) changes.push(`生产指令号: ${component.productionOrderNumber || '-'} → ${updates.productionOrderNumber}`);
+        if (updates.holder && updates.holder !== component.holder) changes.push(`持有人: ${component.holder || '-'} → ${updates.holder}`);
+        if (updates.stage && updates.stage !== component.stage) changes.push(`阶段: ${component.stage} → ${updates.stage}`);
+        if (updates.version && updates.version !== component.version) changes.push(`版本: ${component.version} → ${updates.version}`);
+        if (updates.status && updates.status !== component.status) changes.push(`状态: ${component.status} → ${updates.status}`);
+        changes.push(`所属模块: ${oldModule.moduleName} → ${targetModule.moduleName}`);
 
-        const newModuleStatus = calculateModuleStatus(updatedComponents);
-
-        return {
-          ...m,
-          components: updatedComponents,
-          status: newModuleStatus,
+        const newLog = {
+          id: generateId(),
+          action: `组件信息更新: ${changes.join(', ')}`,
+          timestamp: new Date().toISOString(),
+          userId: currentUser?.id || '',
+          username: currentUser?.username || currentUser?.name || '未知',
+          details: JSON.stringify({ ...updates, oldModuleName: oldModule.moduleName, newModuleName: targetModule.moduleName }),
         };
-      });
 
-      const targetModule = updatedModules.find(m => m.id === moduleId);
-      const systemId = targetModule?.systemId;
+        const { statusChangeReason, newModuleId: _, ...restUpdates } = updates;
+
+        const movedComponent = {
+          ...component,
+          ...restUpdates,
+          moduleId: newModuleId,
+          systemId: targetModule.systemId,
+          systemNumber: targetModule.systemNumber,
+          systemName: targetModule.systemName,
+          logs: [...(component.logs || []), newLog],
+        };
+
+        updatedModules = p.modules.map(m => {
+          if (m.id === moduleId) {
+            const remainingComponents = m.components.filter(c => c.id !== componentId);
+            return {
+              ...m,
+              components: remainingComponents,
+              status: calculateModuleStatus(remainingComponents),
+            };
+          }
+          if (m.id === newModuleId) {
+            return {
+              ...m,
+              components: [...m.components, movedComponent],
+              status: calculateModuleStatus([...m.components, movedComponent]),
+            };
+          }
+          return m;
+        });
+      } else {
+        updatedModules = p.modules.map((m) => {
+          if (m.id !== moduleId) return m;
+
+          const component = m.components.find(c => c.id === componentId);
+          const changes: string[] = [];
+          if (updates.componentName && updates.componentName !== component?.componentName) changes.push(`组件名称: ${component?.componentName} → ${updates.componentName}`);
+          if (updates.componentNumber && updates.componentNumber !== component?.componentNumber) changes.push(`组件编号: ${component?.componentNumber} → ${updates.componentNumber}`);
+          if (updates.productionOrderNumber && updates.productionOrderNumber !== component?.productionOrderNumber) changes.push(`生产指令号: ${component?.productionOrderNumber || '-'} → ${updates.productionOrderNumber}`);
+          if (updates.holder && updates.holder !== component?.holder) changes.push(`持有人: ${component?.holder || '-'} → ${updates.holder}`);
+          if (updates.stage && updates.stage !== component?.stage) changes.push(`阶段: ${component?.stage} → ${updates.stage}`);
+          if (updates.version && updates.version !== component?.version) changes.push(`版本: ${component?.version} → ${updates.version}`);
+          if (updates.status && updates.status !== component?.status) changes.push(`状态: ${component?.status} → ${updates.status}`);
+
+          let updatedLogs = component?.logs || [];
+          let updatedStatusChanges = component?.statusChanges || [];
+
+          if (updates.status && updates.status !== component?.status) {
+            if (isReasonMandatory('COMPONENT', component?.status || '', updates.status)) {
+              const validation = validateReason(updates.statusChangeReason);
+              if (!validation.isValid) {
+                console.error('Invalid status change reason:', validation.errors);
+              }
+            }
+
+            if (updates.statusChangeReason) {
+              try {
+                addStateChangeLog(
+                  currentUser?.id || null,
+                  currentUser?.username || currentUser?.name || '系统',
+                  'COMPONENT',
+                  componentId,
+                  currentComponent?.componentName || '未知组件',
+                  previousState,
+                  newStatus,
+                  updates.statusChangeReason,
+                  { metadata: { projectId, moduleId, projectName: currentProject?.name, moduleName: currentModule?.moduleName } }
+                );
+              } catch (error) {
+                console.error('Failed to add state change log:', error);
+              }
+            }
+
+            const newLog = {
+              id: generateId(),
+              action: `状态从 ${component?.status} 变更为 ${updates.status}`,
+              timestamp: new Date().toISOString(),
+              userId: currentUser?.id || '',
+              username: currentUser?.username || currentUser?.name || '未知',
+              details: updates.statusChangeReason || '无',
+            };
+            updatedLogs = [...updatedLogs, newLog];
+
+            updatedStatusChanges = [
+              ...updatedStatusChanges,
+              {
+                id: generateId(),
+                fromStatus: component?.status || '未知',
+                toStatus: updates.status,
+                changedAt: new Date().toISOString(),
+                changedBy: currentUser?.username || currentUser?.name || '未知',
+                reason: updates.statusChangeReason || '无',
+              },
+            ];
+          } else if (changes.length > 0) {
+            const newLog = {
+              id: generateId(),
+              action: `组件信息更新: ${changes.join(', ')}`,
+              timestamp: new Date().toISOString(),
+              userId: currentUser?.id || '',
+              username: currentUser?.username || currentUser?.name || '未知',
+              details: JSON.stringify(updates),
+            };
+            updatedLogs = [...updatedLogs, newLog];
+          }
+
+          const { statusChangeReason, ...restUpdates } = updates;
+
+          const updatedComponents = m.components.map((c) => (c.id === componentId ? {
+            ...c,
+            ...restUpdates,
+            logs: updatedLogs,
+            statusChanges: updatedStatusChanges,
+          } : c));
+
+          const newModuleStatus = calculateModuleStatus(updatedComponents);
+
+          return {
+            ...m,
+            components: updatedComponents,
+            status: newModuleStatus,
+          };
+        });
+      }
+
+      const affectedModuleIds = isMovingModule ? [moduleId, newModuleId] : [moduleId];
+      const affectedModules = updatedModules.filter(m => affectedModuleIds.includes(m.id));
+      const affectedSystemIds = [...new Set(affectedModules.map(m => m.systemId).filter(Boolean))];
 
       let updatedSystems = p.systems;
-      if (systemId && targetModule) {
+      for (const systemId of affectedSystemIds) {
         const systemModules = updatedModules.filter(m => m.systemId === systemId);
         const newSystemStatus = calculateSystemStatus(systemModules);
         const currentSystem = p.systems.find(s => s.id === systemId);
         if (currentSystem && currentSystem.status !== newSystemStatus) {
-          updatedSystems = p.systems.map(s =>
+          updatedSystems = updatedSystems.map(s =>
             s.id === systemId ? { ...s, status: newSystemStatus } : s
           );
         }
@@ -675,6 +755,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .find(item => item.component?.id === componentId);
 
       let details = `项目: ${component?.project.name}, 模块: ${component?.module.moduleName}`;
+      if (isMovingModule) {
+        const newMod = projects.flatMap(p => p.modules).find(m => m.id === newModuleId);
+        details += `, 所属模块变更: ${component?.module.moduleName} → ${newMod?.moduleName}`;
+      }
       if (updates.status) {
         details += `, 状态变更: ${component?.component?.status} → ${updates.status}`;
       }
@@ -899,6 +983,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         logout,
         addProject,
         updateProject,
+        forceSyncProject,
         deleteProject,
         addModule,
         updateModule,
