@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
+import { useTheme } from '../context/ThemeContext';
 
 interface DonutChartData {
   name: string;
@@ -23,6 +24,60 @@ interface AnimatedDonutChartProps {
   onSegmentClick?: (segment: DonutChartData | null) => void;
   onSegmentHover?: (segment: DonutChartData | null) => void;
 }
+
+const THEME_CONTRAST_STYLES = {
+  anime: {
+    textPrimary: '#831843',
+    textSecondary: '#581c87',
+    textMuted: '#a21caf',
+    centerValueBg: 'rgba(255,255,255,0.9)',
+    legendValue: '#10b981',
+  },
+  dark: {
+    textPrimary: '#ffffff',
+    textSecondary: '#f3f4f6',
+    textMuted: '#d1d5db',
+    centerValueBg: 'rgba(0,0,0,0.3)',
+    legendValue: '#10b981',
+  },
+  cyberpunk: {
+    textPrimary: '#ffffff',
+    textSecondary: '#cffafe',
+    textMuted: '#67e8f9',
+    centerValueBg: 'rgba(10,10,15,0.7)',
+    legendValue: '#10b981',
+  },
+  linear: {
+    textPrimary: '#ffffff',
+    textSecondary: '#f3f4f6',
+    textMuted: '#d1d5db',
+    centerValueBg: 'rgba(13,13,15,0.7)',
+    legendValue: '#86efac',
+  },
+  cosmos: {
+    textPrimary: '#ffffff',
+    textSecondary: '#cffafe',
+    textMuted: '#67e8f9',
+    centerValueBg: 'rgba(10,1,24,0.7)',
+    legendValue: '#10b981',
+  },
+  classical: {
+    textPrimary: '#1c1917',
+    textSecondary: '#44403c',
+    textMuted: '#57534e',
+    centerValueBg: 'rgba(255,255,255,0.9)',
+    legendValue: '#15803d',
+  },
+  minimal: {
+    textPrimary: '#030712',
+    textSecondary: '#1f2937',
+    textMuted: '#374151',
+    centerValueBg: 'rgba(255,255,255,0.95)',
+    legendValue: '#15803d',
+  },
+} as const;
+
+type ThemeKey = keyof typeof THEME_CONTRAST_STYLES;
 
 interface SegmentData extends DonutChartData {
   startAngle: number;
@@ -110,6 +165,8 @@ const CenterContent: React.FC<{
   total: number;
   centerLabel: string;
   fontSize: number;
+  textPrimary: string;
+  textSecondary: string;
 }> = memo(({
   hoveredSegment,
   selectedSegment,
@@ -118,6 +175,8 @@ const CenterContent: React.FC<{
   total,
   centerLabel,
   fontSize,
+  textPrimary,
+  textSecondary,
 }) => {
   const activeSegment = hoveredSegment || selectedSegment;
 
@@ -139,7 +198,7 @@ const CenterContent: React.FC<{
         <span
           className="font-semibold transition-all duration-300"
           style={{
-            color: 'var(--text-primary)',
+            color: textPrimary,
             fontSize: fontSize * 0.35,
             textShadow: `0 1px 3px rgba(0,0,0,0.4)`,
             lineHeight: 1.2,
@@ -151,7 +210,7 @@ const CenterContent: React.FC<{
         <span
           className="transition-all duration-300"
           style={{
-            color: 'var(--text-secondary)',
+            color: textSecondary,
             fontSize: fontSize * 0.3,
             textShadow: `0 1px 2px rgba(0,0,0,0.3)`,
             lineHeight: 1.2,
@@ -168,7 +227,7 @@ const CenterContent: React.FC<{
       <span
         className="font-bold transition-all duration-300"
         style={{
-          color: 'var(--text-primary)',
+          color: textPrimary,
           fontSize: fontSize,
           transform: `scale(${1 + Math.sin(breathPhase) * 0.03})`,
           textShadow: '0 1px 4px rgba(0,0,0,0.5)',
@@ -180,7 +239,7 @@ const CenterContent: React.FC<{
       <span
         className="font-medium transition-all duration-300"
         style={{
-          color: 'var(--text-secondary)',
+          color: textSecondary,
           fontSize: fontSize * 0.35,
           textShadow: '0 1px 3px rgba(0,0,0,0.4)',
           lineHeight: 1.2,
@@ -204,6 +263,8 @@ const LegendItem: React.FC<{
   cornerRadius: number;
   onHover: (index: number | null) => void;
   onClick: (index: number) => void;
+  textPrimary: string;
+  textSecondary: string;
 }> = memo(({
   segment,
   index,
@@ -213,6 +274,8 @@ const LegendItem: React.FC<{
   cornerRadius,
   onHover,
   onClick,
+  textPrimary,
+  textSecondary,
 }) => {
   const delay = index * 60 + 400;
 
@@ -254,7 +317,7 @@ const LegendItem: React.FC<{
       <div className="flex flex-col min-w-0 flex-1">
         <span
           className="text-xs font-semibold truncate"
-          style={{ color: 'var(--text-primary)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
+          style={{ color: textPrimary, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
           title={segment.name}
         >
           {segment.name}
@@ -263,7 +326,7 @@ const LegendItem: React.FC<{
           <span className="text-xs font-bold" style={{ color: segment.fill, textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
             {segment.value}
           </span>
-          <span className="text-xs opacity-80" style={{ color: 'var(--text-secondary)', textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
+          <span className="text-xs opacity-80" style={{ color: textSecondary, textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
             ({Math.round(segment.percentage * 100)}%)
           </span>
         </div>
@@ -291,11 +354,14 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
   onSegmentClick,
   onSegmentHover,
 }) => {
+  const { theme } = useTheme();
   const [isAnimating, setIsAnimating] = useState(true);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const [breathPhase, setBreathPhase] = useState(0);
+
+  const themeContrast = THEME_CONTRAST_STYLES[theme as ThemeKey] || THEME_CONTRAST_STYLES.dark;
 
   const svgSize = size + 20;
   const center = svgSize / 2;
@@ -467,8 +533,8 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>0</span>
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>暂无数据</span>
+            <span className="text-2xl font-bold" style={{ color: themeContrast.textPrimary }}>0</span>
+            <span className="text-xs" style={{ color: themeContrast.textSecondary }}>暂无数据</span>
           </div>
         </div>
       );
@@ -587,6 +653,8 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
             total={total}
             centerLabel={centerLabel}
             fontSize={fontSize}
+            textPrimary={themeContrast.textPrimary}
+            textSecondary={themeContrast.textSecondary}
           />
         </div>
       </div>
@@ -627,6 +695,8 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
                   cornerRadius={cornerRadius}
                   onHover={handleSegmentHover}
                   onClick={handleSegmentClick}
+                  textPrimary={themeContrast.textPrimary}
+                  textSecondary={themeContrast.textSecondary}
                 />
               );
             })}
@@ -635,7 +705,7 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
         {segments.length > 6 && (
           <div
             className="text-xs px-2 py-1 text-center col-span-full"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: themeContrast.textSecondary }}
           >
             +{segments.length - 6} 更多
           </div>
@@ -649,7 +719,7 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
       {title && (
         <h4
           className="text-sm font-semibold mb-3 text-center"
-          style={{ color: 'var(--text-secondary)' }}
+          style={{ color: themeContrast.textSecondary }}
         >
           {title}
         </h4>

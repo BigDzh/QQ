@@ -177,7 +177,7 @@ export default function ProjectList() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <div className="relative flex-1">
-          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDark ? 'text-gray-500 group-focus-within:text-cyan-400' : 'text-gray-400'}`} size={16} />
+          <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${theme === 'anime' ? 'text-purple-600' : isDark ? 'text-gray-500 group-focus-within:text-cyan-400' : 'text-gray-400'}`} size={16} />
           <input
             type="text"
             placeholder="搜索项目..."
@@ -186,9 +186,11 @@ export default function ProjectList() {
             className={`pl-10 pr-4 py-2.5 w-72 rounded-xl text-sm focus:outline-none transition-all ${
               isCyberpunk
                 ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-500/50 focus:bg-white/10'
-                : isDark
-                  ? 'bg-white/5 border border-white/10 text-white'
-                  : 'border border-gray-200 text-gray-900'
+                : theme === 'anime'
+                  ? 'bg-white/80 border-purple-300/50 text-pink-900 placeholder:text-purple-500'
+                  : isDark
+                    ? 'bg-white/5 border border-white/10 text-white'
+                    : 'border border-gray-200 text-gray-900'
             }`}
           />
         </div>
@@ -215,15 +217,19 @@ export default function ProjectList() {
               onClick={toggleSelectAll}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                 selectedProjects.size === filteredProjects.length && filteredProjects.length > 0
-                  ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/40 font-medium'
-                  : `${isDark ? 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:border-white/20' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'}`
+                  ? theme === 'anime'
+                    ? 'bg-pink-500/30 text-pink-900 border border-pink-400/50 font-medium'
+                    : 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 border border-cyan-500/40 font-medium'
+                  : theme === 'anime'
+                    ? 'bg-purple-200/60 text-purple-800 border border-purple-300/50 hover:bg-purple-300/60'
+                    : `${isDark ? 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:border-white/20' : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'}`
               }`}
             >
               {selectedProjects.size === filteredProjects.length && filteredProjects.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
               <span>全选</span>
             </button>
-            <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              已选择 <span className={selectedProjects.size > 0 ? 'text-cyan-600 dark:text-cyan-400 font-semibold' : ''}>{selectedProjects.size}</span> / {filteredProjects.length} 项
+            <span className={`text-sm font-medium ${theme === 'anime' ? 'text-purple-800' : isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+              已选择 <span className={selectedProjects.size > 0 ? theme === 'anime' ? 'text-pink-600 font-semibold' : 'text-cyan-600 dark:text-cyan-400 font-semibold' : ''}>{selectedProjects.size}</span> / {filteredProjects.length} 项
             </span>
           </div>
           {selectedProjects.size > 0 ? (
@@ -233,7 +239,11 @@ export default function ProjectList() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   isCyberpunk
                     ? 'bg-purple-500/20 text-purple-400 border border-purple-500/40 hover:bg-purple-500/30 font-medium'
-                    : `${isDark ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20' : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'}`
+                    : theme === 'anime'
+                      ? 'bg-gradient-to-r from-purple-200 to-pink-200 text-purple-900 border border-purple-300 hover:from-purple-300 hover:to-pink-300 font-medium'
+                      : isDark
+                        ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                        : 'bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100'
                 }`}
               >
                 <ArrowRightLeft size={14} />
@@ -244,7 +254,11 @@ export default function ProjectList() {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                   isCyberpunk
                     ? 'bg-green-500/20 text-green-400 border border-green-500/40 hover:bg-green-500/30 font-medium'
-                    : `${isDark ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20' : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100'}`
+                    : theme === 'anime'
+                      ? 'bg-gradient-to-r from-emerald-200 to-cyan-200 text-emerald-900 border border-emerald-300 hover:from-emerald-300 hover:to-cyan-300 font-medium'
+                      : isDark
+                        ? 'bg-white/10 text-white border border-white/20 hover:bg-white/20'
+                        : 'bg-green-50 text-green-600 border border-green-200 hover:bg-green-100'
                 }`}
               >
                 <Download size={14} />
@@ -256,7 +270,9 @@ export default function ProjectList() {
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-200 ${
                     isCyberpunk
                       ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40 hover:bg-rose-500/30 font-medium'
-                      : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                      : theme === 'anime'
+                        ? 'bg-gradient-to-r from-rose-200 to-orange-200 text-rose-900 border border-rose-300 hover:from-rose-300 hover:to-orange-300 font-medium'
+                        : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
                   }`}
                 >
                   <Trash2 size={14} />
@@ -265,7 +281,7 @@ export default function ProjectList() {
               )}
               <button
                 onClick={() => setSelectedProjects(new Set())}
-                className={`p-1.5 rounded-lg transition-all duration-200 ${isDark ? 'text-gray-500 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                className={`p-1.5 rounded-lg transition-all duration-200 ${theme === 'anime' ? 'text-purple-700 hover:text-purple-900 hover:bg-pink-100' : isDark ? 'text-gray-500 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
                 title="取消选择"
               >
                 <X size={16} />
@@ -302,10 +318,12 @@ export default function ProjectList() {
                       onClick={() => toggleSelectProject(project.id)}
                       className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
                         isSelected
-                          ? 'bg-cyan-500 text-white'
-                          : isDark
-                            ? 'bg-white/10 text-gray-400 hover:bg-white/20'
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                          ? 'bg-pink-500 text-white'
+                          : theme === 'anime'
+                            ? 'bg-purple-200 text-purple-700 hover:bg-purple-300'
+                            : isDark
+                              ? 'bg-white/10 text-gray-400 hover:bg-white/20'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                       }`}
                     >
                       {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
@@ -357,9 +375,11 @@ export default function ProjectList() {
                           className={`px-2 py-0.5 rounded text-xs ${
                             isCyberpunk
                               ? 'bg-gradient-to-r from-cyan-500/10 to-fuchsia-500/10 text-cyan-400 border border-cyan-500/20'
-                              : isDark
-                                ? 'bg-white/10 text-gray-300'
-                                : 'bg-gray-100 text-gray-600'
+                              : theme === 'anime'
+                                ? 'bg-gradient-to-r from-purple-200/60 to-pink-200/60 text-purple-900 border border-purple-300/50'
+                                : isDark
+                                  ? 'bg-white/10 text-gray-300'
+                                  : 'bg-gray-100 text-gray-600'
                           }`}
                         >
                           {category}
@@ -375,9 +395,11 @@ export default function ProjectList() {
                             className={`p-2 rounded-lg transition-colors ${
                               isCyberpunk
                                 ? 'text-gray-500 hover:text-cyan-400 hover:bg-white/5'
-                                : isDark
-                                  ? 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                                  : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+                                : theme === 'anime'
+                                  ? 'text-purple-700 hover:text-purple-900 hover:bg-pink-100'
+                                  : isDark
+                                    ? 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
                             }`}
                           >
                             <Edit size={14} />
@@ -388,9 +410,11 @@ export default function ProjectList() {
                             className={`p-2 rounded-lg transition-colors ${
                               isCyberpunk
                                 ? 'text-gray-500 hover:text-rose-400 hover:bg-white/5'
-                                : isDark
-                                  ? 'text-gray-500 hover:text-red-400 hover:bg-white/5'
-                                  : 'text-gray-400 hover:text-red-600 hover:bg-gray-100'
+                                : theme === 'anime'
+                                  ? 'text-rose-700 hover:text-rose-900 hover:bg-pink-100'
+                                  : isDark
+                                    ? 'text-gray-500 hover:text-red-400 hover:bg-white/5'
+                                    : 'text-gray-400 hover:text-red-600 hover:bg-gray-100'
                             }`}
                           >
                             <Trash2 size={14} />
@@ -400,11 +424,13 @@ export default function ProjectList() {
                       <Link
                         to={`/projects/${project.id}`}
                         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                          isCyberpunk 
-                            ? 'bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 text-cyan-400 border border-cyan-500/20 hover:from-cyan-500/30 hover:to-fuchsia-500/30' 
-                            : isDark
-                              ? 'bg-white/10 text-white hover:bg-white/20'
-                              : 'bg-gray-900 text-white hover:bg-gray-800'
+                          isCyberpunk
+                            ? 'bg-gradient-to-r from-cyan-500/20 to-fuchsia-500/20 text-cyan-400 border border-cyan-500/20 hover:from-cyan-500/30 hover:to-fuchsia-500/30'
+                            : theme === 'anime'
+                              ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-md hover:shadow-lg hover:brightness-110'
+                              : isDark
+                                ? 'bg-white/10 text-white hover:bg-white/20'
+                                : 'bg-gray-900 text-white hover:bg-gray-800'
                         }`}
                       >
                         查看 <ChevronRight size={12} />
@@ -426,49 +452,55 @@ export default function ProjectList() {
             <h2 className={`text-lg font-semibold ${t.text} mb-5`}>{editingProject ? '编辑项目' : '新建项目'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>项目名称</label>
+                <label className={`block text-sm font-medium mb-1.5 ${theme === 'anime' ? 'text-purple-800' : isDark ? 'text-gray-400' : 'text-gray-700'}`}>项目名称</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className={`w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors ${
-                    isCyberpunk 
-                      ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50' 
-                      : isDark
-                        ? 'bg-white/5 border border-white/10 text-white'
-                        : 'border border-gray-200 text-gray-900'
+                    isCyberpunk
+                      ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50'
+                      : theme === 'anime'
+                        ? 'bg-white/80 border-purple-300/50 text-pink-900 placeholder:text-purple-400 focus:border-pink-400'
+                        : isDark
+                          ? 'bg-white/5 border border-white/10 text-white'
+                          : 'border border-gray-200 text-gray-900'
                   }`}
                   required
                 />
               </div>
               <div>
-                <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>项目编号</label>
+                <label className={`block text-sm font-medium mb-1.5 ${theme === 'anime' ? 'text-purple-800' : isDark ? 'text-gray-400' : 'text-gray-700'}`}>项目编号</label>
                 <input
                   type="text"
                   value={formData.projectNumber}
                   onChange={(e) => setFormData({ ...formData, projectNumber: e.target.value })}
                   className={`w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors ${
-                    isCyberpunk 
-                      ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50' 
-                      : isDark
-                        ? 'bg-white/5 border border-white/10 text-white'
-                        : 'border border-gray-200 text-gray-900'
+                    isCyberpunk
+                      ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50'
+                      : theme === 'anime'
+                        ? 'bg-white/80 border-purple-300/50 text-pink-900 placeholder:text-purple-400 focus:border-pink-400'
+                        : isDark
+                          ? 'bg-white/5 border border-white/10 text-white'
+                          : 'border border-gray-200 text-gray-900'
                   }`}
                   required
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>阶段</label>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme === 'anime' ? 'text-purple-800' : isDark ? 'text-gray-400' : 'text-gray-700'}`}>阶段</label>
                   <select
                     value={formData.stage}
                     onChange={(e) => setFormData({ ...formData, stage: e.target.value as 'F阶段' | 'C阶段' | 'S阶段' | 'D阶段' | 'P阶段' })}
                     className={`w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors ${
-                      isCyberpunk 
-                        ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50' 
-                        : isDark
-                          ? 'bg-white/5 border border-white/10 text-white'
-                          : 'border border-gray-200 text-gray-900'
+                      isCyberpunk
+                        ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50'
+                        : theme === 'anime'
+                          ? 'bg-white/80 border-purple-300/50 text-pink-900'
+                          : isDark
+                            ? 'bg-white/5 border border-white/10 text-white'
+                            : 'border border-gray-200 text-gray-900'
                     }`}
                   >
                     <option value="F阶段">F阶段</option>
@@ -479,48 +511,54 @@ export default function ProjectList() {
                   </select>
                 </div>
                 <div>
-                  <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>版本</label>
+                  <label className={`block text-sm font-medium mb-1.5 ${theme === 'anime' ? 'text-purple-800' : isDark ? 'text-gray-400' : 'text-gray-700'}`}>版本</label>
                   <input
                     type="text"
                     value={formData.version}
                     onChange={(e) => setFormData({ ...formData, version: e.target.value })}
                     className={`w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors ${
-                      isCyberpunk 
-                        ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50' 
-                        : isDark
-                          ? 'bg-white/5 border border-white/10 text-white'
-                          : 'border border-gray-200 text-gray-900'
+                      isCyberpunk
+                        ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50'
+                        : theme === 'anime'
+                          ? 'bg-white/80 border-purple-300/50 text-pink-900 placeholder:text-purple-400 focus:border-pink-400'
+                          : isDark
+                            ? 'bg-white/5 border border-white/10 text-white'
+                            : 'border border-gray-200 text-gray-900'
                     }`}
                   />
                 </div>
               </div>
               <div>
-                <label className={`block text-sm font-medium mb-1.5 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>模块种类（逗号分隔）</label>
+                <label className={`block text-sm font-medium mb-1.5 ${theme === 'anime' ? 'text-purple-800' : isDark ? 'text-gray-400' : 'text-gray-700'}`}>模块种类（逗号分隔）</label>
                 <input
                   type="text"
                   value={formData.categories}
                   onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
                   className={`w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors ${
-                    isCyberpunk 
-                      ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-500/50' 
-                      : isDark
-                        ? 'bg-white/5 border border-white/10 text-white'
-                        : 'border border-gray-200 text-gray-900'
+                    isCyberpunk
+                      ? 'bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-cyan-500/50'
+                      : theme === 'anime'
+                        ? 'bg-white/80 border-purple-300/50 text-pink-900 placeholder:text-purple-400 focus:border-pink-400'
+                        : isDark
+                          ? 'bg-white/5 border border-white/10 text-white'
+                          : 'border border-gray-200 text-gray-900'
                   }`}
                   placeholder="如: 控制类, 通信类, 电源类"
                 />
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowModal(false)} className={`flex-1 py-2.5 border rounded-xl text-sm font-medium transition-colors ${
-                  isDark 
-                    ? 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white' 
-                    : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                  theme === 'anime'
+                    ? 'border-purple-300 text-purple-800 hover:bg-pink-50'
+                    : isDark
+                      ? 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'
+                      : 'border-gray-200 text-gray-700 hover:bg-gray-50'
                 }`}>
                   取消
                 </button>
                 <button type="submit" className={`flex-1 py-2.5 rounded-xl text-sm font-medium text-white transition-opacity ${
-                  isCyberpunk 
-                    ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:opacity-90' 
+                  isCyberpunk
+                    ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-500 hover:opacity-90'
                     : t.accent
                 }`}>
                   {editingProject ? '保存' : '创建'}
@@ -555,9 +593,11 @@ export default function ProjectList() {
               className={`w-full px-4 py-2.5 rounded-xl text-sm focus:outline-none transition-colors mb-4 ${
                 isCyberpunk
                   ? 'bg-white/5 border border-white/10 text-white focus:border-cyan-500/50'
-                  : isDark
-                    ? 'bg-white/5 border border-white/10 text-white'
-                    : 'border border-gray-200 text-gray-900'
+                  : theme === 'anime'
+                    ? 'bg-white/80 border-purple-300/50 text-pink-900'
+                    : isDark
+                      ? 'bg-white/5 border border-white/10 text-white'
+                      : 'border border-gray-200 text-gray-900'
               }`}
             >
               <option value="F阶段">F阶段</option>
@@ -568,9 +608,11 @@ export default function ProjectList() {
             </select>
             <div className="flex gap-3">
               <button onClick={() => setBatchStageModal(false)} className={`flex-1 py-2.5 border rounded-xl text-sm font-medium transition-colors ${
-                isDark
-                  ? 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'
-                  : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                theme === 'anime'
+                  ? 'border-purple-300 text-purple-800 hover:bg-pink-50'
+                  : isDark
+                    ? 'border-white/10 text-gray-400 hover:bg-white/5 hover:text-white'
+                    : 'border-gray-200 text-gray-700 hover:bg-gray-50'
               }`}>
                 取消
               </button>

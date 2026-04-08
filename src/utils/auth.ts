@@ -151,7 +151,7 @@ export function validatePasswordStrength(password: string): PasswordValidationRe
     errors.push('密码应包含至少一个数字');
   }
 
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) {
+  if (!/[!@#$%^&*()_+\-={}[\];':"\\|,.<>\/?`~]/.test(password)) {
     errors.push('密码应包含至少一个特殊字符');
   }
 

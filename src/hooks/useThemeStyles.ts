@@ -40,7 +40,7 @@ const themeConfig = {
     },
     badge: 'bg-gray-200 text-gray-900 border border-gray-300', // 提升对比度
     tableHeader: 'bg-gray-100/80 backdrop-blur-sm',
-    hoverBg: 'hover:bg-gray-100',
+    hoverBg: 'hover:bg-gray-200',
     emptyBg: 'bg-white/80 backdrop-blur-sm',
   },
   dark: {
@@ -82,7 +82,7 @@ const themeConfig = {
     },
     badge: 'bg-gray-500/40 text-gray-100 border border-gray-500/50', // 提升对比度
     tableHeader: 'bg-gray-700/80 backdrop-blur-xl',
-    hoverBg: 'hover:bg-gray-700',
+    hoverBg: 'hover:bg-gray-600',
     emptyBg: 'bg-gray-800/80 backdrop-blur-xl',
   },
   cyberpunk: {
@@ -124,7 +124,7 @@ const themeConfig = {
     },
     badge: 'bg-cyan-500/40 text-cyan-100 border border-cyan-400/50', // 提升对比度
     tableHeader: 'bg-[#1a1a2e]/80 backdrop-blur-xl',
-    hoverBg: 'hover:bg-[#1a1a2e]',
+    hoverBg: 'hover:bg-[#252540]',
     emptyBg: 'bg-[#12121a]/80 backdrop-blur-xl',
   },
   linear: {
@@ -166,17 +166,17 @@ const themeConfig = {
     },
     badge: 'bg-[#2c2c30] text-gray-100 border border-[#3c3c42]', // 提升对比度
     tableHeader: 'bg-[#1c1c1f]/80 backdrop-blur-xl',
-    hoverBg: 'hover:bg-[#1c1c1f]',
+    hoverBg: 'hover:bg-[#28282c]',
     emptyBg: 'bg-[#141416]/80 backdrop-blur-xl',
   },
   anime: {
     name: '动漫风格',
     bg: 'bg-gradient-to-br from-pink-100 via-purple-100 to-cyan-100',
-    card: 'bg-white/75 backdrop-blur-xl',
-    border: 'border-pink-300/50',
-    text: 'text-pink-950', // #831843 - 最高对比度 (12.6:1)
-    textSecondary: 'text-purple-900', // #581c87 - 提升对比度 (9.7:1)
-    textMuted: 'text-fuchsia-800', // #a21caf - 提升可读性 (6.2:1)
+    card: 'bg-white/90 backdrop-blur-xl shadow-lg shadow-purple-200/50',
+    border: 'border-pink-300/60',
+    text: 'text-pink-900', // #831843 - 深粉色，提升对比度
+    textSecondary: 'text-purple-800', // #581c87 - 深紫色，提升对比度
+    textMuted: 'text-fuchsia-700', // #a21caf - 提升可读性
     accent: 'bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500',
     accentText: 'text-white',
     input: 'bg-white/80 backdrop-blur-sm border-pink-300/50 text-pink-950 placeholder:text-fuchsia-600',
@@ -208,7 +208,7 @@ const themeConfig = {
     },
     badge: 'bg-pink-200 text-pink-900 border border-pink-300', // 提升对比度
     tableHeader: 'bg-gradient-to-r from-pink-100/80 to-purple-100/80 backdrop-blur-xl',
-    hoverBg: 'hover:bg-pink-50',
+    hoverBg: 'hover:bg-pink-100',
     emptyBg: 'bg-white/80 backdrop-blur-xl',
   },
   cosmos: {
@@ -250,7 +250,7 @@ const themeConfig = {
     },
     badge: 'bg-cyan-500/40 text-cyan-100 border border-cyan-400/50', // 提升对比度
     tableHeader: 'bg-[#0d1b2a]/80 backdrop-blur-2xl',
-    hoverBg: 'hover:bg-cyan-500/15',
+    hoverBg: 'hover:bg-cyan-500/25',
     emptyBg: 'bg-[#0d1b2a]/70 backdrop-blur-xl',
   },
   classical: {
@@ -292,7 +292,7 @@ const themeConfig = {
     },
     badge: 'bg-amber-200 text-amber-900 border border-amber-300', // 提升对比度
     tableHeader: 'bg-amber-50/80 backdrop-blur-xl',
-    hoverBg: 'hover:bg-amber-50',
+    hoverBg: 'hover:bg-amber-100',
     emptyBg: 'bg-white/80 backdrop-blur-xl',
   },
 };

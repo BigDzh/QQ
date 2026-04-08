@@ -416,7 +416,7 @@ export default function Layout({ children }: LayoutProps) {
                       setUserMenuOpen(false);
                       setThemeMenuOpen(true);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} ${isDark || isCyberpunk ? 'hover:bg-white/10' : isAnime ? 'hover:bg-pink-100' : 'hover:bg-gray-100'} transition-colors`}
                   >
                     <Palette size={16} className={isCyberpunk ? 'text-cyan-400' : isAnime ? 'text-pink-500' : 'text-gray-500'} />
                     <span>切换主题</span>
@@ -428,7 +428,7 @@ export default function Layout({ children }: LayoutProps) {
                       setUserMenuOpen(false);
                       setShowShortcuts(true);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} ${isDark || isCyberpunk ? 'hover:bg-white/10' : isAnime ? 'hover:bg-purple-100' : 'hover:bg-gray-100'} transition-colors`}
                   >
                     <Keyboard size={16} className={isCyberpunk ? 'text-cyan-400' : isAnime ? 'text-purple-500' : 'text-gray-500'} />
                     <span>快捷键</span>
@@ -439,7 +439,7 @@ export default function Layout({ children }: LayoutProps) {
                       setUserMenuOpen(false);
                       setShowVersion(true);
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} hover:bg-gray-50 dark:hover:bg-white/5 transition-colors`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} ${isDark || isCyberpunk ? 'hover:bg-white/10' : isAnime ? 'hover:bg-cyan-100' : 'hover:bg-gray-100'} transition-colors`}
                   >
                     <HelpCircle size={16} className={isCyberpunk ? 'text-fuchsia-400' : isAnime ? 'text-cyan-500' : 'text-gray-500'} />
                     <span>版本信息</span>
@@ -450,7 +450,7 @@ export default function Layout({ children }: LayoutProps) {
                       logout();
                       navigate('/login');
                     }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} hover:bg-red-50 dark:hover:bg-red-500/20 transition-colors`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm ${t.text} ${isDark || isCyberpunk ? 'hover:bg-red-500/20' : isAnime ? 'hover:bg-red-100' : 'hover:bg-red-50'} transition-colors`}
                   >
                     <LogOut size={16} className="text-red-500" />
                     <span className="text-red-500">退出登录</span>
