@@ -11,4 +11,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setMonitorPosition: (x, y) => ipcRenderer.invoke('set-monitor-position', x, y),
   minimizeMonitorWindow: () => ipcRenderer.invoke('minimize-monitor-window'),
   closeMonitorWindowIPC: () => ipcRenderer.invoke('close-monitor-window-ipc'),
+  captureScreen: () => ipcRenderer.invoke('capture-screen'),
 });

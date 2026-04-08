@@ -378,7 +378,7 @@ export default function SystemResources() {
       <div className="flex-1 flex items-center gap-2">
         <div className="flex-1">
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-gray-500 dark:text-gray-400">{label}</span>
+            <span className="text-gray-600 dark:text-gray-300">{label}</span>
             <div className="flex items-center gap-1">
               {trend && getTrendIcon(trend)}
               <span className={`font-semibold ${color.text}`}>{value}%</span>
@@ -391,11 +391,6 @@ export default function SystemResources() {
             />
           </div>
         </div>
-        {historyData && historyData.length > 2 && (
-          <div className="shrink-0">
-            <MiniTrendChart data={historyData} color={chartColor} />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -403,7 +398,7 @@ export default function SystemResources() {
 
   const DetailItem = ({ label, value, unit = '', trend, highlight }: { label: string; value: string | number; unit?: string; trend?: 'up' | 'down' | 'stable'; highlight?: boolean }) => (
     <div className={`flex justify-between items-center py-2 ${highlight ? 'px-2 -mx-2 rounded-lg bg-blue-50/50 dark:bg-blue-500/10' : 'border-b border-gray-100 dark:border-gray-700/50'} last:border-0 transition-colors`}>
-      <span className="text-sm text-gray-500 dark:text-gray-400">{label}</span>
+      <span className="text-sm text-gray-600 dark:text-gray-300">{label}</span>
       <div className="flex items-center gap-1.5">
         {trend && getTrendIcon(trend)}
         <span className={`text-sm font-medium ${highlight ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'}`}>{value}{unit}</span>
@@ -514,9 +509,9 @@ export default function SystemResources() {
         </div>
         <div className={`ml-1 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`}>
           {expanded ? (
-            <ChevronUp size={14} className="text-blue-500" />
+            <ChevronUp size={14} className="text-blue-600 dark:text-blue-400" />
           ) : (
-            <ChevronDown size={14} className="text-gray-400" />
+            <ChevronDown size={14} className="text-gray-600 dark:text-gray-300" />
           )}
         </div>
       </button>
@@ -541,7 +536,7 @@ export default function SystemResources() {
                   </div>
                   <div>
                     <span className="text-sm font-bold text-gray-900 dark:text-white">系统监控</span>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">实时性能数据</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-300">实时性能数据</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

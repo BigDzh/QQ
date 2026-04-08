@@ -30,7 +30,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
 
   const logCreate = useCallback(
     (
-      reason?: string,
+      reason: string,
       initialState?: Record<string, unknown>,
       metadata?: Record<string, unknown>
     ) => {
@@ -43,7 +43,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
     (
       previousState: Record<string, unknown>,
       newState: Record<string, unknown>,
-      reason?: string,
+      reason: string,
       metadata?: Record<string, unknown>
     ) => {
       return logComponentUpdate(componentId, componentName, user, previousState, newState, reason, metadata);
@@ -53,7 +53,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
 
   const logDestroy = useCallback(
     (
-      reason?: string,
+      reason: string,
       finalState?: Record<string, unknown>,
       metadata?: Record<string, unknown>
     ) => {
@@ -67,7 +67,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
       changeType: ComponentChangeType,
       previousState: Record<string, unknown> | string,
       newState: Record<string, unknown> | string,
-      reason?: string,
+      reason: string,
       level?: LogLevel,
       metadata?: Record<string, unknown>
     ) => {
@@ -89,8 +89,8 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
   const logEvent = useCallback(
     (
       eventType: string,
-      eventData?: Record<string, unknown>,
-      reason?: string,
+      eventData: Record<string, unknown> | undefined,
+      reason: string,
       metadata?: Record<string, unknown>
     ) => {
       return logComponentEvent(componentId, componentName, user, eventType, eventData, reason, metadata);
@@ -103,7 +103,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
       propertyName: string,
       previousValue: unknown,
       newValue: unknown,
-      reason?: string
+      reason: string
     ) => {
       return logComponentStateChange(
         componentId,
@@ -124,7 +124,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
     (
       previousStatus: string,
       newStatus: string,
-      reason?: string
+      reason: string
     ) => {
       return logComponentStateChange(
         componentId,
@@ -145,7 +145,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
     (
       previousVersion: string,
       newVersion: string,
-      reason?: string
+      reason: string
     ) => {
       return logComponentStateChange(
         componentId,
@@ -166,7 +166,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
     (
       addedDependencies: string[] = [],
       removedDependencies: string[] = [],
-      reason?: string
+      reason: string
     ) => {
       return logComponentStateChange(
         componentId,
@@ -175,7 +175,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
         'PROPERTY_CHANGE',
         { dependencies: removedDependencies },
         { dependencies: addedDependencies },
-        reason || `依赖变更: 新增 ${addedDependencies.length}, 移除 ${removedDependencies.length}`,
+        reason,
         'INFO',
         { type: 'DEPENDENCY_CHANGE', addedDependencies, removedDependencies }
       );
@@ -187,6 +187,7 @@ export function useEntityLogger(options: UseEntityLoggerOptions) {
     return getComponentLogs(filter);
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const subscribe = useCallback((listener: (entry: ComponentLogEntry) => void) => {
     return addComponentLogListener(listener);
   }, []);

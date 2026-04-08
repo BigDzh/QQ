@@ -124,6 +124,9 @@ export function usePerformanceMetrics(): PerformanceMetrics {
       lcpObserver.disconnect();
       fidObserver.disconnect();
       clsObserver.disconnect();
+      if (document.readyState !== 'complete') {
+        window.removeEventListener('load', calculateTTI);
+      }
     };
   }, []);
 

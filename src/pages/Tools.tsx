@@ -671,54 +671,65 @@ export default function Tools() {
   };
 
   const preprocessImage = (imageSrc: string): Promise<string> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          resolve(imageSrc);
-          return;
-        }
-
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        if (ocrPreprocess.grayscale || ocrPreprocess.contrast !== 1 || ocrPreprocess.denoise) {
-          ctx.drawImage(img, 0, 0);
-
-          let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          let data = imageData.data;
-
-          for (let i = 0; i < data.length; i += 4) {
-            if (ocrPreprocess.grayscale) {
-              const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
-              data[i] = avg;
-              data[i + 1] = avg;
-              data[i + 2] = avg;
-            }
-
-            if (ocrPreprocess.contrast !== 1) {
-              const factor = (259 * (ocrPreprocess.contrast * 255 + 255)) / (255 * (259 - ocrPreprocess.contrast * 255));
-              data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));
-              data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128));
-              data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128));
-            }
-
-            if (ocrPreprocess.denoise) {
-              const noiseReduce = 0.2;
-              data[i] = data[i] * (1 - noiseReduce) + 128 * noiseReduce;
-              data[i + 1] = data[i + 1] * (1 - noiseReduce) + 128 * noiseReduce;
-              data[i + 2] = data[i + 2] * (1 - noiseReduce) + 128 * noiseReduce;
-            }
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(imageSrc);
+            return;
           }
 
-          ctx.putImageData(imageData, 0, 0);
-        } else {
-          ctx.drawImage(img, 0, 0);
-        }
+          canvas.width = img.width;
+          canvas.height = img.height;
 
-        resolve(canvas.toDataURL('image/png'));
+          if (ocrPreprocess.grayscale || ocrPreprocess.contrast !== 1 || ocrPreprocess.denoise) {
+            ctx.drawImage(img, 0, 0);
+
+            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            let data = imageData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+              if (ocrPreprocess.grayscale) {
+                const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                data[i] = avg;
+                data[i + 1] = avg;
+                data[i + 2] = avg;
+              }
+
+              if (ocrPreprocess.contrast !== 1) {
+                const factor = (259 * (ocrPreprocess.contrast * 255 + 255)) / (255 * (259 - ocrPreprocess.contrast * 255));
+                data[i] = Math.min(255, Math.max(0, factor * (data[i] - 128) + 128));
+                data[i + 1] = Math.min(255, Math.max(0, factor * (data[i + 1] - 128) + 128));
+                data[i + 2] = Math.min(255, Math.max(0, factor * (data[i + 2] - 128) + 128));
+              }
+
+              if (ocrPreprocess.denoise) {
+                const noiseReduce = 0.2;
+                data[i] = data[i] * (1 - noiseReduce) + 128 * noiseReduce;
+                data[i + 1] = data[i + 1] * (1 - noiseReduce) + 128 * noiseReduce;
+                data[i + 2] = data[i + 2] * (1 - noiseReduce) + 128 * noiseReduce;
+              }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+          } else {
+            ctx.drawImage(img, 0, 0);
+          }
+
+          const result = canvas.toDataURL('image/png');
+          console.log('[OCR] Preprocessed image generated, length:', result.length);
+          resolve(result);
+        } catch (error) {
+          console.error('[OCR] Image preprocessing error:', error);
+          resolve(imageSrc);
+        }
+      };
+      img.onerror = (error) => {
+        console.error('[OCR] Image load error:', error);
+        resolve(imageSrc);
       };
       img.src = imageSrc;
     });
@@ -746,6 +757,10 @@ export default function Tools() {
     showToast(`已导出为${format === 'md' ? 'Markdown' : '文本'}文件`, 'success');
   };
 
+  const checkOnlineStatus = (): boolean => {
+    return navigator.onLine;
+  };
+
   const handleOcrRecognize = async (imageData?: string) => {
     const imageSrc = imageData || ocrImage;
     if (!imageSrc) {
@@ -753,27 +768,50 @@ export default function Tools() {
       return;
     }
 
+    if (!checkOnlineStatus()) {
+      showToast('当前处于离线状态，OCR功能需要网络连接来下载语言模型。请连接网络后重试。', 'error');
+      return;
+    }
+
     setOcrLoading(true);
     setOcrResult('');
     setOcrProgress(0);
 
+    let worker = null;
     try {
+      console.log('[OCR] Starting recognition process');
+      console.log('[OCR] Image source type:', typeof imageSrc);
+      console.log('[OCR] Image source preview:', imageSrc?.substring(0, 50) + '...');
+
       const processedImage = await preprocessImage(imageSrc);
       setPreprocessedImage(processedImage);
+      console.log('[OCR] Image preprocessing completed');
 
+      console.log('[OCR] Importing Tesseract.js...');
       const Tesseract = await import('tesseract.js');
-      const worker = await Tesseract.createWorker(ocrLang, 1, {
+      console.log('[OCR] Tesseract.js imported, creating worker with language:', ocrLang);
+
+      worker = await Tesseract.createWorker(ocrLang, 1, {
+        langPath: './tessdata',
+        cacheMethod: 'readOnly',
+        gzip: true,
         logger: (m) => {
+          console.log('[OCR Worker]', m.status, m.progress !== undefined ? `${Math.round(m.progress * 100)}%` : '');
           if (m.status === 'recognizing text') {
             setOcrProgress(Math.round(m.progress * 100));
           }
         }
       });
+      console.log('[OCR] Worker created successfully');
 
-      const { data: { text } } = await worker.recognize(processedImage);
+      console.log('[OCR] Starting recognition...');
+      const result = await worker.recognize(processedImage);
+      console.log('[OCR] Recognition completed, confidence:', result.data.confidence);
+
+      const { text } = result.data;
       setOcrResult(text);
       addToOcrHistory(text, ocrLang, ocrImage || undefined);
-      await worker.terminate();
+      console.log('[OCR] Worker terminated, recognition successful');
 
       if (imageData && imageData === ocrImage) {
         setTimeout(() => {
@@ -781,12 +819,36 @@ export default function Tools() {
           showToast('截图已自动清理', 'info');
         }, 2000);
       }
-    } catch (error) {
-      showToast('OCR识别失败', 'error');
+
+      if (!text || text.trim() === '') {
+        showToast('未识别到文字，请尝试调整图片或预处理参数', 'warning');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[OCR] Recognition failed with error:', errorMessage);
+      console.error('[OCR] Full error object:', error);
+
+      if (errorMessage.includes('worker') || errorMessage.includes('Worker')) {
+        showToast('OCR引擎初始化失败，请检查网络连接后重试', 'error');
+      } else if (errorMessage.includes('language') || errorMessage.includes('lang')) {
+        showToast('OCR语言包加载失败，请检查网络连接后重试', 'error');
+      } else if (errorMessage.includes('recognize') || errorMessage.includes('image')) {
+        showToast('图像识别失败，请确保图片格式正确且可读', 'error');
+      } else {
+        showToast(`OCR识别失败: ${errorMessage}`, 'error');
+      }
       console.error(error);
+    } finally {
+      if (worker) {
+        try {
+          await worker.terminate();
+        } catch {
+          // Ignore terminate errors
+        }
+      }
+      setOcrLoading(false);
+      setOcrProgress(0);
     }
-    setOcrLoading(false);
-    setOcrProgress(0);
   };
 
   const handlePreciseScreenshotCapture = async () => {
@@ -1147,6 +1209,7 @@ export default function Tools() {
               <button
                 onClick={() => setShowPreprocess(!showPreprocess)}
                 className={`px-3 py-1.5 text-xs border rounded-lg ${t.border} hover:${t.hoverBg} flex items-center gap-1 ${showPreprocess ? 'bg-blue-500/10 border-blue-500/50' : ''}`}
+                style={{ color: '#be185d', textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}
               >
                 <Sliders size={14} />
                 图像预处理
@@ -1154,6 +1217,7 @@ export default function Tools() {
               <button
                 onClick={() => setShowOcrHistory(!showOcrHistory)}
                 className={`px-3 py-1.5 text-xs border rounded-lg ${t.border} hover:${t.hoverBg} flex items-center gap-1 ${showOcrHistory ? 'bg-blue-500/10 border-blue-500/50' : ''}`}
+                style={{ color: '#be185d', textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}
               >
                 <History size={14} />
                 识别历史
@@ -1184,7 +1248,7 @@ export default function Tools() {
                       onChange={(e) => setOcrPreprocess(prev => ({ ...prev, contrast: parseFloat(e.target.value) }))}
                       className="w-24"
                     />
-                    <span className={`text-xs ${t.textMuted}`}>{ocrPreprocess.contrast.toFixed(1)}</span>
+                    <span className={`text-xs ${t.textSecondary}`} style={{ textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}>{ocrPreprocess.contrast.toFixed(1)}</span>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -1196,14 +1260,14 @@ export default function Tools() {
                     <span className={`text-sm ${t.textSecondary}`}>去噪声</span>
                   </label>
                 </div>
-                <p className={`text-xs ${t.textMuted} mt-2`}>预处理可提高复杂背景或低质量图片的识别准确率</p>
+                <p className={`text-xs ${t.textSecondary} mt-2`} style={{ textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}>预处理可提高复杂背景或低质量图片的识别准确率</p>
               </div>
             )}
 
             {showOcrHistory && (
               <div className={`${t.emptyBg} rounded-lg p-4 border border-blue-500/20`}>
                 {ocrHistory.length === 0 ? (
-                  <p className={`text-sm ${t.textMuted} text-center py-4`}>暂无识别历史</p>
+                  <p className={`text-sm ${t.textSecondary} text-center py-4`} style={{ textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}>暂无识别历史</p>
                 ) : (
                   <div className="space-y-2 max-h-60 overflow-y-auto">
                     {ocrHistory.map((item) => (
@@ -1250,17 +1314,18 @@ export default function Tools() {
                   value={ocrLang}
                   onChange={(e) => setOcrLang(e.target.value as typeof ocrLang)}
                   className={`px-3 py-2 border rounded-lg ${t.input}`}
+                  style={{ colorScheme: 'dark' }}
                 >
-                  <option value="chi_sim+eng">简体中文+英文</option>
-                  <option value="chi_sim">简体中文</option>
-                  <option value="eng">英文</option>
+                  <option value="chi_sim+eng" style={{ background: '#1a1a2e', color: '#e879f9' }}>简体中文+英文</option>
+                  <option value="chi_sim" style={{ background: '#1a1a2e', color: '#e879f9' }}>简体中文</option>
+                  <option value="eng" style={{ background: '#1a1a2e', color: '#e879f9' }}>英文</option>
                 </select>
               </div>
               <div className="flex items-end gap-2">
                 <button
                   onClick={handleScreenCapture}
                   disabled={isCapturing}
-                  className={`px-4 py-2 border rounded-lg ${t.border} hover:${t.hoverBg} flex items-center gap-2 disabled:opacity-50`}
+                  className={`px-4 py-2 border rounded-lg ${t.border} ${t.text} hover:${t.hoverBg} flex items-center gap-2 disabled:opacity-50`}
                 >
                   <Crop size={18} />
                   智能截图
@@ -1268,7 +1333,7 @@ export default function Tools() {
                 <button
                   onClick={handlePreciseScreenshotCapture}
                   disabled={isCapturing}
-                  className={`px-4 py-2 border rounded-lg ${t.border} hover:${t.hoverBg} flex items-center gap-2 disabled:opacity-50`}
+                  className={`px-4 py-2 border rounded-lg ${t.border} ${t.text} hover:${t.hoverBg} flex items-center gap-2 disabled:opacity-50`}
                 >
                   <Settings size={18} />
                   精确截图
@@ -1276,12 +1341,12 @@ export default function Tools() {
               </div>
             </div>
 
-            <div className={`text-xs ${t.textMuted} bg-blue-500/10 border border-blue-500/30 rounded-lg p-3`}>
-              <div className="font-medium text-blue-500 mb-1">截图功能说明</div>
+            <div className={`text-xs ${t.textSecondary} bg-blue-500/10 border border-blue-500/30 rounded-lg p-3`} style={{ textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}>
+              <div className="font-medium text-pink-700 mb-1" style={{ textShadow: '0 1px 2px rgba(255,255,255,0.3)' }}>截图功能说明</div>
               <ul className="space-y-0.5 ml-2">
-                <li>• <strong>智能截图</strong>：拖动选择区域，自动识别后删除截图</li>
-                <li>• <strong>精确截图</strong>：显示坐标和尺寸信息，适合精准定位</li>
-                <li>• <strong>图片上传</strong>：支持拖拽或点击选择图片文件</li>
+                <li>• <strong className="text-pink-900">智能截图</strong>：拖动选择区域，自动识别后删除截图</li>
+                <li>• <strong className="text-pink-900">精确截图</strong>：显示坐标和尺寸信息，适合精准定位</li>
+                <li>• <strong className="text-pink-900">图片上传</strong>：支持拖拽或点击选择图片文件</li>
               </ul>
             </div>
 
@@ -1304,11 +1369,11 @@ export default function Tools() {
                     : `${t.border} hover:${t.hoverBg}`
                 }`}
               >
-                <Upload size={32} className={`mx-auto mb-2 ${ocrDragging ? 'text-green-500' : t.textMuted}`} />
-                <p className={`text-sm ${t.textSecondary}`}>
+                <Upload size={32} className={`mx-auto mb-2 ${ocrDragging ? 'text-green-500' : t.textSecondary}`} style={{ filter: 'drop-shadow(0 1px 2px rgba(255,255,255,0.5))' }} />
+                <p className={`text-sm ${t.text}`} style={{ textShadow: '0 1px 2px rgba(255,255,255,0.5)' }}>
                   {ocrDragging ? '松开鼠标上传图片' : '拖拽图片到此处或点击选择'}
                 </p>
-                <p className={`text-xs ${t.textMuted} mt-1`}>支持 JPG、PNG、GIF、BMP 等格式</p>
+                <p className={`text-xs ${t.textSecondary} mt-1`} style={{ textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}>支持 JPG、PNG、GIF、BMP 等格式</p>
               </div>
             </div>
 

@@ -7,6 +7,13 @@ export interface ElectronAPI {
   setMonitorPosition: (x: number, y: number) => Promise<{ success: boolean }>;
   minimizeMonitorWindow: () => Promise<{ success: boolean }>;
   closeMonitorWindowIPC: () => Promise<{ success: boolean }>;
+  captureScreen: () => Promise<{
+    success: boolean;
+    image?: string;
+    width?: number;
+    height?: number;
+    error?: string;
+  }>;
 }
 
 declare global {

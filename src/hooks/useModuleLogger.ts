@@ -31,7 +31,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
   const logInterfaceChange = useCallback(
     (
       changeDetails: string,
-      reason?: string,
+      reason: string,
       previousInterface?: Record<string, unknown>,
       newInterface?: Record<string, unknown>,
       affectedComponents?: string[]
@@ -55,7 +55,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
       changeDetails: string,
       previousConfig: Record<string, unknown>,
       newConfig: Record<string, unknown>,
-      reason?: string,
+      reason: string,
       affectedDependencies?: string[]
     ) => {
       return logModuleConfigModify(
@@ -75,7 +75,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
   const logDependencyAdjust = useCallback(
     (
       changeDetails: string,
-      reason?: string,
+      reason: string,
       addedDependencies?: string[],
       removedDependencies?: string[]
     ) => {
@@ -95,7 +95,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
   const logCoreFunctionChange = useCallback(
     (
       changeDetails: string,
-      reason?: string,
+      reason: string,
       affectedComponents?: string[],
       previousImplementation?: string,
       newImplementation?: string
@@ -115,28 +115,28 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
   );
 
   const logInit = useCallback(
-    (reason?: string, config?: Record<string, unknown>) => {
+    (reason: string, config?: Record<string, unknown>) => {
       return logModuleLifecycle(moduleId, moduleName, user, 'INIT', reason, undefined, config);
     },
     [moduleId, moduleName, user]
   );
 
   const logDestroy = useCallback(
-    (reason?: string, details?: string, config?: Record<string, unknown>) => {
+    (reason: string, details?: string, config?: Record<string, unknown>) => {
       return logModuleLifecycle(moduleId, moduleName, user, 'DESTROY', reason, details, config);
     },
     [moduleId, moduleName, user]
   );
 
   const logEnable = useCallback(
-    (reason?: string, details?: string, config?: Record<string, unknown>) => {
+    (reason: string, details?: string, config?: Record<string, unknown>) => {
       return logModuleLifecycle(moduleId, moduleName, user, 'ENABLE', reason, details, config);
     },
     [moduleId, moduleName, user]
   );
 
   const logDisable = useCallback(
-    (reason?: string, details?: string, config?: Record<string, unknown>) => {
+    (reason: string, details?: string, config?: Record<string, unknown>) => {
       return logModuleLifecycle(moduleId, moduleName, user, 'DISABLE', reason, details, config);
     },
     [moduleId, moduleName, user]
@@ -145,7 +145,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
   const logLifecycle = useCallback(
     (
       changeType: 'INIT' | 'DESTROY' | 'ENABLE' | 'DISABLE',
-      reason?: string,
+      reason: string,
       details?: string,
       config?: Record<string, unknown>
     ) => {
@@ -158,7 +158,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
     (
       changeType: ModuleChangeType,
       changeDetails: string,
-      reason?: string,
+      reason: string,
       previousConfig?: Record<string, unknown>,
       newConfig?: Record<string, unknown>,
       affectedDependencies?: string[]
@@ -230,6 +230,7 @@ export function useModuleLogger(options: UseModuleLoggerOptions) {
     return getModuleLogs(filter);
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const subscribe = useCallback((listener: (entry: ModuleLogEntry) => void) => {
     return addModuleLogListener(listener);
   }, []);

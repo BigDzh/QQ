@@ -1,4 +1,4 @@
-import type { HierarchicalLogEntry, LogFilter, LogListener, LogLevel, LogLayer } from './types';
+import type { LogFilter, LogListener, LogLevel } from './types';
 import { getLogger } from './core';
 
 export type ProjectChangeType =
@@ -19,7 +19,7 @@ export interface ProjectLogEntry {
   projectId: string;
   projectName: string;
   changeType: ProjectChangeType;
-  reason?: string;
+  reason: string;
   previousState?: Record<string, unknown>;
   currentState?: Record<string, unknown>;
   changedProperties?: Array<{
@@ -170,7 +170,7 @@ class ProjectLoggerService {
     projectName: string,
     user: { id: string | null; username: string },
     changeType: ProjectChangeType,
-    reason?: string,
+    reason: string,
     previousState?: Record<string, unknown>,
     currentState?: Record<string, unknown>,
     metadata?: Record<string, unknown>
@@ -269,14 +269,15 @@ class ProjectLoggerService {
     projectName: string,
     user: { id: string | null; username: string },
     previousStage: string,
-    newStage: string
+    newStage: string,
+    reason?: string
   ): ProjectLogEntry {
     return this.logProjectChange(
       projectId,
       projectName,
       user,
       'STAGE_CHANGE',
-      `阶段变更: ${previousStage} → ${newStage}`,
+      reason || `阶段变更: ${previousStage} → ${newStage}`,
       { stage: previousStage },
       { stage: newStage },
       { previousStage, newStage }
@@ -361,7 +362,7 @@ export function logProjectChange(
   projectName: string,
   user: { id: string | null; username: string },
   changeType: ProjectChangeType,
-  reason?: string,
+  reason: string,
   previousState?: Record<string, unknown>,
   currentState?: Record<string, unknown>,
   metadata?: Record<string, unknown>

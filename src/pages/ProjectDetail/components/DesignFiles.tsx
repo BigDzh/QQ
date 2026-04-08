@@ -15,6 +15,54 @@ interface DesignFileVersion {
   note?: string;
 }
 
+const MIME_TYPE_MAP: Record<string, string> = {
+  '.dwg': 'application/acad',
+  '.dxf': 'application/dxf',
+  '.dwt': 'application/dwt',
+  '.dws': 'application/dws',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.xls': 'application/vnd.ms-excel',
+  '.csv': 'text/csv',
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+  '.txt': 'text/plain',
+};
+
+const FORMAT_EXTENSION_MAP: Record<string, string[]> = {
+  'AutoCAD': ['.dwg', '.dxf', '.dwt', '.dws'],
+  'Excel': ['.xlsx', '.xls', '.csv'],
+  'PDF': ['.pdf'],
+};
+
+function getExtensionFromFileName(fileName: string): string {
+  const lastDot = fileName.lastIndexOf('.');
+  if (lastDot === -1) return '';
+  return fileName.slice(lastDot).toLowerCase();
+}
+
+function getMimeTypeFromExtension(ext: string): string {
+  return MIME_TYPE_MAP[ext.toLowerCase()] || 'application/octet-stream';
+}
+
+function inferFormatFromExtension(ext: string): 'AutoCAD' | 'Excel' | 'PDF' | null {
+  for (const [format, extensions] of Object.entries(FORMAT_EXTENSION_MAP)) {
+    if (extensions.includes(ext.toLowerCase())) {
+      return format as 'AutoCAD' | 'Excel' | 'PDF';
+    }
+  }
+  return null;
+}
+
+function validateFileFormat(ext: string, declaredFormat: string): boolean {
+  const inferred = inferFormatFromExtension(ext);
+  if (!inferred) return true;
+  return inferred === declaredFormat;
+}
+
 interface DesignFile {
   id: string;
   name: string;
@@ -34,6 +82,8 @@ interface DesignFile {
   file?: File;
   previewUrl?: string;
   versionHistory?: DesignFileVersion[];
+  originalExtension?: string;
+  mimeType?: string;
 }
 
 interface DesignFilesProps {
@@ -218,15 +268,34 @@ export function DesignFiles({
   }, [onAutoGenerate]);
 
   const handleDownload = useCallback((file: DesignFile) => {
-    if (file.data) {
-      const blob = new Blob([file.data], { type: 'text/plain' });
+    if (!file.data) {
+      showToast('文件数据不存在', 'error');
+      return;
+    }
+
+    const ext = file.originalExtension || getExtensionFromFileName(file.name);
+    const mimeType = file.mimeType || getMimeTypeFromExtension(ext);
+    const fileName = ext && ext !== getExtensionFromFileName(file.name)
+      ? `${file.name}${ext}`
+      : (ext ? file.name : `${file.name}.txt`);
+
+    if (ext && !validateFileFormat(ext, file.format)) {
+      showToast(`文件格式(${ext})与声明格式(${file.format})不匹配，可能导致文件损坏`, 'warning');
+    }
+
+    try {
+      const blob = new Blob([file.data], { type: mimeType });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${file.name}.txt`;
+      a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast('文件下载成功', 'success');
+      showToast(`文件 "${fileName}" 下载成功`, 'success');
+    } catch {
+      showToast('下载失败，请重试', 'error');
     }
   }, [showToast]);
 
@@ -1413,13 +1482,24 @@ export function DesignFiles({
                     </span>
                   </td>
                   <td className={`px-4 py-3 ${t.textSecondary}`}>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      file.format === 'Excel' ? 'bg-green-100 text-green-700' :
-                      file.format === 'AutoCAD' ? 'bg-orange-100 text-orange-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {file.format}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        file.format === 'Excel' ? 'bg-green-100 text-green-700' :
+                        file.format === 'AutoCAD' ? 'bg-orange-100 text-orange-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {file.format}
+                      </span>
+                      {file.originalExtension && (
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          file.originalExtension.match(/\.(dwg|dxf|dwt|dws)/i) ? 'bg-blue-50 text-blue-600' :
+                          file.originalExtension.match(/\.(xlsx|xls|csv)/i) ? 'bg-emerald-50 text-emerald-600' :
+                          'bg-gray-50 text-gray-600'
+                        } font-mono`}>
+                          {file.originalExtension.toUpperCase()}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className={`px-4 py-3 ${t.textSecondary}`}>
                     {file.category === 'module' ? '模块' : '组件'}

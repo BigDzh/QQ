@@ -31,7 +31,7 @@ export function useProjectLogger(options: UseProjectLoggerOptions) {
   const prevStateRef = useRef<Record<string, unknown>>({});
 
   const logCreate = useCallback(
-    (initialState: Record<string, unknown>) => {
+    (reason: string, initialState: Record<string, unknown>) => {
       return logProjectCreate(projectId, projectName, user, initialState);
     },
     [projectId, projectName, user]
@@ -41,7 +41,7 @@ export function useProjectLogger(options: UseProjectLoggerOptions) {
     (
       previousState: Record<string, unknown>,
       newState: Record<string, unknown>,
-      reason?: string
+      reason: string
     ) => {
       return logProjectUpdate(projectId, projectName, user, previousState, newState, reason);
     },
@@ -49,14 +49,14 @@ export function useProjectLogger(options: UseProjectLoggerOptions) {
   );
 
   const logStageChange = useCallback(
-    (previousStage: string, newStage: string) => {
-      return logProjectStageChange(projectId, projectName, user, previousStage, newStage);
+    (previousStage: string, newStage: string, reason: string) => {
+      return logProjectStageChange(projectId, projectName, user, previousStage, newStage, reason);
     },
     [projectId, projectName, user]
   );
 
   const logDelete = useCallback(
-    (finalState: Record<string, unknown>) => {
+    (reason: string, finalState: Record<string, unknown>) => {
       return logProjectDelete(projectId, projectName, user, finalState);
     },
     [projectId, projectName, user]
@@ -65,7 +65,7 @@ export function useProjectLogger(options: UseProjectLoggerOptions) {
   const logChange = useCallback(
     (
       changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'STAGE_CHANGE' | 'VERSION_CHANGE' | 'CONFIG_CHANGE' | 'STATUS_CHANGE',
-      reason?: string,
+      reason: string,
       previousState?: Record<string, unknown>,
       currentState?: Record<string, unknown>,
       metadata?: Record<string, unknown>
@@ -115,6 +115,7 @@ export function useProjectLogger(options: UseProjectLoggerOptions) {
     return projectLogger.getStatistics();
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const subscribe = useCallback((listener: (entry: ProjectLogEntry) => void) => {
     return addProjectLogListener(listener as any);
   }, []);

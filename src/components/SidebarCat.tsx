@@ -40,7 +40,6 @@ export default function SidebarCat() {
   const [isHovered, setIsHovered] = useState(false);
   const [mousePos, setMousePos] = useState<Position | null>(null);
   const [action, setAction] = useState<'walk' | 'run' | 'jump' | 'sleep' | 'fall' | 'parachute' | 'rocket'>('walk');
-  const animationRef = useRef<number>();
   const [mouse, setMouse] = useState<MouseState>({
     position: { x: -50, y: 100 },
     visible: false,
@@ -66,6 +65,26 @@ export default function SidebarCat() {
     petals: 5,
     respawning: false,
   });
+
+  const positionRef = useRef(position);
+  const velocityRef = useRef(velocity);
+  const directionRef = useRef(direction);
+  const isHoveredRef = useRef(isHovered);
+  const mousePosRef = useRef(mousePos);
+  const actionRef = useRef(action);
+  const mouseRef = useRef(mouse);
+  const flowerRef = useRef(flower);
+  const isPausedRef = useRef(isPaused);
+
+  useEffect(() => { positionRef.current = position; }, [position]);
+  useEffect(() => { velocityRef.current = velocity; }, [velocity]);
+  useEffect(() => { directionRef.current = direction; }, [direction]);
+  useEffect(() => { isHoveredRef.current = isHovered; }, [isHovered]);
+  useEffect(() => { mousePosRef.current = mousePos; }, [mousePos]);
+  useEffect(() => { actionRef.current = action; }, [action]);
+  useEffect(() => { mouseRef.current = mouse; }, [mouse]);
+  useEffect(() => { flowerRef.current = flower; }, [flower]);
+  useEffect(() => { isPausedRef.current = isPaused; }, [isPaused]);
 
   const isDark = !theme || theme === 'dark' || theme === 'cyberpunk' || theme === 'linear';
   const isCyberpunk = theme === 'cyberpunk';
@@ -97,35 +116,11 @@ export default function SidebarCat() {
     const container = containerRef.current;
     if (!container) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
-        setMousePos({ x, y });
-      }
-    };
-
-    const handleMouseLeave = () => {
-      setMousePos(null);
-    };
-
-    document.addEventListener('mousemove', handleMouseMove, true);
-    container.addEventListener('mouseleave', handleMouseLeave);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove, true);
-      container.removeEventListener('mouseleave', handleMouseLeave);
-    };
-  }, []);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    let animationId: number;
 
     const animate = () => {
-      if (isHovered || isPaused) {
-        animationRef.current = requestAnimationFrame(animate);
+      if (isHoveredRef.current || isPausedRef.current) {
+        animationId = requestAnimationFrame(animate);
         return;
       }
 
@@ -134,7 +129,7 @@ export default function SidebarCat() {
 
       const now = Date.now();
 
-      if (!mouse.visible && now - lastMouseAppearTime.current > mouseCooldown.current) {
+      if (!mouseRef.current.visible && now - lastMouseAppearTime.current > mouseCooldown.current) {
         const isInAir = Math.random() < 0.7;
 
         let startX = -50, startY = 100, vx = 2, vy = 0, dir: 'left' | 'right' | 'up' | 'down' = 'right';
@@ -192,14 +187,14 @@ export default function SidebarCat() {
         lastMouseAppearTime.current = now;
       }
 
-      if (mouse.visible) {
+      if (mouseRef.current.visible) {
         setMouse((prev) => {
           const now = Date.now();
 
-          const catDx = position.x + 30 - (prev.position.x + 15);
-          const catDy = position.y + 30 - (prev.position.y + 15);
+          const catDx = positionRef.current.x + 30 - (prev.position.x + 15);
+          const catDy = positionRef.current.y + 30 - (prev.position.y + 15);
           const distToCat = Math.sqrt(catDx * catDx + catDy * catDy);
-          const catIsChasing = action === 'run' || action === 'rocket';
+          const catIsChasing = actionRef.current === 'run' || actionRef.current === 'rocket';
 
           if (distToCat < 15 && catIsChasing && !prev.isCaptured) {
             justCapturedMouse.current = true;
@@ -233,8 +228,8 @@ export default function SidebarCat() {
             };
           }
 
-          const flowerDx = flower.position.x + 10 - (prev.position.x + 15);
-          const flowerDy = flower.position.y + 10 - (prev.position.y + 15);
+          const flowerDx = flowerRef.current.position.x + 10 - (prev.position.x + 15);
+          const flowerDy = flowerRef.current.position.y + 10 - (prev.position.y + 15);
           const distToFlower = Math.sqrt(flowerDx * flowerDx + flowerDy * flowerDy);
 
           if (distToCat < 50 && catIsChasing) {
@@ -260,8 +255,8 @@ export default function SidebarCat() {
             };
           }
 
-          const catFlowerDx = flower.position.x + 10 - (position.x + 30);
-          const catFlowerDy = flower.position.y + 10 - (position.y + 30);
+          const catFlowerDx = flowerRef.current.position.x + 10 - (positionRef.current.x + 30);
+          const catFlowerDy = flowerRef.current.position.y + 10 - (positionRef.current.y + 30);
           const catDistToFlower = Math.sqrt(catFlowerDx * catFlowerDx + catFlowerDy * catFlowerDy);
           const isFarFromFlower = distToFlower > catDistToFlower;
           const speed = catSpeedRef.current * 0.5;
@@ -289,22 +284,22 @@ export default function SidebarCat() {
       }
 
       setPosition((prev) => {
-        let newX = prev.x + velocity.vx;
-        let newY = prev.y + velocity.vy;
-        let newVx = velocity.vx;
-        let newVy = velocity.vy;
+        let newX = prev.x + velocityRef.current.vx;
+        let newY = prev.y + velocityRef.current.vy;
+        let newVx = velocityRef.current.vx;
+        let newVy = velocityRef.current.vy;
 
         const containerWidth = container.clientWidth - 60;
 
-        if (mouse.visible && !isHovered) {
-          const dx = mouse.position.x - 15 - prev.x;
-          const dy = mouse.position.y - 15 - prev.y;
+        if (mouseRef.current.visible && !isHoveredRef.current) {
+          const dx = mouseRef.current.position.x - 15 - prev.x;
+          const dy = mouseRef.current.position.y - 15 - prev.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance > 15) {
-            const mouseIsInAir = mouse.position.y < containerHeight - 100;
+            const mouseIsInAir = mouseRef.current.position.y < containerHeight - 100;
 
-            if (mouseIsInAir && action !== 'rocket') {
+            if (mouseIsInAir && actionRef.current !== 'rocket') {
               setAction('rocket');
               const speed = 8;
               catSpeedRef.current = speed;
@@ -322,9 +317,9 @@ export default function SidebarCat() {
               setDirection(newVx > 0 ? 'right' : 'left');
             }
           }
-        } else if (mousePos && !isHovered) {
-          const dx = mousePos.x - 30 - prev.x;
-          const dy = mousePos.y - 30 - prev.y;
+        } else if (mousePosRef.current && !isHoveredRef.current) {
+          const dx = mousePosRef.current.x - 30 - prev.x;
+          const dy = mousePosRef.current.y - 30 - prev.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
 
           if (distance > 10) {
@@ -352,23 +347,23 @@ export default function SidebarCat() {
 
         const isFalling = newY < containerHeight - 100 && newVy > 0;
 
-        if (isFalling && action !== 'parachute') {
+        if (isFalling && actionRef.current !== 'parachute') {
           setAction('fall');
         }
 
-        if (isFalling && action === 'fall' && newVy > 2) {
+        if (isFalling && actionRef.current === 'fall' && newVy > 2) {
           setAction('parachute');
           newVy = 1;
         }
 
-        if (newVy < 0 || (newY < containerHeight - 10 && newVy > 0 && action !== 'parachute')) {
-          newVy += action === 'parachute' ? 0.02 : 0.15;
+        if (newVy < 0 || (newY < containerHeight - 10 && newVy > 0 && actionRef.current !== 'parachute')) {
+          newVy += actionRef.current === 'parachute' ? 0.02 : 0.15;
         }
 
         if (newY >= containerHeight) {
           newY = containerHeight;
           newVy = 0;
-          if (action === 'parachute') {
+          if (actionRef.current === 'parachute') {
             setAction('walk');
           }
         }
@@ -376,24 +371,40 @@ export default function SidebarCat() {
         if (newVx !== 0) {
           setDirection(newVx > 0 ? 'right' : 'left');
         }
-        if (!mousePos || isHovered) {
+        if (!mousePosRef.current || isHoveredRef.current) {
           setVelocity({ vx: newVx, vy: newVy });
         }
 
         return { x: newX, y: newY };
       });
 
-      animationRef.current = requestAnimationFrame(animate);
+      animationId = requestAnimationFrame(animate);
     };
 
-    animationRef.current = requestAnimationFrame(animate);
+    animationId = requestAnimationFrame(animate);
 
-    return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
+    const mouseMoveHandler = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        setMousePos({ x, y });
       }
     };
-  }, [mousePos, isHovered, action, mouse.visible, position, flower]);
+
+    const mouseLeaveHandler = () => {
+      setMousePos(null);
+    };
+
+    document.addEventListener('mousemove', mouseMoveHandler, true);
+    container.addEventListener('mouseleave', mouseLeaveHandler);
+
+    return () => {
+      cancelAnimationFrame(animationId);
+      document.removeEventListener('mousemove', mouseMoveHandler, true);
+      container.removeEventListener('mouseleave', mouseLeaveHandler);
+    };
+  }, []);
 
   useEffect(() => {
     if (isPaused || isHovered) return;

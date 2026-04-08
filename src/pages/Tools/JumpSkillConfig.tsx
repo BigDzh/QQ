@@ -334,7 +334,7 @@ export default function JumpSkillConfig() {
           )}
           <button
             onClick={() => setShowHistory(!showHistory)}
-            className={`px-3 py-1.5 text-xs border rounded-lg ${t.border} hover:${t.hoverBg} flex items-center gap-1.5`}
+            className={`px-3 py-1.5 text-xs border rounded-lg ${t.border} ${t.text} hover:${t.hoverBg} flex items-center gap-1.5`}
           >
             <History size={14} />
             变更历史

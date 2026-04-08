@@ -51,7 +51,7 @@ export interface ComponentLogEntry extends BaseLogEntry {
   componentId: string;
   componentName: string;
   changeType: ComponentChangeType;
-  reason?: string;
+  reason: string;
   previousState?: Record<string, unknown>;
   currentState?: Record<string, unknown>;
   changedProperties?: Array<{
@@ -67,7 +67,7 @@ export interface ModuleLogEntry extends BaseLogEntry {
   moduleName: string;
   moduleId: string;
   changeType: ModuleChangeType;
-  reason?: string;
+  reason: string;
   impactScope: ImpactScope;
   changeDetails: string;
   previousConfig?: Record<string, unknown>;
@@ -80,7 +80,7 @@ export interface SystemLogEntry extends BaseLogEntry {
   layer: 'SYSTEM';
   eventType: SystemEventType;
   eventDescription: string;
-  reason?: string;
+  reason: string;
   impactScope: ImpactScope;
   stackTrace?: string;
   performanceMetrics?: {
@@ -132,7 +132,7 @@ export interface LogStatistics {
   criticalCount: number;
 }
 
-export type LogListener<T extends HierarchicalLogEntry = HierarchicalLogEntry> = (entry: T) => void;
+export type LogListener<T extends HierarchicalLogEntry = HierarchicalLogEntry> = (entry: T) => void; // eslint-disable-line no-unused-vars
 
 export interface LoggerConfig {
   maxLogsPerLayer: number;

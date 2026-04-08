@@ -59,7 +59,7 @@ export function logModuleInterfaceChange(
   moduleName: string,
   user: { id: string | null; username: string },
   changeDetails: string,
-  reason?: string,
+  reason: string,
   previousInterface?: Record<string, unknown>,
   newInterface?: Record<string, unknown>,
   affectedComponents?: string[]
@@ -97,7 +97,7 @@ export function logModuleConfigModify(
   moduleName: string,
   user: { id: string | null; username: string },
   changeDetails: string,
-  reason?: string,
+  reason: string,
   previousConfig: Record<string, unknown>,
   newConfig: Record<string, unknown>,
   affectedDependencies?: string[]
@@ -149,7 +149,7 @@ export function logModuleDependencyAdjust(
   moduleName: string,
   user: { id: string | null; username: string },
   changeDetails: string,
-  reason?: string,
+  reason: string,
   addedDependencies?: string[],
   removedDependencies?: string[]
 ): ModuleLogEntry {
@@ -190,7 +190,7 @@ export function logModuleCoreFunctionChange(
   moduleName: string,
   user: { id: string | null; username: string },
   changeDetails: string,
-  reason?: string,
+  reason: string,
   affectedComponents?: string[],
   previousImplementation?: string,
   newImplementation?: string
@@ -230,7 +230,7 @@ export function logModuleLifecycle(
   moduleName: string,
   user: { id: string | null; username: string },
   changeType: 'INIT' | 'DESTROY' | 'ENABLE' | 'DISABLE',
-  reason?: string,
+  reason: string,
   details?: string,
   config?: Record<string, unknown>
 ): ModuleLogEntry {

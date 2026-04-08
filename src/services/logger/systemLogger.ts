@@ -57,7 +57,7 @@ function buildSystemImpactScope(
 export function logSystemConfigChange(
   user: { id: string | null; username: string },
   eventDescription: string,
-  reason?: string,
+  reason: string,
   previousConfig: Record<string, unknown>,
   newConfig: Record<string, unknown>,
   affectedModules?: string[]
@@ -96,7 +96,7 @@ export function logSystemConfigChange(
 export function logSystemServiceStart(
   user: { id: string | null; username: string },
   serviceName: string,
-  reason?: string,
+  reason: string,
   serviceDetails?: Record<string, unknown>
 ): SystemLogEntry {
   const impactScope = buildSystemImpactScope(
@@ -129,7 +129,7 @@ export function logSystemServiceStart(
 export function logSystemServiceStop(
   user: { id: string | null; username: string },
   serviceName: string,
-  reason?: string,
+  reason: string,
   serviceDetails?: Record<string, unknown>
 ): SystemLogEntry {
   const impactScope = buildSystemImpactScope(
@@ -166,7 +166,7 @@ export function logPerformanceAnomaly(
   metricName: string,
   threshold: number,
   actualValue: number,
-  reason?: string,
+  reason: string,
   unit: string = 'ms',
   additionalMetrics?: Record<string, number>
 ): SystemLogEntry {
@@ -211,7 +211,7 @@ export function logSecurityEvent(
   user: { id: string | null; username: string },
   eventType: string,
   description: string,
-  reason?: string,
+  reason: string,
   sourceIp?: string,
   targetResource?: string,
   details?: Record<string, unknown>
@@ -248,7 +248,7 @@ export function logSecurityEvent(
 export function logCrossModuleChange(
   user: { id: string | null; username: string },
   description: string,
-  reason?: string,
+  reason: string,
   affectedModules: string[],
   affectedComponents?: string[],
   changeDetails?: Record<string, unknown>
@@ -284,7 +284,7 @@ export function logCrossModuleChange(
 
 export function logSystemInit(
   user: { id: string | null; username: string },
-  reason?: string,
+  reason: string,
   systemInfo?: Record<string, unknown>
 ): SystemLogEntry {
   const impactScope = buildSystemImpactScope(
@@ -316,7 +316,7 @@ export function logSystemInit(
 
 export function logSystemShutdown(
   user: { id: string | null; username: string },
-  reason?: string,
+  reason: string,
   shutdownDetails?: Record<string, unknown>
 ): SystemLogEntry {
   const impactScope = buildSystemImpactScope(

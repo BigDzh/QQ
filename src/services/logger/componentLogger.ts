@@ -11,7 +11,7 @@ export function logComponentCreate(
   componentId: string,
   componentName: string,
   user: { id: string | null; username: string },
-  reason?: string,
+  reason: string,
   initialState?: Record<string, unknown>,
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
@@ -47,7 +47,7 @@ export function logComponentUpdate(
   user: { id: string | null; username: string },
   previousState: Record<string, unknown>,
   newState: Record<string, unknown>,
-  reason?: string,
+  reason: string,
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
   const changedProperties = Object.keys(newState).reduce<Array<{
@@ -92,7 +92,7 @@ export function logComponentDestroy(
   componentId: string,
   componentName: string,
   user: { id: string | null; username: string },
-  reason?: string,
+  reason: string,
   finalState?: Record<string, unknown>,
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
@@ -122,7 +122,7 @@ export function logComponentStateChange(
   changeType: ComponentChangeType,
   previousState: Record<string, unknown> | string,
   newState: Record<string, unknown> | string,
-  reason?: string,
+  reason: string,
   level: LogLevel = 'INFO',
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
@@ -180,6 +180,7 @@ export function logComponentMount(
   componentId: string,
   componentName: string,
   user: { id: string | null; username: string },
+  reason: string,
   props?: Record<string, unknown>,
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
@@ -192,6 +193,7 @@ export function logComponentMount(
     componentId,
     componentName,
     changeType: 'MOUNT',
+    reason,
     currentState: props,
     metadata,
   };
@@ -205,6 +207,7 @@ export function logComponentUnmount(
   componentId: string,
   componentName: string,
   user: { id: string | null; username: string },
+  reason: string,
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
   const entry: ComponentLogEntry = {
@@ -216,6 +219,7 @@ export function logComponentUnmount(
     componentId,
     componentName,
     changeType: 'UNMOUNT',
+    reason,
     metadata,
   };
 
@@ -230,7 +234,7 @@ export function logComponentEvent(
   user: { id: string | null; username: string },
   eventType: string,
   eventData?: Record<string, unknown>,
-  reason?: string,
+  reason: string,
   metadata?: Record<string, unknown>
 ): ComponentLogEntry {
   const entry: ComponentLogEntry = {

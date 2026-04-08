@@ -34,6 +34,36 @@ export default function GlobalSearch() {
   const { projects, tasks } = useApp();
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestQueryRef = useRef<string>('');
+  const latestFilterTypeRef = useRef<SearchType>('all');
+
+  const computedSearchResults = useMemo(() => {
+    if (!query.trim()) return [];
+    return searchAll(query, projects, tasks);
+  }, [query, projects, tasks]);
+
+  useEffect(() => {
+    latestQueryRef.current = query;
+    latestFilterTypeRef.current = filterType;
+
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      if (latestQueryRef.current !== query) return;
+
+      const type = latestFilterTypeRef.current;
+      const filtered = type === 'all' ? computedSearchResults : computedSearchResults.filter(r => r.type === type);
+      setResults(filtered.slice(0, MAX_RESULTS));
+      setSelectedIndex(0);
+    }, DEBOUNCE_MS);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [query, filterType, computedSearchResults]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -63,37 +93,6 @@ export default function GlobalSearch() {
       setHistory(getSearchHistory());
     }
   }, [isOpen]);
-
-  const performSearch = useCallback((searchQuery: string, type: SearchType) => {
-    if (!searchQuery.trim()) {
-      setResults([]);
-      return;
-    }
-    const searchResults = searchAll(searchQuery, projects, tasks);
-    const filtered = type === 'all' ? searchResults : searchResults.filter(r => r.type === type);
-    setResults(filtered.slice(0, MAX_RESULTS));
-    setSelectedIndex(0);
-  }, [projects, tasks]);
-
-  useEffect(() => {
-    latestQueryRef.current = query;
-
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
-    debounceTimerRef.current = setTimeout(() => {
-      if (latestQueryRef.current === query) {
-        performSearch(query, filterType);
-      }
-    }, DEBOUNCE_MS);
-
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-      }
-    };
-  }, [query, filterType, performSearch]);
 
   const handleSelect = useCallback((result: SearchResult) => {
     if (query.trim()) {

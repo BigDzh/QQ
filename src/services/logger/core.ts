@@ -61,6 +61,9 @@ class LogStore<T extends HierarchicalLogEntry> {
   private readonly maxEntries: number;
   private readonly storageKey: string;
   private listeners: Set<LogListener<T>> = new Set();
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private isDirty = false;
+  private readonly SAVE_DELAY_MS = 1000;
 
   constructor(maxEntries: number, storageKey: string) {
     this.maxEntries = maxEntries;
@@ -79,9 +82,20 @@ class LogStore<T extends HierarchicalLogEntry> {
     }
   }
 
+  private scheduleSave(): void {
+    if (this.saveTimer) return;
+    this.isDirty = true;
+    this.saveTimer = setTimeout(() => {
+      this.saveToStorage();
+      this.saveTimer = null;
+    }, this.SAVE_DELAY_MS);
+  }
+
   private saveToStorage(): void {
+    if (!this.isDirty) return;
     try {
       safeSetObject(this.storageKey, this.entries);
+      this.isDirty = false;
     } catch (e) {
       console.error('Failed to save logs to storage:', e);
     }
@@ -92,14 +106,22 @@ class LogStore<T extends HierarchicalLogEntry> {
     if (this.entries.length > this.maxEntries) {
       this.entries = this.entries.slice(0, this.maxEntries);
     }
-    this.saveToStorage();
+    this.scheduleSave();
     this.notifyListeners(entry);
   }
 
   addBatch(entries: T[]): void {
     this.entries = [...entries, ...this.entries].slice(0, this.maxEntries);
-    this.saveToStorage();
+    this.scheduleSave();
     entries.forEach(entry => this.notifyListeners(entry));
+  }
+
+  flush(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
+    this.saveToStorage();
   }
 
   getAll(): T[] {
@@ -460,6 +482,9 @@ export class HierarchicalLogger {
     this.flushComponentBuffer();
     this.flushModuleBuffer();
     this.globalListeners.clear();
+    this.componentStore.flush();
+    this.moduleStore.flush();
+    this.systemStore.flush();
     this.componentStore.clear();
     this.moduleStore.clear();
     this.systemStore.clear();

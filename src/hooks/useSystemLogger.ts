@@ -32,7 +32,7 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
       eventDescription: string,
       previousConfig: Record<string, unknown>,
       newConfig: Record<string, unknown>,
-      reason?: string,
+      reason: string,
       affectedModules?: string[]
     ) => {
       return logSystemConfigChange(
@@ -48,14 +48,14 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
   );
 
   const logServiceStart = useCallback(
-    (serviceName: string, reason?: string, serviceDetails?: Record<string, unknown>) => {
+    (serviceName: string, reason: string, serviceDetails?: Record<string, unknown>) => {
       return logSystemServiceStart(user, serviceName, reason, serviceDetails);
     },
     [user]
   );
 
   const logServiceStop = useCallback(
-    (serviceName: string, reason?: string, serviceDetails?: Record<string, unknown>) => {
+    (serviceName: string, reason: string, serviceDetails?: Record<string, unknown>) => {
       return logSystemServiceStop(user, serviceName, reason, serviceDetails);
     },
     [user]
@@ -66,7 +66,7 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
       metricName: string,
       threshold: number,
       actualValue: number,
-      reason?: string,
+      reason: string,
       unit?: string,
       additionalMetrics?: Record<string, number>
     ) => {
@@ -87,7 +87,7 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
     (
       eventType: string,
       description: string,
-      reason?: string,
+      reason: string,
       sourceIp?: string,
       targetResource?: string,
       details?: Record<string, unknown>
@@ -108,7 +108,7 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
   const logCrossModuleChangeEvent = useCallback(
     (
       description: string,
-      reason?: string,
+      reason: string,
       affectedModules: string[] = [],
       affectedComponents?: string[],
       changeDetails?: Record<string, unknown>
@@ -126,14 +126,14 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
   );
 
   const logSystemStartup = useCallback(
-    (reason?: string, systemInfo?: Record<string, unknown>) => {
+    (reason: string, systemInfo?: Record<string, unknown>) => {
       return logSystemInit(user, reason, systemInfo);
     },
     [user]
   );
 
   const logSystemShutdownEvent = useCallback(
-    (reason?: string, shutdownDetails?: Record<string, unknown>) => {
+    (reason: string, shutdownDetails?: Record<string, unknown>) => {
       return logSystemShutdown(user, reason, shutdownDetails);
     },
     [user]
@@ -143,7 +143,7 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
     (
       eventType: SystemEventType,
       eventDescription: string,
-      reason?: string,
+      reason: string,
       metadata?: Record<string, unknown>
     ) => {
       switch (eventType) {
@@ -221,6 +221,7 @@ export function useSystemLogger(options: UseSystemLoggerOptions = {}) {
     return getSystemLogs(filter);
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const subscribe = useCallback((listener: (entry: SystemLogEntry) => void) => {
     return addSystemLogListener(listener);
   }, []);

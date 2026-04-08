@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, shell, ipcMain, screen, desktopCapturer } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 
@@ -301,6 +301,36 @@ ipcMain.handle('toggle-monitor-always-on-top', async (event, value) => {
 
 ipcMain.handle('is-monitor-always-on-top', async () => {
   return monitorAlwaysOnTop;
+});
+
+ipcMain.handle('capture-screen', async () => {
+  log('info', 'IPC: capture-screen');
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: 1920, height: 1080 }
+    });
+
+    if (sources.length === 0) {
+      log('error', 'No screen sources found');
+      return { success: false, error: 'No screen sources found' };
+    }
+
+    const primarySource = sources[0];
+    const thumbnail = primarySource.thumbnail;
+    const dataUrl = thumbnail.toDataURL();
+
+    log('info', 'Screen captured successfully, size:', thumbnail.getSize().width, 'x', thumbnail.getSize().height);
+    return {
+      success: true,
+      image: dataUrl,
+      width: thumbnail.getSize().width,
+      height: thumbnail.getSize().height
+    };
+  } catch (error) {
+    log('error', 'Screen capture failed:', error.message);
+    return { success: false, error: error.message };
+  }
 });
 
 ipcMain.handle('set-monitor-position', async (event, x, y) => {

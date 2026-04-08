@@ -244,7 +244,7 @@ export default function ChineseSymbolConverter() {
         </div>
         <button
           onClick={() => setShowSettings(!showSettings)}
-          className={`px-3 py-1.5 text-xs border rounded-lg ${t.border} hover:${t.hoverBg} flex items-center gap-1`}
+          className={`px-3 py-1.5 text-xs border rounded-lg ${t.border} ${t.text} hover:${t.hoverBg} flex items-center gap-1`}
         >
           <RefreshCw size={14} />
           {showSettings ? '收起设置' : '转换设置'}
@@ -424,7 +424,7 @@ export default function ChineseSymbolConverter() {
             value={outputText}
             readOnly
             placeholder="转换结果将显示在这里..."
-            className={`w-full h-64 px-3 py-2 border rounded-lg resize-none ${t.input} bg-gray-50 dark:bg-gray-800`}
+            className={`w-full h-64 px-3 py-2 border rounded-lg resize-none ${t.input}`}
           />
         </div>
       </div>

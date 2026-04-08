@@ -32,25 +32,27 @@ export function Modal({
     if (isOpen) {
       setShouldRender(true);
       setIsClosing(false);
-      // 禁止背景滚动
       document.body.style.overflow = 'hidden';
     } else if (shouldRender && !isClosing) {
-      // 开始关闭动画
       setIsClosing(true);
       const timer = setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
-        document.body.style.overflow = '';
-      }, 250); // 与退出动画时长匹配
+      }, 250);
       return () => clearTimeout(timer);
     }
+  }, [isOpen, shouldRender, isClosing]);
 
+  useEffect(() => {
+    if (shouldRender && !isClosing && isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else if (!shouldRender || (shouldRender && isClosing && !isOpen)) {
+      document.body.style.overflow = '';
+    }
     return () => {
-      if (!isOpen) {
-        document.body.style.overflow = '';
-      }
+      document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [shouldRender, isClosing, isOpen]);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

@@ -101,13 +101,13 @@ export default defineConfig({
       'react-router-dom',
       'recharts',
       'lodash',
+      'tesseract.js',
     ],
     exclude: [
       'xlsx',
       'jspdf',
       'html2canvas',
       'pdf-parse',
-      'tesseract.js',
     ],
   },
   preview: {

@@ -36,8 +36,8 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
   const isMountedRef = useRef(false);
 
   const logCreate = useCallback(
-    (initialState?: Record<string, unknown>, metadata?: Record<string, unknown>) => {
-      logComponentCreate(componentId, componentName, user, initialState, metadata);
+    (reason: string, initialState?: Record<string, unknown>, metadata?: Record<string, unknown>) => {
+      logComponentCreate(componentId, componentName, user, reason, initialState, metadata);
     },
     [componentId, componentName, user]
   );
@@ -46,16 +46,17 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
     (
       previousState: Record<string, unknown>,
       newState: Record<string, unknown>,
+      reason: string,
       metadata?: Record<string, unknown>
     ) => {
-      logComponentUpdate(componentId, componentName, user, previousState, newState, metadata);
+      logComponentUpdate(componentId, componentName, user, previousState, newState, reason, metadata);
     },
     [componentId, componentName, user]
   );
 
   const logDestroy = useCallback(
-    (finalState?: Record<string, unknown>, metadata?: Record<string, unknown>) => {
-      logComponentDestroy(componentId, componentName, user, finalState, metadata);
+    (reason: string, finalState?: Record<string, unknown>, metadata?: Record<string, unknown>) => {
+      logComponentDestroy(componentId, componentName, user, reason, finalState, metadata);
     },
     [componentId, componentName, user]
   );
@@ -65,6 +66,7 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
       changeType: ComponentChangeType,
       previousValue: Record<string, unknown> | string,
       newValue: Record<string, unknown> | string,
+      reason: string,
       level?: LogLevel,
       metadata?: Record<string, unknown>
     ) => {
@@ -75,6 +77,7 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
         changeType,
         previousValue,
         newValue,
+        reason,
         level,
         metadata
       );
@@ -83,8 +86,8 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
   );
 
   const logEvent = useCallback(
-    (eventType: string, eventData?: Record<string, unknown>, metadata?: Record<string, unknown>) => {
-      logComponentEvent(componentId, componentName, user, eventType, eventData, metadata);
+    (eventType: string, eventData: Record<string, unknown> | undefined, reason: string, metadata?: Record<string, unknown>) => {
+      logComponentEvent(componentId, componentName, user, eventType, eventData, reason, metadata);
     },
     [componentId, componentName, user]
   );
@@ -103,7 +106,7 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
           prop => JSON.stringify(prev[prop]) !== JSON.stringify(state[prop])
         );
         if (changedProps.length > 0) {
-          logComponentUpdate(componentId, componentName, user, prev, state, {
+          logComponentUpdate(componentId, componentName, user, prev, state, `状态跟踪: 属性 ${changedProps.join(', ')} 变更`, {
             trackedProperties: changedProps,
           });
         }
@@ -116,7 +119,7 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
 
   useEffect(() => {
     if (enableLifecycleLogging) {
-      logComponentMount(componentId, componentName, user, {
+      logComponentMount(componentId, componentName, user, '组件首次挂载', {
         options: { enableLifecycleLogging, enableStateTracking, trackProperties },
       });
       isMountedRef.current = true;
@@ -124,7 +127,7 @@ export function useComponentLogger(options: UseComponentLoggerOptions) {
 
     return () => {
       if (enableLifecycleLogging && isMountedRef.current) {
-        logComponentUnmount(componentId, componentName, user, {
+        logComponentUnmount(componentId, componentName, user, '组件卸载/重新挂载', {
           finalState: prevStateRef.current,
         });
       }

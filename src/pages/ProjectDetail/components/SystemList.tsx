@@ -97,16 +97,37 @@ export function SystemList({
   const stageInfo = STAGE_OPTIONS.map(stage => {
     const stageSystems = systems.filter(s => s.stage === stage);
     const total = stageSystems.length;
-    const statusCounts: Record<string, number> = {};
+    const statusCounts: Record<string, number> = {
+      '未投产': 0, '投产中': 0, '正常': 0, '维修中': 0, '三防中': 0, '测试中': 0, '仿真中': 0, '借用中': 0, '故障': 0
+    };
     stageSystems.forEach(s => {
-      statusCounts[s.status] = (statusCounts[s.status] || 0) + 1;
+      if (s.status in statusCounts) {
+        statusCounts[s.status]++;
+      }
     });
     return { stage, total, statusCounts };
   });
 
-  const getStageButtonStyle = (stage: string) => {
+  const tailwindColorMap: Record<string, string> = {
+    'bg-gray-400': '#9ca3af',
+    'bg-blue-500': '#3b82f6',
+    'bg-green-500': '#22c55e',
+    'bg-orange-500': '#f97316',
+    'bg-purple-500': '#a855f7',
+    'bg-yellow-500': '#eab308',
+    'bg-cyan-500': '#06b6d4',
+    'bg-pink-500': '#ec4899',
+    'bg-red-500': '#ef4444',
+  };
+
+  const getTailwindColor = (className: string): string => {
+    return tailwindColorMap[className] || '#9ca3af';
+  };
+
+  const getStageButtonStyle = (stage: string, info: typeof stageInfo[0]) => {
     const isSelected = selectedStage === stage;
     const isOtherSelected = selectedStage !== null && !isSelected;
+    const isAllCompleted = info.total > 0 && info.statusCounts['正常'] === info.total;
     const colors = {
       'F阶段': { active: 'bg-rose-500', light: 'bg-rose-100 border-rose-300', dark: 'text-rose-900', ring: 'ring-rose-400' },
       'C阶段': { active: 'bg-blue-500', light: 'bg-blue-100 border-blue-300', dark: 'text-blue-900', ring: 'ring-blue-400' },
@@ -121,6 +142,7 @@ export function SystemList({
       opacity: isOtherSelected ? 0.3 : 1,
       colors,
       isSelected,
+      isAllCompleted,
     };
   };
 
@@ -226,7 +248,8 @@ export function SystemList({
     <div>
       <div className="flex gap-1 h-20 overflow-x-auto mb-4">
         {stageInfo.map(({ stage, total, statusCounts }) => {
-          const style = getStageButtonStyle(stage);
+          const info = { stage, total, statusCounts };
+          const style = getStageButtonStyle(stage, info);
           const statusColors: Record<string, string> = {
             '正常': 'bg-green-500',
             '故障': 'bg-red-500',
@@ -241,7 +264,9 @@ export function SystemList({
           return (
             <button
               key={stage}
-              onClick={() => setSelectedStage(selectedStage === stage ? null : stage)}
+              onClick={() => {
+                setSelectedStage(selectedStage === stage ? null : stage);
+              }}
               style={{
                 flex: style.flex,
                 minWidth: style.minWidth,
@@ -252,12 +277,14 @@ export function SystemList({
                 relative rounded-lg border-2 overflow-hidden
                 ${style.isSelected
                   ? `backdrop-blur-sm ${style.colors.light} shadow-lg ring-2 ring-offset-1 ${style.colors.ring}`
-                  : 'backdrop-blur-sm border-gray-300/50 bg-white/30 hover:bg-white/50'
+                  : style.isAllCompleted
+                    ? 'backdrop-blur-sm border-green-400/50 bg-green-50/50 hover:bg-green-100'
+                    : 'backdrop-blur-sm border-gray-300/50 bg-white/30 hover:bg-white/50'
                 }
               `}
             >
               <div className={`h-full flex flex-col justify-center px-2 ${style.isSelected ? style.colors.light : ''}`}>
-                <div className={`text-sm font-bold text-center mb-1 ${style.isSelected ? style.colors.dark : 'text-gray-900'}`}>
+                <div className={`text-sm font-bold text-center mb-1 ${style.isSelected ? style.colors.dark : style.isAllCompleted ? 'text-green-800' : 'text-gray-900'}`}>
                   {stage}
                 </div>
                 <div className="w-full h-3 bg-white/40 rounded-full overflow-hidden shadow-inner border border-gray-200/30 flex">
@@ -266,6 +293,7 @@ export function SystemList({
                       const width = (count / total) * 100;
                       const isFirst = idx === 0;
                       const isLast = idx === arr.length - 1;
+                      const nextStatus = arr[idx + 1];
                       return (
                         <div
                           key={status}
@@ -276,6 +304,15 @@ export function SystemList({
                           <div
                             className={`absolute inset-0 ${statusColors[status] || 'bg-gray-400'} ${isFirst ? 'rounded-l-full' : ''} ${isLast ? 'rounded-r-full' : ''}`}
                           />
+                          {!isLast && nextStatus && arr[idx + 1][1] > 0 && (
+                            <div
+                              className="absolute right-0 top-0 bottom-0"
+                              style={{
+                                width: '30%',
+                                background: `linear-gradient(to right, transparent, ${getTailwindColor(statusColors[nextStatus[0]] || 'bg-gray-400')})`,
+                              }}
+                            />
+                          )}
                         </div>
                       );
                     })
@@ -283,6 +320,9 @@ export function SystemList({
                     <div className="w-full h-full bg-gray-300 rounded-full" />
                   )}
                 </div>
+                {style.isSelected && (
+                  <div className={`absolute -top-0.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 ${style.colors.light} border-2 border-r-0 border-b-0 ${style.colors.dark}`} />
+                )}
               </div>
             </button>
           );

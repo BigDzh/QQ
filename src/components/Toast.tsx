@@ -44,7 +44,7 @@ function ToastItem({ toast, remove }: { toast: Toast; remove: (id: string) => vo
 
   useEffect(() => {
     const startTime = Date.now();
-    const duration = TOAST_DURATION - 300; // 留出退出动画时间
+    const duration = TOAST_DURATION - 300;
 
     const progressTimer = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -55,7 +55,7 @@ function ToastItem({ toast, remove }: { toast: Toast; remove: (id: string) => vo
         clearInterval(progressTimer);
         handleExit();
       }
-    }, 50);
+    }, 100);
 
     return () => clearInterval(progressTimer);
   }, []);

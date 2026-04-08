@@ -4,34 +4,42 @@ const path = require('path');
 const srcDir = __dirname;
 const destDir = path.join(srcDir, 'win7-dist');
 
-const filesToCopy = [
-  { src: 'Python服务器启动.bat', dest: 'Python服务器启动.bat' },
-  { src: 'server.py', dest: 'server.py' },
-  { src: 'start.bat', dest: 'start.bat' },
+const startBatContent = `@echo off
+cd /d "%~dp0"
+python -m http.server 8080
+`;
+
+const filesToWrite = [
+  { filename: 'start.bat', content: startBatContent },
 ];
 
-const indexHtmlSrc = path.join(srcDir, 'index.win7.html');
-const indexHtmlDest = path.join(destDir, 'index.html');
-
-filesToCopy.forEach(({ src, dest }) => {
-  const srcPath = path.join(srcDir, src);
-  const destPath = path.join(destDir, dest);
-  if (fs.existsSync(srcPath)) {
-    fs.copyFileSync(srcPath, destPath);
-    console.log(`[OK] Copied: ${src} -> win7-dist/${dest}`);
-  } else {
-    console.log(`[SKIP] Source not found: ${srcPath}`);
-  }
+filesToWrite.forEach(({ filename, content }) => {
+  const destPath = path.join(destDir, filename);
+  fs.writeFileSync(destPath, content, 'utf8');
+  console.log(`[OK] Written: ${filename}`);
 });
 
-if (fs.existsSync(indexHtmlSrc)) {
-  let content = fs.readFileSync(indexHtmlSrc, 'utf8');
-  content = content.replace(/https:\/\/fonts\.googleapis\.com/g, 'http://fonts.googleapis.com');
-  content = content.replace(/https:\/\/fonts\.gstatic\.com/g, 'http://fonts.gstatic.com');
-  fs.writeFileSync(indexHtmlDest, content, 'utf8');
-  console.log(`[OK] Updated: index.html`);
-} else {
-  console.log(`[SKIP] Source not found: ${indexHtmlSrc}`);
+const serverPySrc = path.join(srcDir, 'server.py');
+const serverPyDest = path.join(destDir, 'server.py');
+if (fs.existsSync(serverPySrc)) {
+  fs.copyFileSync(serverPySrc, serverPyDest);
+  console.log(`[OK] Copied: server.py`);
+}
+
+const builtIndex = path.join(destDir, 'index.html');
+if (fs.existsSync(builtIndex)) {
+  let content = fs.readFileSync(builtIndex, 'utf8');
+  content = content.replace(/https:\/\/fonts\.googleapis\.com[^"]*/g, 'http://fonts.googleapis.com');
+  content = content.replace(/https:\/\/fonts\.gstatic\.com[^"]*/g, 'http://fonts.gstatic.com');
+  fs.writeFileSync(builtIndex, content, 'utf8');
+  console.log(`[OK] Updated: index.html (removed Google Fonts)`);
+}
+
+const swSrc = path.join(srcDir, 'public', 'sw.js');
+const swDest = path.join(destDir, 'sw.js');
+if (fs.existsSync(swSrc)) {
+  fs.copyFileSync(swSrc, swDest);
+  console.log(`[OK] Copied: sw.js`);
 }
 
 console.log('[OK] Post-build processing completed');

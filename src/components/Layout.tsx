@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   FolderKanban,
@@ -173,25 +173,25 @@ export default function Layout({ children }: LayoutProps) {
   const isCyberpunk = theme === 'cyberpunk';
   const isAnime = theme === 'anime';
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (matchesShortcut(e, 'toggleSidebar')) {
-        setSidebarOpen((prev) => !prev);
-      }
-      if (matchesShortcut(e, 'showHelp')) {
-        setShowShortcuts(true);
-      }
-      if (e.key === 'Escape') {
-        setShowShortcuts(false);
-        setShowVersion(false);
-        setUserMenuOpen(false);
-        setThemeMenuOpen(false);
-      }
-    };
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (matchesShortcut(e, 'toggleSidebar')) {
+      setSidebarOpen((prev) => !prev);
+    }
+    if (matchesShortcut(e, 'showHelp')) {
+      setShowShortcuts(true);
+    }
+    if (e.key === 'Escape') {
+      setShowShortcuts(false);
+      setShowVersion(false);
+      setUserMenuOpen(false);
+      setThemeMenuOpen(false);
+    }
+  }, []);
 
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [handleKeyDown]);
 
   if (!isAuthenticated) {
     return <>{children}</>;

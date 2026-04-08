@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 interface UseServiceWorkerReturn {
   isSupported: boolean;
@@ -13,6 +13,7 @@ export function useServiceWorker(): UseServiceWorkerReturn {
   const [isRegistered, setIsRegistered] = useState(false);
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
@@ -27,16 +28,20 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 
     setIsSupported(true);
 
+    let newWorkerListener: (() => void) | null = null;
+    let controllerChangeListener: (() => void) | null = null;
+
     const registerSW = async () => {
       try {
         const reg = await navigator.serviceWorker.register('/sw.js', {
           scope: '/',
         });
 
+        registrationRef.current = reg;
         setRegistration(reg);
         setIsRegistered(true);
 
-        reg.addEventListener('updatefound', () => {
+        newWorkerListener = () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
 
@@ -45,15 +50,19 @@ export function useServiceWorker(): UseServiceWorkerReturn {
               setIsUpdateAvailable(true);
             }
           });
-        });
+        };
+
+        controllerChangeListener = () => {
+          window.location.reload();
+        };
+
+        reg.addEventListener('updatefound', newWorkerListener);
 
         if (reg.waiting && navigator.serviceWorker.controller) {
           setIsUpdateAvailable(true);
         }
 
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          window.location.reload();
-        });
+        navigator.serviceWorker.addEventListener('controllerchange', controllerChangeListener);
       } catch (error) {
         console.error('Service Worker registration failed:', error);
         setIsRegistered(false);
@@ -61,6 +70,21 @@ export function useServiceWorker(): UseServiceWorkerReturn {
     };
 
     registerSW();
+
+    return () => {
+      const reg = registrationRef.current;
+      if (reg) {
+        if (newWorkerListener) {
+          reg.removeEventListener('updatefound', newWorkerListener);
+        }
+        if (reg.installing && newWorkerListener) {
+          reg.installing.removeEventListener('statechange', () => {});
+        }
+      }
+      if (controllerChangeListener) {
+        navigator.serviceWorker.removeEventListener('controllerchange', controllerChangeListener);
+      }
+    };
   }, []);
 
   const update = () => {

@@ -233,7 +233,9 @@ export function AutoVirtualList<T>({
   }, [items, visibleRange, getItemKey]);
 
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    console.debug('[VirtualList] scrollTop:', e.currentTarget.scrollTop);
+    if (import.meta.env.DEV) {
+      console.debug('[VirtualList] scrollTop:', e.currentTarget.scrollTop);
+    }
   }, []);
 
   return (

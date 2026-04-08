@@ -348,17 +348,45 @@ export function useProjectHandlers(
     const file = e.target.files?.[0];
     if (!file) return;
     projectState.setUploadingDesignFile(designFileId);
+
+    const fileName = file.name;
+    const lastDot = fileName.lastIndexOf('.');
+    const originalExtension = lastDot !== -1 ? fileName.slice(lastDot).toLowerCase() : '';
+    const mimeType = file.type || 'application/octet-stream';
+
+    const FORMAT_EXTENSION_MAP: Record<string, string[]> = {
+      'AutoCAD': ['.dwg', '.dxf', '.dwt', '.dws'],
+      'Excel': ['.xlsx', '.xls', '.csv'],
+      'PDF': ['.pdf'],
+    };
+
+    const inferFormatFromExtension = (ext: string): 'AutoCAD' | 'Excel' | 'PDF' | null => {
+      for (const [format, extensions] of Object.entries(FORMAT_EXTENSION_MAP)) {
+        if (extensions.includes(ext.toLowerCase())) {
+          return format as 'AutoCAD' | 'Excel' | 'PDF';
+        }
+      }
+      return null;
+    };
+
     try {
       const reader = new FileReader();
       reader.onload = (event) => {
         const content = event.target?.result as string;
         const existingFile = project.designFiles.find((df: any) => df.id === designFileId);
         if (existingFile) {
+          const inferredFormat = inferFormatFromExtension(originalExtension);
+          const formatToUpdate = inferredFormat || existingFile.format;
+
           updateDesignFile(project.id, designFileId, {
-            data: content, fileSize: file.size,
-            uploadDate: new Date().toLocaleString()
+            data: content,
+            fileSize: file.size,
+            uploadDate: new Date().toLocaleString(),
+            originalExtension,
+            mimeType,
+            format: formatToUpdate,
           });
-          showToast('设计文件已上传', 'success');
+          showToast(`设计文件 "${fileName}" 已上传`, 'success');
         }
       };
       reader.readAsText(file);
