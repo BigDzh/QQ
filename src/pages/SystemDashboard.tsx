@@ -160,16 +160,16 @@ const SystemStatusCard: React.FC<{
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium opacity-60" style={{ color }}>
+        <span className="text-xs font-medium opacity-70" style={{ color, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           {label}
         </span>
         <Icon size={14} style={{ color }} />
       </div>
       <div className="flex items-end gap-1">
-        <span className="text-2xl font-bold" style={{ color }}>
+        <span className="text-2xl font-bold" style={{ color, textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
           {typeof value === 'number' ? value.toFixed(1) : value}
         </span>
-        <span className="text-xs opacity-60 mb-1" style={{ color }}>
+        <span className="text-xs opacity-70 mb-1" style={{ color, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
           {unit}
         </span>
       </div>
@@ -217,18 +217,18 @@ const KPICard: React.FC<{
 
       <div className="flex items-start justify-between relative z-10">
         <div className="flex flex-col gap-2">
-          <span className="text-xs font-medium uppercase tracking-wider opacity-50">
+          <span className="text-xs font-medium uppercase tracking-wider opacity-60" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
             {kpi.label}
           </span>
           <div className="flex items-baseline gap-2">
             <span
               className="text-3xl font-bold transition-all duration-300"
-              style={{ color: sparklineColor }}
+              style={{ color: sparklineColor, textShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
             >
               {typeof kpi.value === 'number' ? kpi.value.toLocaleString() : kpi.value}
             </span>
             {kpi.unit && (
-              <span className="text-sm opacity-60" style={{ color: sparklineColor }}>
+              <span className="text-sm opacity-70" style={{ color: sparklineColor, textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                 {kpi.unit}
               </span>
             )}
@@ -236,7 +236,7 @@ const KPICard: React.FC<{
           {kpi.trendValue !== undefined && (
             <div className="flex items-center gap-1">
               {trendIcon}
-              <span className="text-xs font-medium">
+              <span className="text-xs font-medium" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                 {kpi.trendValue > 0 ? '+' : ''}
                 {kpi.trendValue}%
               </span>
@@ -563,8 +563,8 @@ const RecentActivityWidget: React.FC<{
           >
             <div className="mt-0.5">{getActivityIcon(activity.type)}</div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm truncate">{activity.message}</p>
-              <p className="text-xs opacity-50 mt-0.5">{formatTime(activity.timestamp)}</p>
+              <p className="text-sm truncate" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>{activity.message}</p>
+              <p className="text-xs opacity-60 mt-0.5" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>{formatTime(activity.timestamp)}</p>
             </div>
           </div>
         ))
@@ -622,8 +622,8 @@ const AlertsWidget: React.FC<{
             >
               <div className="mt-0.5">{style.icon}</div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm">{alert.message}</p>
-                <p className="text-xs opacity-50 mt-1">
+                <p className="text-sm" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>{alert.message}</p>
+                <p className="text-xs opacity-60 mt-1" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
                   {alert.timestamp.toLocaleString()}
                 </p>
               </div>
@@ -875,7 +875,7 @@ export default function SystemDashboard({ className = '' }: SystemDashboardProps
     <div className={`space-y-6 ${className}`}>
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className={`text-2xl font-bold ${t.text}`}>系统概览</h1>
+          <h1 className={`text-2xl font-bold ${t.text}`} style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>系统概览</h1>
           <p className={`text-sm ${t.textSecondary} mt-1`}>
             实时监控系统状态 · 最后更新: {lastUpdate.toLocaleTimeString()}
           </p>
@@ -973,9 +973,9 @@ export default function SystemDashboard({ className = '' }: SystemDashboardProps
               <div className="p-2 rounded-lg bg-purple-500/10">
                 <Server size={18} className="text-purple-500" />
               </div>
-              <h2 className="font-semibold">系统资源监控</h2>
+              <h2 className="font-semibold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>系统资源监控</h2>
             </div>
-            <div className="flex items-center gap-2 text-xs opacity-50">
+            <div className="flex items-center gap-2 text-xs opacity-60" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
               <span>每5秒自动更新</span>
             </div>
           </div>
@@ -1043,7 +1043,7 @@ export default function SystemDashboard({ className = '' }: SystemDashboardProps
             <div className="p-2 rounded-lg bg-blue-500/10">
               <Zap size={18} className="text-blue-500" />
             </div>
-            <h2 className="font-semibold">快捷操作</h2>
+            <h2 className="font-semibold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>快捷操作</h2>
           </div>
           <QuickActionsWidget actions={quickActions} />
         </div>
@@ -1080,7 +1080,7 @@ export default function SystemDashboard({ className = '' }: SystemDashboardProps
               <div className="p-2 rounded-lg bg-red-500/10">
                 <AlertTriangle size={18} className="text-red-500" />
               </div>
-              <h2 className="font-semibold">系统警报</h2>
+              <h2 className="font-semibold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>系统警报</h2>
             </div>
             <AlertsWidget alerts={alerts} />
           </div>

@@ -145,6 +145,7 @@ class LogStore<T extends HierarchicalLogEntry> {
 
   clear(): void {
     this.entries = [];
+    this.listeners.clear();
     try {
       localStorage.removeItem(this.storageKey);
     } catch (e) {
@@ -289,7 +290,10 @@ export class HierarchicalLogger {
   }
 
   private startFlushInterval(): void {
-    if (this.flushTimer) return;
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+      this.flushTimer = null;
+    }
 
     this.flushTimer = setInterval(() => {
       if (this.componentBuffer.size > 0) {
@@ -456,6 +460,9 @@ export class HierarchicalLogger {
     this.flushComponentBuffer();
     this.flushModuleBuffer();
     this.globalListeners.clear();
+    this.componentStore.clear();
+    this.moduleStore.clear();
+    this.systemStore.clear();
   }
 }
 

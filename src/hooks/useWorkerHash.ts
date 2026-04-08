@@ -7,9 +7,22 @@ interface UseWorkerHashReturn {
   terminate: () => void;
 }
 
-export function useWorkerHash(): UseWorkerHashReturn {
+const DEFAULT_TIMEOUT = 30000;
+
+export function useWorkerHash(options: { timeout?: number } = {}): UseWorkerHashReturn {
+  const { timeout = DEFAULT_TIMEOUT } = options;
   const [isComputing, setIsComputing] = useState(false);
-  const pendingRef = useRef<Map<string, { resolve: (value: string) => void; reject: (error: Error) => void }>>(new Map());
+  const pendingRef = useRef<Map<string, { resolve: (value: string) => void; reject: (error: Error) => void; timeoutId: ReturnType<typeof setTimeout> }>>(new Map());
+
+  const cleanupPending = useCallback((messageId: string) => {
+    const pending = pendingRef.current.get(messageId);
+    if (pending) {
+      if (pending.timeoutId) {
+        clearTimeout(pending.timeoutId);
+      }
+      pendingRef.current.delete(messageId);
+    }
+  }, []);
 
   const computeHash = useCallback((content: string): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -22,13 +35,21 @@ export function useWorkerHash(): UseWorkerHashReturn {
 
       const messageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+      let settled = false;
+
+      const cleanup = () => {
+        if (settled) return;
+        settled = true;
+        worker.removeEventListener('message', handleMessage);
+        worker.removeEventListener('error', handleError);
+        cleanupPending(messageId);
+      };
+
       const handleMessage = (e: MessageEvent) => {
         const { type, payload, id } = e.data;
         if (id === messageId) {
-          worker.removeEventListener('message', handleMessage);
-          worker.removeEventListener('error', handleError);
-          pendingRef.current.delete(messageId);
-          setIsComputing(false);
+          cleanup();
+          setIsComputing(pendingRef.current.size > 0);
 
           if (type === 'result') {
             resolve(payload.hash);
@@ -39,17 +60,21 @@ export function useWorkerHash(): UseWorkerHashReturn {
       };
 
       const handleError = (error: ErrorEvent) => {
-        worker.removeEventListener('message', handleMessage);
-        worker.removeEventListener('error', handleError);
-        pendingRef.current.delete(messageId);
-        setIsComputing(false);
+        cleanup();
+        setIsComputing(pendingRef.current.size > 0);
         reject(new Error(error.message));
       };
+
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        setIsComputing(pendingRef.current.size > 0);
+        reject(new Error(`Hash computation timeout after ${timeout}ms`));
+      }, timeout);
 
       worker.addEventListener('message', handleMessage);
       worker.addEventListener('error', handleError);
 
-      pendingRef.current.set(messageId, { resolve, reject });
+      pendingRef.current.set(messageId, { resolve, reject, timeoutId });
       setIsComputing(true);
 
       worker.postMessage({
@@ -58,15 +83,18 @@ export function useWorkerHash(): UseWorkerHashReturn {
         id: messageId,
       });
     });
-  }, []);
+  }, [timeout, cleanupPending]);
 
   const terminate = useCallback(() => {
-    terminateWorkers();
-    pendingRef.current.forEach(({ reject }) => {
+    pendingRef.current.forEach(({ reject, timeoutId }) => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       reject(new Error('Worker terminated'));
     });
     pendingRef.current.clear();
     setIsComputing(false);
+    terminateWorkers();
   }, []);
 
   return {

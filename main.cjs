@@ -54,7 +54,11 @@ function createMonitorWindow() {
     monitorWindow.loadURL('http://localhost:5173/#/monitor');
   } else {
     const appPath = app.getAppPath();
-    monitorWindow.loadFile(path.join(appPath, 'dist', 'index.html'), { hash: '/monitor' });
+    const resourcesPath = path.dirname(appPath);
+    const distPath = app.isPackaged
+      ? path.join(resourcesPath, 'app.asar.unpacked', 'win7-dist', 'index.html')
+      : path.join(appPath, 'win7-dist', 'index.html');
+    monitorWindow.loadFile(distPath, { hash: '/monitor' });
   }
 
   monitorWindow.on('closed', () => {
@@ -107,7 +111,11 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   } else {
     const appPath = app.getAppPath();
-    mainWindow.loadFile(path.join(appPath, 'dist', 'index.html'));
+    const resourcesPath = path.dirname(appPath);
+    const distPath = app.isPackaged
+      ? path.join(resourcesPath, 'app.asar.unpacked', 'win7-dist', 'index.html')
+      : path.join(appPath, 'win7-dist', 'index.html');
+    mainWindow.loadFile(distPath);
   }
 
   mainWindow.on('closed', () => {

@@ -50,11 +50,12 @@ export function useUndo(options: UseUndoOptions = {}) {
   useEffect(() => {
     updateHistory();
 
-    intervalRef.current = setInterval(updateHistory, 100);
+    intervalRef.current = setInterval(updateHistory, 1000);
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
   }, [updateHistory]);

@@ -74,6 +74,7 @@ const STATUS_CHANGE_AUDIT_KEY = 'borrow_status_change_audit';
 
 export class BorrowCascadeService {
   private auditCache: StatusChangeAuditEntry[] | null = null;
+  private static readonly MAX_AUDIT_CACHE_SIZE = 500;
 
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -96,6 +97,11 @@ export class BorrowCascadeService {
     try {
       const stored = localStorage.getItem(STATUS_CHANGE_AUDIT_KEY);
       this.auditCache = stored ? JSON.parse(stored) : [];
+
+      if (this.auditCache.length > BorrowCascadeService.MAX_AUDIT_CACHE_SIZE) {
+        this.auditCache = this.auditCache.slice(-BorrowCascadeService.MAX_AUDIT_CACHE_SIZE);
+      }
+
       return this.auditCache!;
     } catch {
       this.auditCache = [];
@@ -429,6 +435,10 @@ export class BorrowCascadeService {
       console.error('[BorrowCascadeService] Failed to clear audit logs:', error);
       return 0;
     }
+  }
+
+  clearAuditCache(): void {
+    this.auditCache = null;
   }
 
   generateAuditReport(borrowRecordId: string): string {

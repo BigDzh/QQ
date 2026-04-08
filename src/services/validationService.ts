@@ -245,6 +245,7 @@ export function validateAgainstInjection(value: string): ValidationResult {
 export function validateFileName(fileName: string): string | null {
   if (!fileName) return '文件名不能为空';
 
+  // eslint-disable-next-line no-control-regex
   const invalidChars = /[<>:"|?*\x00-\x1f]/;
   if (invalidChars.test(fileName)) {
     return '文件名包含非法字符';

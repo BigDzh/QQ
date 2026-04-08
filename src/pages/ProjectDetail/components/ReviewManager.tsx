@@ -96,7 +96,7 @@ export function ReviewManager({
         setShowFilterDropdown(false);
       }
       const target = event.target as HTMLElement;
-      if (!target.closest('[data-folder-btn]')) {
+      if (!target.closest('[data-folder-btn]') && !target.closest('[data-category-input]')) {
         setSelectedFolderPath(null);
         setNewCategoryParent(null);
       }
@@ -111,7 +111,7 @@ export function ReviewManager({
     return matchesName && matchesSelected;
   });
 
-  const buildCategoryTree = (categories: string[]): { name: string; path: string; level: number; children: string[] }[] => {
+  const buildCategoryTree = (categories: string[]): { tree: { name: string; path: string; level: number; children: string[] }[]; pathMap: Map<string, { name: string; path: string; level: number; children: string[] }> } => {
     const tree: { name: string; path: string; level: number; children: string[] }[] = [];
     const pathMap = new Map<string, { name: string; path: string; level: number; children: string[] }>();
 
@@ -141,13 +141,14 @@ export function ReviewManager({
       });
     });
 
-    return tree;
+    return { tree, pathMap };
   };
 
   const renderCategoryTree = (
     tree: { name: string; path: string; level: number; children: string[] }[],
     reviewId: string,
-    reviewFiles: ReviewFile[]
+    reviewFiles: ReviewFile[],
+    pathMap?: Map<string, { name: string; path: string; level: number; children: string[] }>
   ) => {
     return tree.map(node => {
       const nodeFiles = reviewFiles.filter(f => f.category === node.path);
@@ -243,7 +244,7 @@ export function ReviewManager({
             </div>
 
             {newCategoryParent?.reviewId === reviewId && newCategoryParent?.parentPath === node.path && (
-              <div className={`flex items-center gap-2 mt-2 p-2 border rounded transition-all duration-200 ${t.border}`}>
+              <div className={`flex items-center gap-2 mt-2 p-2 border rounded transition-all duration-200 ${t.border}`} data-category-input onClick={(e) => e.stopPropagation()}>
                 <input
                   type="text"
                   value={newCategoryInput}
@@ -257,16 +258,20 @@ export function ReviewManager({
                   }}
                   placeholder="输入子文件夹名称..."
                   className={`flex-1 px-2 py-1 text-sm border rounded ${t.border} ${t.text} ${t.card} focus:outline-none focus:ring-2 focus:ring-blue-400`}
-                  autoFocus
+                  data-category-input
                 />
                 <button
-                  onClick={() => handleAddCategory()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddCategory();
+                  }}
                   className={`px-3 py-1 text-xs ${t.button} text-white rounded`}
                 >
                   确定
                 </button>
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setNewCategoryParent(null);
                     setSelectedFolderPath(null);
                   }}
@@ -308,12 +313,16 @@ export function ReviewManager({
                   <div className="mt-2">
                     {renderCategoryTree(
                       node.children.map(childPath => {
-                        const parts = childPath.split('/');
-                        const name = parts[parts.length - 1];
-                        return { name, path: childPath, level: node.level + 1, children: [] as string[] };
+                        const childNode = pathMap?.get(childPath);
+                        if (!childNode) {
+                          const parts = childPath.split('/');
+                          return { name: parts[parts.length - 1], path: childPath, level: node.level + 1, children: [] as string[] };
+                        }
+                        return childNode;
                       }),
                       reviewId,
-                      reviewFiles
+                      reviewFiles,
+                      pathMap
                     )}
                   </div>
                 )}
@@ -340,7 +349,30 @@ export function ReviewManager({
 
   const handleAddCategory = () => {
     if (newCategoryInput.trim() && newCategoryParent) {
+      const fullPath = newCategoryParent.parentPath
+        ? `${newCategoryParent.parentPath}/${newCategoryInput.trim()}`
+        : newCategoryInput.trim();
+
+      const keysToExpand: string[] = [];
+      const parentPath = newCategoryParent.parentPath;
+
+      if (parentPath) {
+        const pathParts = parentPath.split('/');
+        for (let i = 1; i <= pathParts.length; i++) {
+          const partialPath = pathParts.slice(0, i).join('/');
+          keysToExpand.push(`${newCategoryParent.reviewId}-${partialPath}`);
+        }
+      }
+
+      keysToExpand.push(`${newCategoryParent.reviewId}-${fullPath}`);
+
       onAddCategory(newCategoryParent.reviewId, newCategoryInput.trim(), newCategoryParent.parentPath);
+
+      setExpandedReviewCategories(prev => {
+        const newSet = new Set(prev);
+        keysToExpand.forEach(k => newSet.add(k));
+        return Array.from(newSet);
+      });
       setNewCategoryInput('');
       setNewCategoryParent(null);
     }
@@ -348,9 +380,45 @@ export function ReviewManager({
 
   if (!reviews || reviews.length === 0) {
     return (
-      <div className={`text-center py-12 ${t.card} rounded-lg border ${t.border}`}>
-        <Folder className={`mx-auto ${t.textMuted} mb-4`} size={48} />
-        <p className={t.textMuted}>暂无评审</p>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0 max-w-md">
+              <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${t.textMuted}`} />
+              <input
+                type="text"
+                placeholder="筛选评审名称..."
+                value={reviewNameFilter}
+                onChange={(e) => setReviewNameFilter(e.target.value)}
+                className={`w-full pl-9 pr-8 py-2 text-sm border rounded-lg transition-all duration-200 ${t.border} ${t.text} ${t.card} focus:outline-none focus:ring-2 focus:ring-blue-400`}
+              />
+              {reviewNameFilter && (
+                <button
+                  onClick={() => setReviewNameFilter('')}
+                  className={`absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:${t.hoverBg}`}
+                >
+                  <X size={14} className={t.textMuted} />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <span className={`text-sm ${t.textMuted} whitespace-nowrap`}>0/0 个评审</span>
+            {canEdit && (
+              <button
+                onClick={onOpenAddReviewModal || onAddReview}
+                className={`flex items-center gap-1 px-3 py-2 text-sm ${t.button} rounded-lg text-white whitespace-nowrap transition-all duration-200 hover:brightness-110 active:brightness-95`}
+              >
+                <Plus size={16} />
+                新建评审
+              </button>
+            )}
+          </div>
+        </div>
+        <div className={`text-center py-12 ${t.card} rounded-lg border ${t.border}`}>
+          <Folder className={`mx-auto ${t.textMuted} mb-4`} size={48} />
+          <p className={t.textMuted}>暂无评审</p>
+        </div>
       </div>
     );
   }
@@ -694,8 +762,11 @@ export function ReviewManager({
                 {reviewCategories.length === 0 ? (
                   <p className={`text-xs ${t.textMuted}`}>暂无种类文件夹</p>
                 ) : (
-                  <div className="space-y-3">
-                    {renderCategoryTree(buildCategoryTree(reviewCategories), review.id, reviewFiles)}
+                  <div className="space-y-3" key={`tree-${reviewCategories.join('-')}`}>
+                    {(() => {
+                      const { tree, pathMap } = buildCategoryTree(reviewCategories);
+                      return renderCategoryTree(tree, review.id, reviewFiles, pathMap);
+                    })()}
                   </div>
                 )}
 

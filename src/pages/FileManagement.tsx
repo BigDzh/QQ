@@ -914,10 +914,10 @@ export default function FileManagement() {
                 ) : (
                   <div className={`p-8 text-center ${t.textMuted}`}>暂无文档</div>
                 )}
-              </div>
-            );
-          })}
-        </div>
+                </div>
+              );
+            })}
+          </div>
       )}
 
       {activeTab === 'software' && (

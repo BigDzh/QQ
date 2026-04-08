@@ -130,11 +130,12 @@ function sortResults(
       case 'relevance':
         comparison = b.score - a.score;
         break;
-      case 'createdTime':
+      case 'createdTime': {
         const timeA = a.document.uploadDate ? new Date(a.document.uploadDate).getTime() : 0;
         const timeB = b.document.uploadDate ? new Date(b.document.uploadDate).getTime() : 0;
         comparison = timeB - timeA;
         break;
+      }
       case 'fileSize':
         comparison = (b.document.fileSize || 0) - (a.document.fileSize || 0);
         break;

@@ -4,6 +4,11 @@ import { safeSetObject, safeGetObject } from './storageManager';
 
 const AUDIT_LOGS_KEY = 'audit_logs';
 const MAX_AUDIT_LOGS = 500;
+const LOG_BUFFER_SIZE = 20;
+const FLUSH_INTERVAL_MS = 5000;
+
+let logBuffer: AuditLog[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function getAuditLogs(): AuditLog[] {
   return safeGetObject<AuditLog[]>(AUDIT_LOGS_KEY) || [];
@@ -11,6 +16,28 @@ export function getAuditLogs(): AuditLog[] {
 
 export function saveAuditLogs(logs: AuditLog[]): void {
   safeSetObject(AUDIT_LOGS_KEY, logs);
+}
+
+function flushLogs(): void {
+  if (logBuffer.length === 0) return;
+
+  const logs = getAuditLogs();
+  const newLogs = [...logBuffer, ...logs].slice(0, MAX_AUDIT_LOGS);
+  saveAuditLogs(newLogs);
+  logBuffer = [];
+
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+}
+
+function scheduleFlush(): void {
+  if (flushTimer) return;
+
+  flushTimer = setTimeout(() => {
+    flushLogs();
+  }, FLUSH_INTERVAL_MS);
 }
 
 export function addAuditLog(
@@ -51,16 +78,23 @@ export function addAuditLog(
     reason,
   };
 
-  const logs = getAuditLogs();
-  logs.unshift(log);
-  if (logs.length > MAX_AUDIT_LOGS) {
-    logs.pop();
+  logBuffer.push(log);
+
+  if (logBuffer.length >= LOG_BUFFER_SIZE) {
+    flushLogs();
+  } else {
+    scheduleFlush();
   }
-  saveAuditLogs(logs);
+
   return log;
 }
 
+export function flushAuditLogs(): void {
+  flushLogs();
+}
+
 export function clearAuditLogs(): void {
+  flushLogs();
   localStorage.removeItem(AUDIT_LOGS_KEY);
 }
 
@@ -95,6 +129,7 @@ export function addComponentAuditLog(
 }
 
 export function exportAuditLogs(): string {
+  flushLogs();
   const logs = getAuditLogs();
   return JSON.stringify(logs, null, 2);
 }

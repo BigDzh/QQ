@@ -531,7 +531,9 @@ export default function WorkflowDetail() {
                               try {
                                 const updated = { ...step, config: JSON.parse(e.target.value) };
                                 handleUpdateStep(updated);
-                              } catch {}
+                              } catch {
+                                // Ignore invalid JSON
+                              }
                             }}
                             className={`w-full px-3 py-2 border rounded-lg ${t.input} font-mono text-sm`}
                             rows={4}

@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Package, Copy, Trash2, Edit2, ChevronRight, Search, X, CheckSquare, Square, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Package, Copy, Trash2, Edit2, ChevronRight, Search, X, Loader2 } from 'lucide-react';
 import { useThemeStyles } from '../../../hooks/useThemeStyles';
 import { useToast } from '../../../components/Toast';
 import { BatchOperationsBar } from '../../../components/BatchOperationsBar';
 import { ConfirmModal } from './ConfirmModal';
-import { ModuleStatusChangeModal } from './ModuleStatusChangeModal';
 import type { Module, ProjectStage } from '../../../types';
-import { STAGE_OPTIONS, getDefaultStageForEntity } from '../../../services/stageConfig';
 
 interface ModuleListProps {
   projectId: string;
@@ -21,11 +19,11 @@ interface ModuleListProps {
   onBatchUpdateStage?: (moduleIds: string[], stage: ProjectStage) => Promise<void>;
   onBatchUpdateVersion?: (moduleIds: string[], version: string) => Promise<void>;
   onBatchDelete?: (moduleIds: string[]) => Promise<void>;
-  onModuleStatusChange?: (moduleId: string, newStatus: string, reason: string) => Promise<void>;
 }
 
 const STATUS_LIST = ['未投产', '投产中', '正常', '维修中', '三防中', '测试中', '仿真中', '借用中', '故障'] as const;
 type StatusType = typeof STATUS_LIST[number];
+const STAGE_OPTIONS: ProjectStage[] = ['F阶段', 'C阶段', 'S阶段', 'D阶段', 'P阶段'];
 
 export function ModuleList({
   modules,
@@ -38,7 +36,6 @@ export function ModuleList({
   onBatchUpdateStage,
   onBatchUpdateVersion,
   onBatchDelete,
-  onModuleStatusChange,
 }: ModuleListProps) {
   const t = useThemeStyles();
   const { showToast } = useToast();
@@ -54,13 +51,9 @@ export function ModuleList({
   const [showStageModal, setShowStageModal] = useState(false);
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [batchStage, setBatchStage] = useState<ProjectStage>(getDefaultStageForEntity('module'));
+  const [batchStage, setBatchStage] = useState<ProjectStage>('C阶段');
   const [batchVersion, setBatchVersion] = useState('');
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [statusChangeModule, setStatusChangeModule] = useState<Module | null>(null);
   const MODULE_PAGE_SIZE = 15;
-  const [sortField, setSortField] = useState<keyof Module>('moduleNumber');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -72,46 +65,19 @@ export function ModuleList({
   useEffect(() => {
     setSelectedModuleIds(new Set());
     setModulePage(1);
-  }, [modules, selectedStage, selectedStatus, selectedCategory]);
+  }, [modules]);
 
   const filteredModules = useMemo(() => {
-    return modules
-      .filter(m =>
-        (!selectedStatus || m.status === selectedStatus) &&
-        (!selectedCategory || m.category === selectedCategory) &&
-        (!selectedStage || m.stage === selectedStage) &&
-        (!debouncedSearchTerm ||
-          m.moduleNumber.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-          m.moduleName.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-        )
+    return modules.filter(m =>
+      (!selectedStatus || m.status === selectedStatus) &&
+      (!selectedCategory || m.category === selectedCategory) &&
+      (!selectedStage || m.stage === selectedStage) &&
+      (!debouncedSearchTerm ||
+        m.moduleNumber.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        m.moduleName.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       )
-      .sort((a, b) => {
-        const aVal = String(a[sortField] || '');
-        const bVal = String(b[sortField] || '');
-        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
-        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
-        return 0;
-      });
-  }, [modules, selectedStatus, selectedCategory, selectedStage, debouncedSearchTerm, sortField, sortOrder]);
-
-  const handleSort = (field: keyof Module) => {
-    if (sortField === field) {
-      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-    setModulePage(1);
-  };
-
-  const SortIndicator = ({ field }: { field: keyof Module }) => {
-    if (sortField !== field) {
-      return <ArrowUp size={12} className="inline opacity-30 ml-1" />;
-    }
-    return sortOrder === 'asc'
-      ? <ArrowUp size={12} className="inline text-blue-500 ml-1" />
-      : <ArrowDown size={12} className="inline text-blue-500 ml-1" />;
-  };
+    );
+  }, [modules, selectedStatus, selectedCategory, selectedStage, debouncedSearchTerm]);
 
   const paginatedModules = useMemo(() => {
     const startIndex = (modulePage - 1) * MODULE_PAGE_SIZE;
@@ -296,27 +262,6 @@ export function ModuleList({
     onEditModule(module);
   };
 
-  const handleStatusModuleClick = (module: Module) => {
-    setStatusChangeModule(module);
-    setShowStatusModal(true);
-  };
-
-  const handleStatusModalConfirm = async (newStatus: StatusType, reason: string) => {
-    if (!onModuleStatusChange || !statusChangeModule) return;
-    try {
-      await onModuleStatusChange(statusChangeModule.id, newStatus, reason);
-      setShowStatusModal(false);
-      setStatusChangeModule(null);
-    } catch (error) {
-      showToast('状态变更失败', 'error');
-    }
-  };
-
-  const handleStatusModalCancel = () => {
-    setShowStatusModal(false);
-    setStatusChangeModule(null);
-  };
-
   if (modules.length === 0) {
     return (
       <div className="space-y-4">
@@ -391,7 +336,7 @@ export function ModuleList({
             <button
               key={stage}
               onClick={() => {
-                setSelectedStage(selectedStage === stage ? null : stage);
+                setSelectedStage(style.isSelected ? null : stage);
                 setModulePage(1);
               }}
               style={{
@@ -530,30 +475,19 @@ export function ModuleList({
               <thead className={t.tableHeader}>
                 <tr>
                   {canEdit && (
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary} w-10`}>
-                      <button
-                        onClick={handleToggleAll}
-                        className={`p-1 rounded transition-colors ${
-                          isAllSelected || isIndeterminate
-                            ? 'text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900'
-                            : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                        aria-label={isAllSelected ? '取消全选' : '全选'}
-                      >
-                        {isAllSelected || isIndeterminate ? (
-                          <CheckSquare size={18} className={isIndeterminate ? 'opacity-50' : ''} />
-                        ) : (
-                          <Square size={18} className="opacity-50" />
-                        )}
-                      </button>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-12">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = isIndeterminate; }}
+                        onChange={handleToggleAll}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                      />
                     </th>
                   )}
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>
-                    <button onClick={() => handleSort('moduleNumber')} className={`flex items-center gap-1 hover:text-blue-500 cursor-pointer transition-colors ${t.textSecondary}`}>模块编号<SortIndicator field='moduleNumber' /></button>
-                  </th>
-                  <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>
-                    <button onClick={() => handleSort('moduleName')} className={`flex items-center gap-1 hover:text-blue-500 cursor-pointer transition-colors ${t.textSecondary}`}>模块名称<SortIndicator field='moduleName' /></button>
-                  </th>
+                  <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>模块编号</th>
+                  <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>模块名称</th>
+                  <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>种类</th>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>阶段</th>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>版本</th>
                   <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>状态</th>
@@ -570,21 +504,12 @@ export function ModuleList({
                   >
                     {canEdit && (
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={() => handleToggleModule(module.id)}
-                          className={`p-1 rounded transition-colors ${
-                            selectedModuleIds.has(module.id)
-                              ? 'text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900'
-                              : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                          }`}
-                          aria-label={selectedModuleIds.has(module.id) ? '取消选择' : '选择'}
-                        >
-                          {selectedModuleIds.has(module.id) ? (
-                            <CheckSquare size={18} />
-                          ) : (
-                            <Square size={18} className="opacity-50" />
-                          )}
-                        </button>
+                        <input
+                          type="checkbox"
+                          checked={selectedModuleIds.has(module.id)}
+                          onChange={() => handleToggleModule(module.id)}
+                          className="w-4 h-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                        />
                       </td>
                     )}
                     <td className={`px-4 py-3 ${t.text}`}>{module.moduleNumber}</td>
@@ -597,19 +522,20 @@ export function ModuleList({
                         {module.moduleName}
                       </Link>
                     </td>
+                    <td className={`px-4 py-3`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${categoryColors[module.category] || 'bg-gray-500'}`} />
+                        <span className={`${t.textSecondary}`}>{module.category || '-'}</span>
+                      </div>
+                    </td>
                     <td className={`px-4 py-3 ${t.textSecondary}`}>{module.stage || '-'}</td>
                     <td className={`px-4 py-3 ${t.textSecondary}`}>{module.version || '-'}</td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => canEdit && onModuleStatusChange && handleStatusModuleClick(module)}
-                        disabled={!canEdit || !onModuleStatusChange}
-                        className={`px-2 py-1 rounded text-xs transition-all ${
-                          t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors['故障']
-                        } ${canEdit && onModuleStatusChange ? 'hover:ring-2 hover:ring-offset-1 cursor-pointer' : 'cursor-default'}`}
-                        title={canEdit && onModuleStatusChange ? '点击变更状态' : module.status}
-                      >
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        t.statusColors[module.status as keyof typeof t.statusColors] || t.statusColors['故障']
+                      }`}>
                         {module.status}
-                      </button>
+                      </span>
                     </td>
                     <td className={`px-4 py-3 ${t.textSecondary}`}>{module.components?.length || 0}</td>
                     <td className="px-4 py-3">
@@ -757,26 +683,13 @@ export function ModuleList({
         </>
       )}
 
-      {statusChangeModule && (
-        <ModuleStatusChangeModal
-          show={showStatusModal}
-          moduleName={statusChangeModule.moduleName}
-          currentStatus={statusChangeModule.status}
-          onConfirm={handleStatusModalConfirm}
-          onCancel={handleStatusModalCancel}
-        />
-      )}
-
       <div
-        className={`fixed inset-0 z-40 bg-black/30 ${showStageModal || showVersionModal || showDeleteConfirm || showStatusModal ? 'block' : 'hidden'}`}
+        className={`fixed inset-0 z-40 bg-black/30 ${showStageModal || showVersionModal || showDeleteConfirm ? 'block' : 'hidden'}`}
         onClick={() => {
           if (!isLoading) {
             setShowStageModal(false);
             setShowVersionModal(false);
             setShowDeleteConfirm(false);
-            if (!isLoading) {
-              setShowStatusModal(false);
-            }
           }
         }}
       />

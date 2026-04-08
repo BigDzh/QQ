@@ -5,6 +5,7 @@ import { safeSetObject, safeGetObject } from './storageManager';
 const SEARCH_HISTORY_KEY = 'search_history';
 const MAX_HISTORY = 10;
 const CACHE_TTL = 30000;
+const MAX_INDEX_AGE = 5 * 60 * 1000;
 
 interface SearchCache {
   query: string;
@@ -14,6 +15,7 @@ interface SearchCache {
 
 let searchCache: SearchCache | null = null;
 let projectIndex: Map<string, SearchResult[]> | null = null;
+let indexTimestamp: number = 0;
 
 function buildProjectIndex(projects: Project[]): Map<string, SearchResult[]> {
   const index = new Map<string, SearchResult[]>();
@@ -89,6 +91,7 @@ function buildProjectIndex(projects: Project[]): Map<string, SearchResult[]> {
     });
   });
 
+  indexTimestamp = Date.now();
   return index;
 }
 
@@ -124,15 +127,17 @@ export function searchAll(
   if (!query.trim()) return [];
 
   const cacheKey = query.toLowerCase();
+  const now = Date.now();
+
   if (
     searchCache &&
     searchCache.query === cacheKey &&
-    Date.now() - searchCache.timestamp < CACHE_TTL
+    now - searchCache.timestamp < CACHE_TTL
   ) {
     return searchCache.results;
   }
 
-  if (!projectIndex) {
+  if (!projectIndex || now - indexTimestamp > MAX_INDEX_AGE) {
     projectIndex = buildProjectIndex(projects);
   }
 
@@ -193,6 +198,20 @@ function calculateScore(query: string, ...fields: string[]): number {
 export function invalidateSearchCache(): void {
   searchCache = null;
   projectIndex = null;
+  indexTimestamp = 0;
+}
+
+export function cleanupSearchCache(): void {
+  const now = Date.now();
+
+  if (searchCache && now - searchCache.timestamp > CACHE_TTL) {
+    searchCache = null;
+  }
+
+  if (projectIndex && now - indexTimestamp > MAX_INDEX_AGE) {
+    projectIndex = null;
+    indexTimestamp = 0;
+  }
 }
 
 export function getSearchHistory(): SearchHistory[] {

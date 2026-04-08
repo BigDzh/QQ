@@ -3,13 +3,14 @@
   "private": true,
   "version": "2.19.1-export",
   "description": "项目全生命周期管理系统 (导出版本)",
-  "main": "electron/main.cjs",
+  "main": "main.cjs",
   "author": "Your Name",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "build:win7": "vite build --config vite.win7.config.ts --mode production && node win7-post-build.cjs",
     "analyze": "vite build && npx vite-bundle-analyzer dist/assets/*.js",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest run",
@@ -52,8 +53,8 @@
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "concurrently": "^8.2.2",
-    "electron": "^28.2.0",
-    "electron-builder": "^24.9.1",
+    "electron": "^25.9.8",
+    "electron-builder": "^24.13.3",
     "eslint-plugin-react": "^4.3.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^17.4.0",
@@ -70,17 +71,22 @@
     "appId": "com.lifecycle.management.export",
     "productName": "项目全生命周期管理系统_导出版",
     "copyright": "Copyright © 2024",
-    "electronVersion": "28.2.0",
+    "electronVersion": "25.9.8",
     "directories": {
       "output": "C:\\temp\\win7-app-export"
     },
     "files": [
-      "dist/**/*",
-      "electron/**/*"
+      "win7-dist/**/*",
+      "main.cjs",
+      "preload.cjs"
+    ],
+    "asarUnpack": [
+      "win7-dist/**/*"
     ],
     "win": {
       "target": "portable",
-      "artifactName": "${productName}.${ext}"
+      "artifactName": "${productName}.${ext}",
+      "sign": false
     },
     "portable": {
       "artifactName": "${productName}.${ext}"

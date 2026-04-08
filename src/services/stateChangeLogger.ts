@@ -5,11 +5,16 @@ import { safeSetObject, safeGetObject } from './storageManager';
 const STATE_CHANGE_LOGS_KEY = 'state_change_logs';
 const STATE_CHANGE_LISTENERS_KEY = 'state_change_listeners';
 const MAX_STATE_CHANGE_LOGS = 1000;
+const LOG_BUFFER_SIZE = 20;
+const FLUSH_INTERVAL_MS = 5000;
 const MIN_REASON_LENGTH = 2;
 const MAX_REASON_LENGTH = 500;
 
 const CRITICAL_STATES = ['故障', '维修中', '三防中', '测试中', '仿真中', '投产中', '借用中'];
 const NORMAL_STATES = ['正常', '未投产'];
+
+let logBuffer: StateChangeLog[] = [];
+let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function getStateChangeLogs(): StateChangeLog[] {
   return safeGetObject<StateChangeLog[]>(STATE_CHANGE_LOGS_KEY) || [];
@@ -17,6 +22,32 @@ export function getStateChangeLogs(): StateChangeLog[] {
 
 export function saveStateChangeLogs(logs: StateChangeLog[]): void {
   safeSetObject(STATE_CHANGE_LOGS_KEY, logs);
+}
+
+function flushLogs(): void {
+  if (logBuffer.length === 0) return;
+
+  const logs = getStateChangeLogs();
+  const newLogs = [...logBuffer, ...logs].slice(0, MAX_STATE_CHANGE_LOGS);
+  saveStateChangeLogs(newLogs);
+  logBuffer = [];
+
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+  }
+}
+
+function scheduleFlush(): void {
+  if (flushTimer) return;
+
+  flushTimer = setTimeout(() => {
+    flushLogs();
+  }, FLUSH_INTERVAL_MS);
+}
+
+export function flushStateChangeLogs(): void {
+  flushLogs();
 }
 
 export function validateReason(reason: string | undefined | null): StateChangeValidationResult {
@@ -158,12 +189,13 @@ export function addStateChangeLog(
     level,
   };
 
-  const logs = getStateChangeLogs();
-  logs.unshift(log);
-  if (logs.length > MAX_STATE_CHANGE_LOGS) {
-    logs.pop();
+  logBuffer.push(log);
+
+  if (logBuffer.length >= LOG_BUFFER_SIZE) {
+    flushLogs();
+  } else {
+    scheduleFlush();
   }
-  saveStateChangeLogs(logs);
 
   notifyListeners(log);
 
@@ -241,10 +273,12 @@ export function getFilteredStateChangeLogs(filter: StateChangeLogFilter): StateC
 }
 
 export function clearStateChangeLogs(): void {
+  flushLogs();
   localStorage.removeItem(STATE_CHANGE_LOGS_KEY);
 }
 
 export function exportStateChangeLogs(): string {
+  flushLogs();
   const logs = getStateChangeLogs();
   return JSON.stringify(logs, null, 2);
 }
@@ -255,6 +289,7 @@ export function getStateChangeStats(): {
   byLevel: Record<AuditLevel, number>;
   recentCount: number;
 } {
+  flushLogs();
   const logs = getStateChangeLogs();
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 

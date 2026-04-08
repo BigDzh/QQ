@@ -78,12 +78,16 @@ export async function createPreUpdateSnapshot(): Promise<DataSnapshot> {
     const projects = data.projects ? JSON.parse(data.projects) : [];
     projectCount = projects.length || 0;
     documentCount = projects.reduce((sum: number, p: any) => sum + (p.documents?.length || 0), 0);
-  } catch {}
+  } catch {
+    // Ignore parse errors
+  }
 
   try {
     const users = data.users ? JSON.parse(data.users) : [];
     userCount = users.length || 0;
-  } catch {}
+  } catch {
+    // Ignore parse errors
+  }
 
   const checksum = await calculateDataChecksum(data);
 
@@ -264,7 +268,9 @@ export function getDataStats(): { projectCount: number; userCount: number; docum
       projectCount = parsed.length || 0;
       documentCount = parsed.reduce((sum: number, p: any) => sum + (p.documents?.length || 0), 0);
     }
-  } catch {}
+  } catch {
+    // Ignore parse errors
+  }
 
   try {
     const users = localStorage.getItem('users');
@@ -272,7 +278,9 @@ export function getDataStats(): { projectCount: number; userCount: number; docum
       const parsed = JSON.parse(users);
       userCount = parsed.length || 0;
     }
-  } catch {}
+  } catch {
+    // Ignore parse errors
+  }
 
   try {
     const backups = localStorage.getItem('backup_records');
@@ -280,7 +288,9 @@ export function getDataStats(): { projectCount: number; userCount: number; docum
       const parsed = JSON.parse(backups);
       backupCount = parsed.length || 0;
     }
-  } catch {}
+  } catch {
+    // Ignore parse errors
+  }
 
   return { projectCount, userCount, documentCount, backupCount };
 }

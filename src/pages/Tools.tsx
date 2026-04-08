@@ -381,7 +381,9 @@ export default function Tools() {
     if (currentFileId) {
       try {
         await deleteFile(currentFileId);
-      } catch (e) {}
+      } catch {
+        // Ignore delete errors
+      }
       setCurrentFileId(null);
     }
 

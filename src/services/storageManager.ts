@@ -118,7 +118,8 @@ function compressData(data: string): string {
     if (compressed.length < data.length) {
       return compressed;
     }
-  } catch (e) {
+  } catch {
+    // Compression failed, use original data
   }
   return data;
 }
@@ -127,7 +128,8 @@ export function decompressData(data: string): string {
   try {
     const decoded = decodeURIComponent(atob(data));
     return decoded;
-  } catch (e) {
+  } catch {
+    // Decompression failed, return original data
     return data;
   }
 }
@@ -160,7 +162,8 @@ function cleanupLargeItems(requiredSpace: number): boolean {
           localStorage.setItem('audit_logs', JSON.stringify(reducedLogs));
           cleaned += (auditLogs.length - JSON.stringify(reducedLogs).length) * 2;
         }
-      } catch (e) {
+      } catch {
+        // Ignore cleanup errors
       }
     }
   }
@@ -194,7 +197,8 @@ export function safeGetItem<T = string>(
     }
 
     return value as unknown as T;
-  } catch (e) {
+  } catch {
+    // Ignore parse errors
     return defaultValue ?? null;
   }
 }
@@ -256,7 +260,8 @@ export function cleanupOldData(daysToKeep: number = 30): number {
         cleanedCount += history.length - filtered.length;
       }
     }
-  } catch (e) {
+  } catch {
+    // Ignore storage access errors
   }
 
   try {
@@ -272,7 +277,8 @@ export function cleanupOldData(daysToKeep: number = 30): number {
         cleanedCount += logs.length - filtered.length;
       }
     }
-  } catch (e) {
+  } catch {
+    // Ignore cleanup errors
   }
 
   return cleanedCount;

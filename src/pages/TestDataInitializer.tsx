@@ -100,17 +100,23 @@ export default function TestDataInitializer() {
         components = parsed.reduce((sum: number, p: any) =>
           sum + ((p.modules && Array.isArray(p.modules)) ? p.modules.reduce((s: number, m: any) => s + ((m.components && Array.isArray(m.components)) ? m.components.length : 0), 0) : 0), 0);
       }
-    } catch {}
+    } catch {
+      // Ignore parse errors
+    }
 
     try {
       const tasksData = localStorage.getItem(TEST_DATA_KEYS.TASKS);
       if (tasksData) tasks = JSON.parse(tasksData).length;
-    } catch {}
+    } catch {
+      // Ignore parse errors
+    }
 
     try {
       const borrowData = localStorage.getItem(TEST_DATA_KEYS.BORROW_RECORDS);
       if (borrowData) borrowRecords = JSON.parse(borrowData).length;
-    } catch {}
+    } catch {
+      // Ignore parse errors
+    }
 
     return { projects, modules, components, tasks, borrowRecords };
   }, []);

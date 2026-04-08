@@ -154,6 +154,13 @@ export default function DatabaseManagement() {
   useEffect(() => {
     loadData();
     loadSavedKeys();
+
+    return () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+        autoRefreshRef.current = null;
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -161,19 +168,22 @@ export default function DatabaseManagement() {
   }, [typeFilter, projectFilter, searchKeyword, page, sortConfig]);
 
   useEffect(() => {
+    if (autoRefreshRef.current) {
+      clearInterval(autoRefreshRef.current);
+      autoRefreshRef.current = null;
+    }
+
     if (autoRefresh) {
       autoRefreshRef.current = setInterval(() => {
-        handleRefresh();
+        loadData();
+        loadFiles();
       }, 30000);
-    } else {
-      if (autoRefreshRef.current) {
-        clearInterval(autoRefreshRef.current);
-        autoRefreshRef.current = null;
-      }
     }
+
     return () => {
       if (autoRefreshRef.current) {
         clearInterval(autoRefreshRef.current);
+        autoRefreshRef.current = null;
       }
     };
   }, [autoRefresh]);
@@ -401,7 +411,7 @@ export default function DatabaseManagement() {
     const timestamp = new Date().toISOString().slice(0, 10);
     try {
       switch (format) {
-        case 'json':
+        case 'json': {
           const data = await exportDatabase();
           const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
           const url = URL.createObjectURL(blob);
@@ -412,6 +422,7 @@ export default function DatabaseManagement() {
           URL.revokeObjectURL(url);
           showToast('JSON导出成功', 'success');
           break;
+        }
         case 'csv':
           exportToCSV(files, `files_export_${timestamp}`);
           showToast('CSV导出成功', 'success');

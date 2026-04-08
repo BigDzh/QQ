@@ -22,7 +22,6 @@ interface AnimatedDonutChartProps {
   breathInterval?: number;
   onSegmentClick?: (segment: DonutChartData | null) => void;
   onSegmentHover?: (segment: DonutChartData | null) => void;
-  rotationSpeed?: number;
 }
 
 interface SegmentData extends DonutChartData {
@@ -31,21 +30,7 @@ interface SegmentData extends DonutChartData {
   percentage: number;
 }
 
-const MemoizedSegment: React.FC<{
-  segment: SegmentData;
-  index: number;
-  center: number;
-  outerRadius: number;
-  innerRadius: number;
-  isAnimating: boolean;
-  animationProgress: number;
-  isHovered: boolean;
-  isSelected: boolean;
-  blurAmount: number;
-  describeArcForFilled: (start: number, end: number) => string;
-  onHover: (index: number | null) => void;
-  onClick: (index: number) => void;
-}> = memo(({
+const MemoizedSegment: React.FC<MemoizedSegmentProps> = memo(({
   segment,
   index,
   center,
@@ -59,6 +44,8 @@ const MemoizedSegment: React.FC<{
   describeArcForFilled,
   onHover,
   onClick,
+  hasBlur = true,
+  cornerRadius = 8,
 }) => {
   const displayedEndAngle = segment.startAngle + (segment.endAngle - segment.startAngle) * animationProgress;
   const path = describeArcForFilled(segment.startAngle, displayedEndAngle);
@@ -70,13 +57,16 @@ const MemoizedSegment: React.FC<{
         d={path}
         fill={`url(#donut-gradient-${index}-${segment.name.replace(/\s/g, '')})`}
         opacity={isAnimating ? 0 : (isHovered || isSelected ? 1 : 0.85)}
-        filter={isHovered || isSelected ? 'url(#donut-glow)' : 'none'}
+        filter={isHovered || isSelected ? 'url(#donut-glow)' : (hasBlur ? 'url(#donut-blur-edge)' : 'none')}
         style={{
           cursor: 'pointer',
           transition: `all 0.3s ease-out ${delay}ms`,
           transform: isHovered || isSelected ? 'scale(1.03)' : 'scale(1)',
           transformOrigin: `${center}px ${center}px`,
         }}
+        strokeWidth={2}
+        stroke={hasBlur ? `${segment.fill}30` : 'transparent'}
+        strokeLinejoin={hasBlur ? 'round' : 'miter'}
         onClick={() => onClick(index)}
         onMouseEnter={() => onHover(index)}
         onMouseLeave={() => onHover(null)}
@@ -97,7 +87,7 @@ const MemoizedSegment: React.FC<{
           stroke={segment.fill}
           strokeWidth={3}
           strokeLinecap="round"
-          strokeDasharray="0"
+          strokeLinejoin="round"
           opacity={0.8}
           style={{
             pointerEvents: 'none',
@@ -140,7 +130,7 @@ const CenterContent: React.FC<{
             color: activeSegment.fill,
             fontSize: fontSize * 0.8,
             transform: `scale(${1 + Math.sin(breathPhase) * 0.05})`,
-            textShadow: `0 0 20px ${activeSegment.fill}80, 0 0 40px ${activeSegment.fill}40`,
+            textShadow: `0 1px 3px rgba(0,0,0,0.5), 0 0 8px ${activeSegment.fill}40`,
             lineHeight: 1.2,
           }}
         >
@@ -151,7 +141,7 @@ const CenterContent: React.FC<{
           style={{
             color: 'var(--text-primary)',
             fontSize: fontSize * 0.35,
-            textShadow: `0 0 10px ${activeSegment.fill}40`,
+            textShadow: `0 1px 3px rgba(0,0,0,0.4)`,
             lineHeight: 1.2,
             marginTop: '2px',
           }}
@@ -163,7 +153,7 @@ const CenterContent: React.FC<{
           style={{
             color: 'var(--text-secondary)',
             fontSize: fontSize * 0.3,
-            textShadow: '0 0 8px rgba(255,255,255,0.3)',
+            textShadow: `0 1px 2px rgba(0,0,0,0.3)`,
             lineHeight: 1.2,
           }}
         >
@@ -181,7 +171,7 @@ const CenterContent: React.FC<{
           color: 'var(--text-primary)',
           fontSize: fontSize,
           transform: `scale(${1 + Math.sin(breathPhase) * 0.03})`,
-          textShadow: '0 0 20px rgba(255,255,255,0.4), 0 0 40px rgba(255,255,255,0.2)',
+          textShadow: '0 1px 4px rgba(0,0,0,0.5)',
           lineHeight: 1.2,
         }}
       >
@@ -192,7 +182,7 @@ const CenterContent: React.FC<{
         style={{
           color: 'var(--text-secondary)',
           fontSize: fontSize * 0.35,
-          textShadow: '0 0 10px rgba(255,255,255,0.3)',
+          textShadow: '0 1px 3px rgba(0,0,0,0.4)',
           lineHeight: 1.2,
           marginTop: '2px',
         }}
@@ -263,17 +253,17 @@ const LegendItem: React.FC<{
       />
       <div className="flex flex-col min-w-0 flex-1">
         <span
-          className="text-xs font-medium truncate"
-          style={{ color: 'var(--text-primary)' }}
+          className="text-xs font-semibold truncate"
+          style={{ color: 'var(--text-primary)', textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}
           title={segment.name}
         >
           {segment.name}
         </span>
         <div className="flex items-center gap-1">
-          <span className="text-xs font-bold" style={{ color: segment.fill }}>
+          <span className="text-xs font-bold" style={{ color: segment.fill, textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
             {segment.value}
           </span>
-          <span className="text-xs opacity-60" style={{ color: 'var(--text-secondary)' }}>
+          <span className="text-xs opacity-80" style={{ color: 'var(--text-secondary)', textShadow: '0 1px 2px rgba(0,0,0,0.15)' }}>
             ({Math.round(segment.percentage * 100)}%)
           </span>
         </div>
@@ -300,14 +290,12 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
   breathInterval = 3,
   onSegmentClick,
   onSegmentHover,
-  rotationSpeed = 30,
 }) => {
   const [isAnimating, setIsAnimating] = useState(true);
   const [animationProgress, setAnimationProgress] = useState(0);
   const [hoveredSegment, setHoveredSegment] = useState<number | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const [breathPhase, setBreathPhase] = useState(0);
-  const [rotation, setRotation] = useState(0);
 
   const svgSize = size + 20;
   const center = svgSize / 2;
@@ -335,7 +323,6 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
 
   const animationRef = useRef<number | null>(null);
   const breathRef = useRef<number | null>(null);
-  const rotationRef = useRef<number | null>(null);
 
   useEffect(() => {
     setIsAnimating(true);
@@ -377,23 +364,6 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
       if (breathRef.current) cancelAnimationFrame(breathRef.current);
     };
   }, [isAnimating, breathInterval]);
-
-  useEffect(() => {
-    if (isAnimating) return;
-    let lastTime = performance.now();
-
-    const rotate = (currentTime: number) => {
-      const delta = currentTime - lastTime;
-      lastTime = currentTime;
-      setRotation((prev) => (prev + (delta / 1000) * rotationSpeed * 0.5) % 360);
-      rotationRef.current = requestAnimationFrame(rotate);
-    };
-
-    rotationRef.current = requestAnimationFrame(rotate);
-    return () => {
-      if (rotationRef.current) cancelAnimationFrame(rotationRef.current);
-    };
-  }, [isAnimating, rotationSpeed]);
 
   const describeArcForFilled = useCallback((startAngle: number, endAngle: number): string => {
     const gap = 2;
@@ -541,6 +511,15 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
             <filter id="donut-blur" x="-20%" y="-20%" width="140%" height="140%">
               <feGaussianBlur stdDeviation={blurAmount / 2} />
             </filter>
+            <filter id="donut-blur-edge" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation={blurAmount * 0.75} result="edgeBlur" />
+              <feMorphology operator="dilate" radius="1" result="dilated" />
+              <feGaussianBlur stdDeviation={1} result="softEdge" />
+              <feMerge>
+                <feMergeNode in="softEdge" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
 
           <circle
@@ -556,9 +535,7 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
 
           <g
             style={{
-              transform: `rotate(${rotation}deg)`,
               transformOrigin: `${center}px ${center}px`,
-              transition: 'transform 0.016s linear',
             }}
             aria-hidden="true"
           >
@@ -583,6 +560,8 @@ const AnimatedDonutChart: React.FC<AnimatedDonutChartProps> = memo(({
                   describeArcForFilled={describeArcForFilled}
                   onHover={handleSegmentHover}
                   onClick={handleSegmentClick}
+                  hasBlur={true}
+                  cornerRadius={cornerRadius}
                 />
               ))}
             </g>

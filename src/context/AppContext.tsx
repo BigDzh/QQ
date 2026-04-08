@@ -211,8 +211,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (isInitializedRef.current && projects.length > 0) {
-      dataRelationService.initialize(projects, tasks, borrowRecords);
-      invalidateSearchCache();
+      const timeoutId = setTimeout(() => {
+        dataRelationService.initialize(projects, tasks, borrowRecords);
+        invalidateSearchCache();
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
     }
   }, [projects, tasks, borrowRecords]);
 

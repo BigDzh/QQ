@@ -56,27 +56,6 @@ function PrefetchHelper() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const prefetchAssets = () => {
-      const assetsToPrefetch = [
-        { href: '/assets/vendor-react.js', as: 'script', type: 'module' },
-        { href: '/assets/index.js', as: 'script', type: 'module' },
-      ];
-
-      assetsToPrefetch.forEach((asset) => {
-        const existingLink = document.querySelector(`link[href="${asset.href}"]`);
-        if (existingLink) return;
-
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = asset.as;
-        link.href = asset.href;
-        if (asset.type) {
-          link.setAttribute('fetchpriority', 'high');
-        }
-        document.head.appendChild(link);
-      });
-    };
-
     const prefetchRoutes = ['/projects', '/tasks', '/borrow', '/tools', '/backups'];
     prefetchRoutes.forEach((route) => {
       const link = document.createElement('link');
@@ -85,12 +64,6 @@ function PrefetchHelper() {
       link.href = route;
       document.head.appendChild(link);
     });
-
-    if ('requestIdleCallback' in window) {
-      (window as any).requestIdleCallback(prefetchAssets, { timeout: 2000 });
-    } else {
-      setTimeout(prefetchAssets, 1);
-    }
   }, []);
 
   return null;

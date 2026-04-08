@@ -88,6 +88,8 @@ export interface WorkerResponse {
 
 let pdfWorker: Worker | null = null;
 let hashWorker: Worker | null = null;
+let pdfBlobUrl: string | null = null;
+let hashBlobUrl: string | null = null;
 
 export function getPDFWorker(): Worker | null {
   if (typeof Worker === 'undefined') return null;
@@ -112,7 +114,8 @@ export function getPDFWorker(): Worker | null {
       };
     `;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
-    pdfWorker = new Worker(URL.createObjectURL(blob));
+    pdfBlobUrl = URL.createObjectURL(blob);
+    pdfWorker = new Worker(pdfBlobUrl);
   }
 
   return pdfWorker;
@@ -143,7 +146,8 @@ export function getHashWorker(): Worker | null {
       };
     `;
     const blob = new Blob([workerCode], { type: 'application/javascript' });
-    hashWorker = new Worker(URL.createObjectURL(blob));
+    hashBlobUrl = URL.createObjectURL(blob);
+    hashWorker = new Worker(hashBlobUrl);
   }
 
   return hashWorker;
@@ -157,6 +161,14 @@ export function terminateWorkers(): void {
   if (hashWorker) {
     hashWorker.terminate();
     hashWorker = null;
+  }
+  if (pdfBlobUrl) {
+    URL.revokeObjectURL(pdfBlobUrl);
+    pdfBlobUrl = null;
+  }
+  if (hashBlobUrl) {
+    URL.revokeObjectURL(hashBlobUrl);
+    hashBlobUrl = null;
   }
 }
 

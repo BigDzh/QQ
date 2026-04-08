@@ -12,11 +12,19 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'on-first-retry',
+    launchOptions: {
+      args: ['--disable-web-security'],
+    },
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: ['--disable-web-security', '--allow-file-access-from-files'],
+        },
+      },
       testMatch: /.*\.spec\.ts/,
     },
     {

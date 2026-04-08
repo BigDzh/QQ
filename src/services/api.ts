@@ -29,6 +29,7 @@ async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
       const errorData = await response.json();
       errorMessage = errorData.error || errorData.message || errorMessage;
     } catch {
+      // Ignore JSON parse errors, use default error message
     }
     return { success: false, error: errorMessage, statusCode };
   }

@@ -38,6 +38,8 @@ export function usePerformanceObserver(options: UsePerformanceObserverOptions = 
   const [metrics, setMetrics] = useState<PerformanceMetric[]>([]);
   const observersRef = useRef<PerformanceObserver[]>([]);
   const memoryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const onMetricRef = useRef(onMetric);
+  onMetricRef.current = onMetric;
 
   const addMetric = useCallback((name: string, value: number, unit: string = 'ms') => {
     const metric: PerformanceMetric = {
@@ -47,8 +49,8 @@ export function usePerformanceObserver(options: UsePerformanceObserverOptions = 
       timestamp: Date.now(),
     };
     setMetrics(prev => [...prev.slice(-99), metric]);
-    onMetric?.(metric);
-  }, [onMetric]);
+    onMetricRef.current?.(metric);
+  }, []);
 
   const measureTTFB = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -66,7 +68,7 @@ export function usePerformanceObserver(options: UsePerformanceObserverOptions = 
     measureTTFB();
 
     if (trackMemory && 'memory' in performance) {
-      memoryIntervalRef.current = setInterval(() => {
+      const intervalId = setInterval(() => {
         const memory = (performance as Performance & { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
         if (memory) {
           addMetric('Memory Used', memory.usedJSHeapSize, 'bytes');
@@ -77,6 +79,7 @@ export function usePerformanceObserver(options: UsePerformanceObserverOptions = 
           }));
         }
       }, memoryCheckInterval);
+      memoryIntervalRef.current = intervalId;
     }
 
     const metricNames: Array<{ name: string; type: string }> = [
@@ -85,6 +88,8 @@ export function usePerformanceObserver(options: UsePerformanceObserverOptions = 
       { name: 'FID', type: 'event' },
       { name: 'CLS', type: 'layout-shift' },
     ];
+
+    const newObservers: PerformanceObserver[] = [];
 
     metricNames.forEach(({ name, type }) => {
       try {
@@ -124,13 +129,15 @@ export function usePerformanceObserver(options: UsePerformanceObserverOptions = 
         });
 
         observer.observe({ type: type as string, buffered: true });
-        observersRef.current.push(observer);
+        newObservers.push(observer);
       } catch {
       }
     });
 
+    observersRef.current = newObservers;
+
     return () => {
-      observersRef.current.forEach(observer => observer.disconnect());
+      newObservers.forEach(observer => observer.disconnect());
       observersRef.current = [];
       if (memoryIntervalRef.current) {
         clearInterval(memoryIntervalRef.current);

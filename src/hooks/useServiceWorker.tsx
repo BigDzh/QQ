@@ -20,6 +20,11 @@ export function useServiceWorker(): UseServiceWorkerReturn {
       return;
     }
 
+    if (window.location.protocol === 'file:') {
+      setIsSupported(false);
+      return;
+    }
+
     setIsSupported(true);
 
     const registerSW = async () => {
