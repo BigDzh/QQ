@@ -186,15 +186,6 @@ export const CORE_FEATURES: FeatureToggle[] = [
     enabledInLowMode: true,
     resourceCost: 'low',
   },
-  {
-    id: 'task-auto-create',
-    name: '自动任务创建',
-    description: '根据系统状态自动创建任务',
-    category: 'core',
-    enabledInHighMode: true,
-    enabledInLowMode: false,
-    resourceCost: 'medium',
-  },
 ];
 
 export const ENHANCED_FEATURES: FeatureToggle[] = [
@@ -238,6 +229,15 @@ export const ENHANCED_FEATURES: FeatureToggle[] = [
     id: 'notification',
     name: '后台通知',
     description: '后台任务通知推送',
+    category: 'enhanced',
+    enabledInHighMode: true,
+    enabledInLowMode: false,
+    resourceCost: 'medium',
+  },
+  {
+    id: 'task-auto-create',
+    name: '自动任务创建',
+    description: '根据系统状态自动创建任务',
     category: 'enhanced',
     enabledInHighMode: true,
     enabledInLowMode: false,

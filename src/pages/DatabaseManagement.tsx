@@ -853,7 +853,11 @@ export default function DatabaseManagement() {
           )}
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`p-2 rounded-lg border transition-colors ${autoRefresh ? 'bg-green-100 border-green-300 text-green-600' : t.border}`}
+            className={`p-2 rounded-lg border transition-colors ${
+              autoRefresh
+                ? 'bg-green-100 border-green-300 text-green-600'
+                : 'bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
             title={autoRefresh ? '自动刷新已开启 (30秒)' : '自动刷新已关闭'}
           >
             <SyncIcon size={18} className={autoRefresh ? 'animate-spin' : ''} />

@@ -22,6 +22,7 @@ export function useHierarchicalLogger(options: UseHierarchicalLoggerOptions = {}
   const { autoRefresh = false, refreshInterval = 5000 } = options;
   const loggerRef = useRef(getLogger());
   const listenersRef = useRef<Set<LogListener<HierarchicalLogEntry>>>(new Set());
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getAllLogs = useCallback((filter?: LogFilter): HierarchicalLogEntry[] => {
     return loggerRef.current.getAllLogs(filter);
@@ -81,7 +82,13 @@ export function useHierarchicalLogger(options: UseHierarchicalLoggerOptions = {}
   }, []);
 
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (!autoRefresh) {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      return;
+    }
 
     const interval = setInterval(() => {
       listenersRef.current.forEach(listener => {
@@ -95,12 +102,25 @@ export function useHierarchicalLogger(options: UseHierarchicalLoggerOptions = {}
         }
       });
     }, refreshInterval);
+    refreshIntervalRef.current = interval;
 
-    return () => clearInterval(interval);
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+    };
   }, [autoRefresh, refreshInterval]);
 
   useEffect(() => {
     return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+      listenersRef.current.forEach(listener => {
+        loggerRef.current.removeGlobalListener(listener);
+      });
       listenersRef.current.clear();
     };
   }, []);

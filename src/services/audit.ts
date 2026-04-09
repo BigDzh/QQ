@@ -9,35 +9,62 @@ const FLUSH_INTERVAL_MS = 5000;
 
 let logBuffer: AuditLog[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let isUnloading = false;
 
-export function getAuditLogs(): AuditLog[] {
-  return safeGetObject<AuditLog[]>(AUDIT_LOGS_KEY) || [];
+function getAuditLogsFromStorage(): AuditLog[] {
+  try {
+    return safeGetObject<AuditLog[]>(AUDIT_LOGS_KEY) || [];
+  } catch (error) {
+    console.error('Failed to get audit logs:', error);
+    return [];
+  }
 }
 
-export function saveAuditLogs(logs: AuditLog[]): void {
-  safeSetObject(AUDIT_LOGS_KEY, logs);
+export function getAuditLogs(): AuditLog[] {
+  return getAuditLogsFromStorage();
+}
+
+function saveAuditLogs(logs: AuditLog[]): void {
+  try {
+    safeSetObject(AUDIT_LOGS_KEY, logs);
+  } catch (error) {
+    console.error('Failed to save audit logs:', error);
+  }
 }
 
 function flushLogs(): void {
   if (logBuffer.length === 0) return;
 
-  const logs = getAuditLogs();
-  const newLogs = [...logBuffer, ...logs].slice(0, MAX_AUDIT_LOGS);
-  saveAuditLogs(newLogs);
-  logBuffer = [];
-
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
+  try {
+    const logs = getAuditLogsFromStorage();
+    const newLogs = [...logBuffer, ...logs].slice(0, MAX_AUDIT_LOGS);
+    saveAuditLogs(newLogs);
+    logBuffer = [];
+  } finally {
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
   }
 }
 
 function scheduleFlush(): void {
-  if (flushTimer) return;
+  if (flushTimer || isUnloading) return;
 
   flushTimer = setTimeout(() => {
     flushLogs();
   }, FLUSH_INTERVAL_MS);
+}
+
+function handleBeforeUnload(): void {
+  isUnloading = true;
+  if (logBuffer.length > 0) {
+    flushLogs();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', handleBeforeUnload);
 }
 
 export function addAuditLog(
@@ -128,8 +155,81 @@ export function addComponentAuditLog(
   return addAuditLog(userId, username, action, 'INFO', 'Component', componentId, componentName, details, beforeState, afterState, reason, additionalInfo);
 }
 
+export function addProjectAuditLog(
+  userId: string,
+  username: string,
+  action: AuditAction,
+  projectId: string,
+  projectName: string,
+  details?: string,
+  beforeState?: Record<string, unknown>,
+  afterState?: Record<string, unknown>,
+  reason?: string,
+  additionalInfo?: string
+): AuditLog {
+  return addAuditLog(userId, username, action, 'INFO', 'Project', projectId, projectName, details, beforeState, afterState, reason, additionalInfo);
+}
+
+export function addSoftwareAuditLog(
+  userId: string,
+  username: string,
+  action: AuditAction,
+  softwareId: string,
+  softwareName: string,
+  details?: string,
+  beforeState?: Record<string, unknown>,
+  afterState?: Record<string, unknown>,
+  reason?: string,
+  additionalInfo?: string
+): AuditLog {
+  return addAuditLog(userId, username, action, 'INFO', 'Software', softwareId, softwareName, details, beforeState, afterState, reason, additionalInfo);
+}
+
+export function addDocumentAuditLog(
+  userId: string,
+  username: string,
+  action: AuditAction,
+  documentId: string,
+  documentName: string,
+  details?: string,
+  beforeState?: Record<string, unknown>,
+  afterState?: Record<string, unknown>,
+  reason?: string,
+  additionalInfo?: string
+): AuditLog {
+  return addAuditLog(userId, username, action, 'INFO', 'Document', documentId, documentName, details, beforeState, afterState, reason, additionalInfo);
+}
+
 export function exportAuditLogs(): string {
   flushLogs();
-  const logs = getAuditLogs();
+  const logs = getAuditLogsFromStorage();
   return JSON.stringify(logs, null, 2);
+}
+
+export function getAuditLogsByUser(userId: string): AuditLog[] {
+  const logs = getAuditLogsFromStorage();
+  return logs.filter(log => log.userId === userId);
+}
+
+export function getAuditLogsByResource(resourceType: string, resourceId?: string): AuditLog[] {
+  const logs = getAuditLogsFromStorage();
+  return logs.filter(log =>
+    log.resourceType === resourceType &&
+    (!resourceId || log.resourceId === resourceId)
+  );
+}
+
+export function getAuditLogsByTimeRange(startTime: string, endTime: string): AuditLog[] {
+  const logs = getAuditLogsFromStorage();
+  return logs.filter(log => log.timestamp >= startTime && log.timestamp <= endTime);
+}
+
+export function searchAuditLogs(keyword: string): AuditLog[] {
+  const logs = getAuditLogsFromStorage();
+  const lowerKeyword = keyword.toLowerCase();
+  return logs.filter(log =>
+    log.details?.toLowerCase().includes(lowerKeyword) ||
+    log.resourceName?.toLowerCase().includes(lowerKeyword) ||
+    log.username.toLowerCase().includes(lowerKeyword)
+  );
 }

@@ -135,6 +135,7 @@ export function usePerformanceMetrics(): PerformanceMetrics {
 
 export function useResourceTiming() {
   const [resourceTiming, setResourceTiming] = useState<PerformanceResourceTiming[]>([]);
+  const MAX_RESOURCE_ENTRIES = 100;
 
   useEffect(() => {
     if (!('PerformanceObserver' in window)) {
@@ -146,7 +147,12 @@ export function useResourceTiming() {
       const timingEntries = entries.filter(
         (entry): entry is PerformanceResourceTiming => entry.entryType === 'resource'
       );
-      setResourceTiming(prev => [...prev, ...timingEntries]);
+      if (timingEntries.length === 0) return;
+
+      setResourceTiming(prev => {
+        const combined = [...prev, ...timingEntries];
+        return combined.slice(-MAX_RESOURCE_ENTRIES);
+      });
     });
 
     try {

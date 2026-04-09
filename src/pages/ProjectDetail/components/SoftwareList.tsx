@@ -902,10 +902,7 @@ export function SoftwareList({
                       {canEdit && (
                         <button
                           onClick={() => {
-                            if (confirm('确定要删除该软件吗？')) {
-                              onDeleteSoftware(soft.id);
-                              showToast('软件已删除', 'success');
-                            }
+                            onDeleteSoftware(soft.id);
                           }}
                           className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}
                           title="删除"

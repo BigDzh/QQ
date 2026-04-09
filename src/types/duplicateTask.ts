@@ -1,6 +1,7 @@
 export type DuplicateMatchField = 'title' | 'description' | 'priority' | 'dueDate' | 'all';
 export type DeletionAction = 'move_to_trash' | 'permanent_delete';
 export type DeletionTrigger = 'manual' | 'automatic';
+export type FaultTaskType = 'module-fault' | 'component-fault' | 'software-incomplete' | 'document-incomplete';
 
 export interface DuplicateRule {
   id: string;

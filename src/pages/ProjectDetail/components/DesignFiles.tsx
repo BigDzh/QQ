@@ -1558,10 +1558,7 @@ export function DesignFiles({
                       {canEdit && (
                         <button
                           onClick={() => {
-                            if (confirm('确定要删除这个设计文件吗？')) {
-                              onDelete(file.id);
-                              showToast('设计文件已删除', 'success');
-                            }
+                            onDelete(file.id);
                           }}
                           className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}
                           title="删除"

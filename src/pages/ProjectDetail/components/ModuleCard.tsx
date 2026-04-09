@@ -38,9 +38,7 @@ const ModuleCard = memo(function ModuleCard({
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (confirm('确定要删除该模块吗？')) {
-      onDelete(module.id);
-    }
+    onDelete(module.id);
   }, [module.id, onDelete]);
 
   const handleEdit = useCallback((e: React.MouseEvent) => {

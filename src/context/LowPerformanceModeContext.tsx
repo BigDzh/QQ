@@ -11,6 +11,7 @@ import {
 import { useResourceMonitor } from '../hooks/useResourceMonitor';
 import { usePerformanceMode } from './PerformanceModeContext';
 import { useToast } from '../components/Toast';
+import { memoryOptimizer, checkMemoryPressure } from '../utils/memoryOptimizer';
 import {
   type PerformanceMode,
   type ResourceMetrics,
@@ -46,6 +47,11 @@ interface LowPerformanceModeContextType {
   enabledFeatures: FeatureToggle[];
   disabledFeatures: FeatureToggle[];
   isFeatureEnabled: (featureId: string) => boolean;
+  featureOverrides: Record<string, boolean>;
+  setFeatureOverride: (featureId: string, enabled: boolean) => void;
+  clearFeatureOverride: (featureId: string) => void;
+  clearAllFeatureOverrides: () => void;
+  getEffectiveFeatureState: (feature: FeatureToggle) => boolean;
   dismissAlert: (alertId: string) => void;
   clearAlerts: () => void;
   config: LowPerformanceModeConfig;
@@ -65,6 +71,7 @@ const LOW_PERFORMANCE_MODE_KEY = 'low_performance_mode';
 const AUTO_MODE_KEY = 'auto_mode_enabled';
 const CONFIG_KEY = 'low_performance_config';
 const SWITCH_HISTORY_KEY = 'mode_switch_history';
+const FEATURE_OVERRIDES_KEY = 'feature_overrides';
 const MAX_SWITCH_HISTORY = 10;
 
 interface LowPerformanceModeProviderProps {
@@ -101,6 +108,7 @@ export function LowPerformanceModeProvider({
   const [modeChangeReason, setModeChangeReason] = useState<string | null>(null);
   const [lastSwitchEvent, setLastSwitchEvent] = useState<ModeSwitchEvent | null>(null);
   const [switchHistory, setSwitchHistory] = useState<ModeSwitchEvent[]>([]);
+  const [featureOverrides, setFeatureOverridesState] = useState<Record<string, boolean>>({});
 
   const previousModeRef = useRef<PerformanceMode>('high');
   const modeChangeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -126,6 +134,15 @@ export function LowPerformanceModeProvider({
       }
     } catch {
       // Ignore history parse errors
+    }
+
+    try {
+      const savedOverrides = localStorage.getItem(FEATURE_OVERRIDES_KEY);
+      if (savedOverrides) {
+        setFeatureOverridesState(JSON.parse(savedOverrides));
+      }
+    } catch {
+      // Ignore feature overrides parse errors
     }
   }, []);
 
@@ -264,6 +281,50 @@ export function LowPerformanceModeProvider({
     [mode]
   );
 
+  const getEffectiveFeatureState = useCallback(
+    (feature: FeatureToggle): boolean => {
+      if (featureOverrides[feature.id] !== undefined) {
+        return featureOverrides[feature.id];
+      }
+      return isFeatureEnabled(feature.id, mode);
+    },
+    [featureOverrides, mode]
+  );
+
+  const setFeatureOverride = useCallback((featureId: string, enabled: boolean) => {
+    setFeatureOverridesState(prev => {
+      const updated = { ...prev, [featureId]: enabled };
+      try {
+        localStorage.setItem(FEATURE_OVERRIDES_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore storage errors
+      }
+      return updated;
+    });
+  }, []);
+
+  const clearFeatureOverride = useCallback((featureId: string) => {
+    setFeatureOverridesState(prev => {
+      const updated = { ...prev };
+      delete updated[featureId];
+      try {
+        localStorage.setItem(FEATURE_OVERRIDES_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore storage errors
+      }
+      return updated;
+    });
+  }, []);
+
+  const clearAllFeatureOverrides = useCallback(() => {
+    setFeatureOverridesState({});
+    try {
+      localStorage.removeItem(FEATURE_OVERRIDES_KEY);
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+
   const resourceStatus = resourceMetrics?.overallStatus || 'normal';
 
   const resourceScore = useMemo(() => {
@@ -272,12 +333,29 @@ export function LowPerformanceModeProvider({
   }, [resourceMetrics]);
 
   useEffect(() => {
+    if (mode === 'low') {
+      memoryOptimizer.setLowMemoryMode(true);
+    } else {
+      memoryOptimizer.setLowMemoryMode(false);
+    }
+  }, [mode]);
+
+  useEffect(() => {
     if (!isAutoMode || !mergedConfig.autoSwitchEnabled) return;
     if (!resourceMetrics) return;
 
     const now = Date.now();
     const timeSinceLastSwitch = now - lastModeChangeTimeRef.current;
     if (timeSinceLastSwitch < mergedConfig.minDurationInMode) {
+      return;
+    }
+
+    const { level: memoryLevel } = checkMemoryPressure();
+    if (memoryLevel === 'critical' && mode !== 'low') {
+      console.log('[LowPerformanceMode] Critical memory pressure detected, switching to low mode');
+      setMode('low');
+      notifyModeChange('low', '内存严重不足', 'auto-memory');
+      memoryOptimizer.setLowMemoryMode(true);
       return;
     }
 
@@ -348,6 +426,11 @@ export function LowPerformanceModeProvider({
         enabledFeatures,
         disabledFeatures,
         isFeatureEnabled: isFeatureEnabledFn,
+        featureOverrides,
+        setFeatureOverride,
+        clearFeatureOverride,
+        clearAllFeatureOverrides,
+        getEffectiveFeatureState,
         dismissAlert,
         clearAlerts,
         config: mergedConfig,

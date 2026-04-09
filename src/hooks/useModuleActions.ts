@@ -31,10 +31,8 @@ export function useModuleActions(params: {
   }, [projectId, addModule]);
 
   const handleDeleteModule = useCallback((moduleId: string) => {
-    if (confirm('确定要删除该模块吗？')) {
-      deleteModule(projectId, moduleId);
-      showToast('模块已删除', 'success');
-    }
+    deleteModule(projectId, moduleId);
+    showToast('模块已删除', 'success');
   }, [projectId, deleteModule, showToast]);
 
   const handleEditModule = useCallback((module: Module) => {

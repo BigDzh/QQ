@@ -252,10 +252,7 @@ export function ModuleList({
   };
 
   const handleDeleteModule = (moduleId: string) => {
-    if (confirm('确定要删除该模块吗？')) {
-      onDeleteModule(moduleId);
-      showToast('模块已删除', 'success');
-    }
+    onDeleteModule(moduleId);
   };
 
   const handleEditModule = (module: Module) => {

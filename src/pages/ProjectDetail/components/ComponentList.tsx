@@ -617,10 +617,7 @@ export function ComponentList({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm('确定要删除该组件吗？')) {
-                              onDeleteComponent(comp.moduleId, comp.id);
-                              showToast('组件已删除', 'success');
-                            }
+                            onDeleteComponent(comp.moduleId, comp.id);
                           }}
                           className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}
                           title="删除"

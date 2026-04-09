@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Cpu, HardDrive, Monitor as MonitorIcon, MemoryStick, Globe, Zap, Wifi, WifiOff, Clock, Activity, TrendingUp, TrendingDown, Minus, RefreshCw, Minimize2, X, Pin, PinOff } from 'lucide-react';
+import { Cpu, HardDrive, Monitor as MonitorIcon, MemoryStick, Globe, Zap, Wifi, WifiOff, Clock, Activity, TrendingUp, TrendingDown, Minus, RefreshCw, Minimize2, X, Pin, PinOff, Settings } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { usePerformanceMode } from '../context/PerformanceModeContext';
 import { useLowPerformanceMode } from '../context/LowPerformanceModeContext';
+import FeatureSwitchPanel from '../components/FeatureSwitchPanel';
 import type { FeatureToggle } from '../types/lowPerformanceMode';
 
 interface ResourceData {
@@ -36,8 +37,7 @@ const MAX_HISTORY = 20;
 export default function MonitorWindow() {
   const { isDark } = useTheme();
   const { isHighPerformance } = usePerformanceMode();
-  const { features: allFeatures, isFeatureEnabled } = useLowPerformanceMode();
-  const [featureOverrides] = useState<Record<string, boolean>>({});
+  const { features: allFeatures, isFeatureEnabled, getEffectiveFeatureState: contextGetEffectiveFeatureState, featureOverrides } = useLowPerformanceMode();
   const [resources, setResources] = useState<ResourceData>({
     cpu: 0,
     memory: 0,
@@ -62,15 +62,13 @@ export default function MonitorWindow() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alwaysOnTop, setAlwaysOnTop] = useState(true);
   const [showFeatures, setShowFeatures] = useState(false);
+  const [showFeaturePanel, setShowFeaturePanel] = useState(false);
   const lastUpdateTime = useRef(performance.now());
   const cpuSamples = useRef<number[]>([]);
 
   const getEffectiveFeatureState = useCallback((feature: FeatureToggle) => {
-    if (featureOverrides[feature.id] !== undefined) {
-      return featureOverrides[feature.id];
-    }
-    return isFeatureEnabled(feature.id);
-  }, [featureOverrides, isFeatureEnabled]);
+    return contextGetEffectiveFeatureState(feature);
+  }, [contextGetEffectiveFeatureState]);
 
   const getMemoryInfo = useCallback(() => {
     const memory = (performance as any).memory;
@@ -444,23 +442,33 @@ export default function MonitorWindow() {
               {isHighPerformance ? <Zap size={14} className="text-amber-500" /> : <Activity size={14} className="text-slate-500" />}
               {isHighPerformance ? '高性能' : '低性能'}模式
             </span>
-            <button
-              onClick={() => setShowFeatures(!showFeatures)}
-              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
-                showFeatures
-                  ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
-                  : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600'
-              }`}
-            >
-              <Globe size={12} />
-              {enabledCount}/{allFeatures.length}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setShowFeaturePanel(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600"
+                title="打开功能开关控制面板"
+              >
+                <Settings size={12} />
+              </button>
+              <button
+                onClick={() => setShowFeatures(!showFeatures)}
+                className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${
+                  showFeatures
+                    ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                    : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Globe size={12} />
+                {enabledCount}/{allFeatures.length}
+              </button>
+            </div>
           </div>
 
           {showFeatures && (
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600 space-y-2 max-h-40 overflow-y-auto">
               {allFeatures.map(feature => {
                 const isEnabled = getEffectiveFeatureState(feature);
+                const hasOverride = featureOverrides[feature.id] !== undefined;
                 const categoryColors = {
                   core: 'text-amber-500',
                   enhanced: 'text-blue-500',
@@ -474,6 +482,9 @@ export default function MonitorWindow() {
                     <span className={isEnabled ? 'text-gray-700 dark:text-gray-200' : 'text-gray-400'}>
                       {feature.name}
                     </span>
+                    {hasOverride && (
+                      <span className="text-xs text-cyan-400">(手动)</span>
+                    )}
                     <span className={`ml-auto ${categoryColors[feature.category]}`}>
                       {feature.category === 'core' ? '核心' : feature.category === 'enhanced' ? '增强' : '可选'}
                     </span>
@@ -525,6 +536,11 @@ export default function MonitorWindow() {
           <DetailItem label="磁盘使用" value={`${formatNumber(resources.diskUsed)} GB`} />
         </div>
       </div>
+
+      <FeatureSwitchPanel
+        isVisible={showFeaturePanel}
+        onClose={() => setShowFeaturePanel(false)}
+      />
     </div>
   );
 }

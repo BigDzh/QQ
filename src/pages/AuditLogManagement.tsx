@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react';
-import { FileText, Search, Download, Trash2, Info, AlertTriangle, AlertCircle, Activity, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { FileText, Search, Download, Trash2, Info, AlertTriangle, AlertCircle, Activity, ChevronDown, ChevronUp, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAuditLogs, clearAuditLogs, exportAuditLogs } from '../services/audit';
 import { getStateChangeLogs, exportStateChangeLogs, clearStateChangeLogs } from '../services/stateChangeLogger';
 import type { AuditLog, AuditAction, AuditLevel } from '../types/audit';
 import type { StateChangeLog, StateChangePriority } from '../services/stateChangeLogger';
 import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
+
+const AUDIT_PAGE_SIZE = 50;
+const STATE_CHANGE_PAGE_SIZE = 50;
 
 const actionLabels: Record<AuditAction, string> = {
   LOGIN: '登录',
@@ -45,9 +48,7 @@ export default function AuditLogManagement() {
   const t = useThemeStyles();
   const [activeTab, setActiveTab] = useState<TabType>('audit');
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<AuditLog[]>([]);
   const [stateChangeLogs, setStateChangeLogs] = useState<StateChangeLog[]>([]);
-  const [filteredStateChangeLogs, setFilteredStateChangeLogs] = useState<StateChangeLog[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFilter, setActionFilter] = useState<AuditAction | 'all'>('all');
   const [levelFilter, setLevelFilter] = useState<AuditLevel | 'all'>('all');
@@ -55,23 +56,15 @@ export default function AuditLogManagement() {
   const [stateChangeSearchTerm, setStateChangeSearchTerm] = useState('');
   const [stateChangeResourceFilter, setStateChangeResourceFilter] = useState<string>('all');
   const [stateChangePriorityFilter, setStateChangePriorityFilter] = useState<string>('all');
+  const [auditPage, setAuditPage] = useState(1);
+  const [stateChangePage, setStateChangePage] = useState(1);
 
-  useEffect(() => {
-    const data = getAuditLogs();
-    setLogs(data);
-    setFilteredLogs(data);
-
-    const scLogs = getStateChangeLogs();
-    setStateChangeLogs(scLogs);
-    setFilteredStateChangeLogs(scLogs);
-  }, []);
-
-  useEffect(() => {
-    let filtered = logs;
+  const { debouncedFilteredLogs, debouncedFilteredStateChangeLogs } = useMemo(() => {
+    let filteredLogs = logs;
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
+      filteredLogs = filteredLogs.filter(
         (log) =>
           log.username.toLowerCase().includes(term) ||
           log.resourceName?.toLowerCase().includes(term) ||
@@ -81,22 +74,18 @@ export default function AuditLogManagement() {
     }
 
     if (actionFilter !== 'all') {
-      filtered = filtered.filter((log) => log.action === actionFilter);
+      filteredLogs = filteredLogs.filter((log) => log.action === actionFilter);
     }
 
     if (levelFilter !== 'all') {
-      filtered = filtered.filter((log) => log.level === levelFilter);
+      filteredLogs = filteredLogs.filter((log) => log.level === levelFilter);
     }
 
-    setFilteredLogs(filtered);
-  }, [logs, searchTerm, actionFilter, levelFilter]);
-
-  useEffect(() => {
-    let filtered = stateChangeLogs;
+    let filteredStateLogs = stateChangeLogs;
 
     if (stateChangeSearchTerm) {
       const term = stateChangeSearchTerm.toLowerCase();
-      filtered = filtered.filter(
+      filteredStateLogs = filteredStateLogs.filter(
         (log) =>
           log.username.toLowerCase().includes(term) ||
           log.resourceName?.toLowerCase().includes(term) ||
@@ -107,15 +96,48 @@ export default function AuditLogManagement() {
     }
 
     if (stateChangeResourceFilter !== 'all') {
-      filtered = filtered.filter((log) => log.resourceType === stateChangeResourceFilter);
+      filteredStateLogs = filteredStateLogs.filter((log) => log.resourceType === stateChangeResourceFilter);
     }
 
     if (stateChangePriorityFilter !== 'all') {
-      filtered = filtered.filter((log) => log.priority === stateChangePriorityFilter);
+      filteredStateLogs = filteredStateLogs.filter((log) => log.priority === stateChangePriorityFilter);
     }
 
-    setFilteredStateChangeLogs(filtered);
-  }, [stateChangeLogs, stateChangeSearchTerm, stateChangeResourceFilter, stateChangePriorityFilter]);
+    return {
+      debouncedFilteredLogs: filteredLogs,
+      debouncedFilteredStateChangeLogs: filteredStateLogs,
+    };
+  }, [logs, searchTerm, actionFilter, levelFilter, stateChangeLogs, stateChangeSearchTerm, stateChangeResourceFilter, stateChangePriorityFilter]);
+
+  const paginatedAuditLogs = useMemo(() => {
+    const startIndex = (auditPage - 1) * AUDIT_PAGE_SIZE;
+    return debouncedFilteredLogs.slice(startIndex, startIndex + AUDIT_PAGE_SIZE);
+  }, [debouncedFilteredLogs, auditPage]);
+
+  const paginatedStateChangeLogs = useMemo(() => {
+    const startIndex = (stateChangePage - 1) * STATE_CHANGE_PAGE_SIZE;
+    return debouncedFilteredStateChangeLogs.slice(startIndex, startIndex + STATE_CHANGE_PAGE_SIZE);
+  }, [debouncedFilteredStateChangeLogs, stateChangePage]);
+
+  const auditTotalPages = useMemo(() => Math.ceil(debouncedFilteredLogs.length / AUDIT_PAGE_SIZE), [debouncedFilteredLogs]);
+  const stateChangeTotalPages = useMemo(() => Math.ceil(debouncedFilteredStateChangeLogs.length / STATE_CHANGE_PAGE_SIZE), [debouncedFilteredStateChangeLogs]);
+
+  const resetPagination = useCallback(() => {
+    setAuditPage(1);
+    setStateChangePage(1);
+  }, []);
+
+  useEffect(() => {
+    resetPagination();
+  }, [searchTerm, actionFilter, levelFilter, stateChangeSearchTerm, stateChangeResourceFilter, stateChangePriorityFilter, resetPagination]);
+
+  useEffect(() => {
+    const data = getAuditLogs();
+    setLogs(data);
+
+    const scLogs = getStateChangeLogs();
+    setStateChangeLogs(scLogs);
+  }, []);
 
   const handleExportAudit = () => {
     const jsonStr = exportAuditLogs();
@@ -145,7 +167,6 @@ export default function AuditLogManagement() {
     if (confirm('确定要清空所有审计日志吗？此操作不可恢复。')) {
       clearAuditLogs();
       setLogs([]);
-      setFilteredLogs([]);
       showToast('审计日志已清空', 'success');
     }
   };
@@ -154,7 +175,6 @@ export default function AuditLogManagement() {
     if (confirm('确定要清空所有状态变更日志吗？此操作不可恢复。')) {
       clearStateChangeLogs();
       setStateChangeLogs([]);
-      setFilteredStateChangeLogs([]);
       showToast('状态变更日志已清空', 'success');
     }
   };
@@ -324,53 +344,77 @@ export default function AuditLogManagement() {
             </button>
           </div>
 
-          {filteredLogs.length === 0 ? (
+          {debouncedFilteredLogs.length === 0 ? (
             <div className={`text-center py-12 ${t.card} rounded-lg border ${t.border}`}>
               <FileText className={`mx-auto ${t.textMuted} mb-4`} size={48} />
               <p className={t.textMuted}>暂无日志记录</p>
             </div>
           ) : (
-            <div className={`${t.card} rounded-lg shadow-sm overflow-hidden border ${t.border}`}>
-              <table className="w-full">
-                <thead className={t.tableHeader}>
-                  <tr>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>时间</th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>用户</th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>操作</th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>资源类型</th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>资源名称</th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>级别</th>
-                    <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>变更原因</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map((log) => (
-                    <tr key={log.id} className={`border-t ${t.border} ${t.hoverBg}`}>
-                      <td className={`px-4 py-3 text-sm ${t.textMuted}`}>
-                        {formatRelativeTime(log.timestamp)}
-                      </td>
-                      <td className={`px-4 py-3 ${t.text}`}>{log.username}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 ${t.emptyBg} rounded text-xs ${t.text}`}>
-                          {actionLabels[log.action]}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-3 ${t.textSecondary}`}>{log.resourceType}</td>
-                      <td className={`px-4 py-3 ${t.textSecondary}`}>{log.resourceName || '-'}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getLevelColors(log.level)}`}>
-                          {getLevelIcon(log.level)}
-                          {log.level === 'INFO' ? '信息' : log.level === 'WARNING' ? '警告' : '严重'}
-                        </span>
-                      </td>
-                      <td className={`px-4 py-3 text-sm ${t.text} font-medium max-w-xs truncate`}>
-                        {log.reason || log.details || '-'}
-                      </td>
+            <>
+              <div className={`${t.card} rounded-lg shadow-sm overflow-hidden border ${t.border}`}>
+                <table className="w-full">
+                  <thead className={t.tableHeader}>
+                    <tr>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>时间</th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>用户</th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>操作</th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>资源类型</th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>资源名称</th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>级别</th>
+                      <th className={`px-4 py-3 text-left text-sm font-medium ${t.textSecondary}`}>变更原因</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {paginatedAuditLogs.map((log) => (
+                      <tr key={log.id} className={`border-t ${t.border} ${t.hoverBg}`}>
+                        <td className={`px-4 py-3 text-sm ${t.textMuted}`}>
+                          {formatRelativeTime(log.timestamp)}
+                        </td>
+                        <td className={`px-4 py-3 ${t.text}`}>{log.username}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 ${t.emptyBg} rounded text-xs ${t.text}`}>
+                            {actionLabels[log.action]}
+                          </span>
+                        </td>
+                        <td className={`px-4 py-3 ${t.textSecondary}`}>{log.resourceType}</td>
+                        <td className={`px-4 py-3 ${t.textSecondary}`}>{log.resourceName || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs ${getLevelColors(log.level)}`}>
+                            {getLevelIcon(log.level)}
+                            {log.level === 'INFO' ? '信息' : log.level === 'WARNING' ? '警告' : '严重'}
+                          </span>
+                        </td>
+                        <td className={`px-4 py-3 text-sm ${t.text} font-medium max-w-xs truncate`}>
+                          {log.reason || log.details || '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                <div className={`text-sm ${t.textMuted}`}>
+                  显示 {(auditPage - 1) * AUDIT_PAGE_SIZE + 1}-{Math.min(auditPage * AUDIT_PAGE_SIZE, debouncedFilteredLogs.length)} 条，共 {debouncedFilteredLogs.length} 条
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setAuditPage(p => Math.max(1, p - 1))}
+                    disabled={auditPage === 1}
+                    className={`p-1.5 rounded-lg ${auditPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span className={`text-sm ${t.text}`}>第 {auditPage} / {auditTotalPages || 1} 页</span>
+                  <button
+                    onClick={() => setAuditPage(p => Math.min(auditTotalPages, p + 1))}
+                    disabled={auditPage >= auditTotalPages}
+                    className={`p-1.5 rounded-lg ${auditPage >= auditTotalPages ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </>
       ) : (
@@ -447,130 +491,154 @@ export default function AuditLogManagement() {
             </button>
           </div>
 
-          {filteredStateChangeLogs.length === 0 ? (
+          {debouncedFilteredStateChangeLogs.length === 0 ? (
             <div className={`text-center py-12 ${t.card} rounded-lg border ${t.border}`}>
               <Activity className={`mx-auto ${t.textMuted} mb-4`} size={48} />
               <p className={t.textMuted}>暂无状态变更记录</p>
             </div>
           ) : (
-            <div className={`${t.card} rounded-lg shadow-sm overflow-hidden border ${t.border}`}>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
-                {filteredStateChangeLogs.map((log) => {
-                  const priorityConf = priorityConfig[log.priority];
-                  const PriorityIcon = priorityConf.icon;
-                  const isExpanded = expandedLogId === log.id;
+            <>
+              <div className={`${t.card} rounded-lg shadow-sm overflow-hidden border ${t.border}`}>
+                <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                  {paginatedStateChangeLogs.map((log) => {
+                    const priorityConf = priorityConfig[log.priority];
+                    const PriorityIcon = priorityConf.icon;
+                    const isExpanded = expandedLogId === log.id;
 
-                  return (
-                    <div
-                      key={log.id}
-                      className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isExpanded ? 'bg-cyan-50/30 dark:bg-cyan-900/10' : ''}`}
-                    >
+                    return (
                       <div
-                        className="px-4 py-3 cursor-pointer"
-                        onClick={() => toggleExpand(log.id)}
+                        key={log.id}
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${isExpanded ? 'bg-cyan-50/30 dark:bg-cyan-900/10' : ''}`}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className={`mt-0.5 p-1.5 rounded-lg ${priorityConf.bgColor}`}>
-                            <PriorityIcon size={16} className={priorityConf.color} />
-                          </div>
+                        <div
+                          className="px-4 py-3 cursor-pointer"
+                          onClick={() => toggleExpand(log.id)}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={`mt-0.5 p-1.5 rounded-lg ${priorityConf.bgColor}`}>
+                              <PriorityIcon size={16} className={priorityConf.color} />
+                            </div>
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap mb-1">
-                              <span className={`px-1.5 py-0.5 text-xs rounded ${priorityConf.bgColor} ${priorityConf.color} font-medium`}>
-                                {priorityConf.label}
-                              </span>
-                              <span className={`px-1.5 py-0.5 text-xs rounded ${levelConfig[log.level].color} bg-opacity-20`}>
-                                {levelConfig[log.level].label}
-                              </span>
-                              <span className={`text-xs ${t.textSecondary}`}>
-                                {log.resourceType}
-                              </span>
-                              {log.resourceName && (
-                                <span className={`text-sm font-medium ${t.text}`}>
-                                  {log.resourceName}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap mb-1">
+                                <span className={`px-1.5 py-0.5 text-xs rounded ${priorityConf.bgColor} ${priorityConf.color} font-medium`}>
+                                  {priorityConf.label}
                                 </span>
+                                <span className={`px-1.5 py-0.5 text-xs rounded ${levelConfig[log.level].color} bg-opacity-20`}>
+                                  {levelConfig[log.level].label}
+                                </span>
+                                <span className={`text-xs ${t.textSecondary}`}>
+                                  {log.resourceType}
+                                </span>
+                                {log.resourceName && (
+                                  <span className={`text-sm font-medium ${t.text}`}>
+                                    {log.resourceName}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 text-sm mb-2">
+                                <span className={`px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 ${t.textSecondary}`}>
+                                  {log.previousState}
+                                </span>
+                                <span className={`text-cyan-500`}>→</span>
+                                <span className={`px-2 py-1 rounded bg-cyan-100 dark:bg-cyan-900/30 ${t.text} font-medium`}>
+                                  {log.newState}
+                                </span>
+                              </div>
+
+                              <div className={`p-2 rounded-lg bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 border border-cyan-200/50 dark:border-cyan-800/50`}>
+                                <div className="flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 mb-1">
+                                  <span className="font-semibold">变更原因:</span>
+                                </div>
+                                <div className={`text-sm font-medium text-gray-800 dark:text-gray-200`}>
+                                  {log.reason}
+                                </div>
+                              </div>
+
+                              <div className={`mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400`}>
+                                <span className="flex items-center gap-1">
+                                  <Clock size={12} />
+                                  {formatRelativeTime(log.timestamp)}
+                                </span>
+                                <span>·</span>
+                                <span>{log.username}</span>
+                                <span>·</span>
+                                <span className="font-mono text-xs">{log.id.slice(0, 8)}</span>
+                              </div>
+                            </div>
+
+                            <button className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}>
+                              {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className={`px-4 pb-3 ml-14`}>
+                            <div className={`p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border ${t.border} text-sm space-y-2`}>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <div className={`text-xs ${t.textMuted} mb-1`}>资源ID</div>
+                                  <div className={`${t.text} font-mono text-xs break-all`}>{log.resourceId}</div>
+                                </div>
+                                <div>
+                                  <div className={`text-xs ${t.textMuted} mb-1`}>用户ID</div>
+                                  <div className={`${t.text} font-mono text-xs`}>{log.userId || '系统'}</div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <div className={`text-xs ${t.textMuted} mb-1`}>完整原因</div>
+                                <div className={`p-2 rounded bg-white dark:bg-gray-800 border-cyan-200 dark:border-cyan-800 ${t.text} font-medium text-cyan-700 dark:text-cyan-300`}>
+                                  {log.reason}
+                                </div>
+                              </div>
+
+                              {log.context.metadata && Object.keys(log.context.metadata).length > 0 && (
+                                <div>
+                                  <div className={`text-xs ${t.textMuted} mb-1`}>附加信息</div>
+                                  <pre className={`p-2 rounded bg-white dark:bg-gray-800 border ${t.border} ${t.text} text-xs overflow-auto max-h-32`}>
+                                    {JSON.stringify(log.context.metadata, null, 2)}
+                                  </pre>
+                                </div>
                               )}
-                            </div>
 
-                            <div className="flex items-center gap-2 text-sm mb-2">
-                              <span className={`px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 ${t.textSecondary}`}>
-                                {log.previousState}
-                              </span>
-                              <span className={`text-cyan-500`}>→</span>
-                              <span className={`px-2 py-1 rounded bg-cyan-100 dark:bg-cyan-900/30 ${t.text} font-medium`}>
-                                {log.newState}
-                              </span>
-                            </div>
-
-                            <div className={`p-2 rounded-lg bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 border border-cyan-200/50 dark:border-cyan-800/50`}>
-                              <div className="flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400 mb-1">
-                                <span className="font-semibold">变更原因:</span>
+                              <div className="flex items-center justify-between text-xs text-gray-400">
+                                <span>日志ID: {log.id}</span>
+                                <span>{formatTime(log.timestamp)}</span>
                               </div>
-                              <div className={`text-sm font-medium text-gray-800 dark:text-gray-200`}>
-                                {log.reason}
-                              </div>
-                            </div>
-
-                            <div className={`mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400`}>
-                              <span className="flex items-center gap-1">
-                                <Clock size={12} />
-                                {formatRelativeTime(log.timestamp)}
-                              </span>
-                              <span>·</span>
-                              <span>{log.username}</span>
-                              <span>·</span>
-                              <span className="font-mono text-xs">{log.id.slice(0, 8)}</span>
                             </div>
                           </div>
-
-                          <button className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}>
-                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </button>
-                        </div>
+                        )}
                       </div>
-
-                      {isExpanded && (
-                        <div className={`px-4 pb-3 ml-14`}>
-                          <div className={`p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border ${t.border} text-sm space-y-2`}>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <div className={`text-xs ${t.textMuted} mb-1`}>资源ID</div>
-                                <div className={`${t.text} font-mono text-xs break-all`}>{log.resourceId}</div>
-                              </div>
-                              <div>
-                                <div className={`text-xs ${t.textMuted} mb-1`}>用户ID</div>
-                                <div className={`${t.text} font-mono text-xs`}>{log.userId || '系统'}</div>
-                              </div>
-                            </div>
-
-                            <div>
-                              <div className={`text-xs ${t.textMuted} mb-1`}>完整原因</div>
-                              <div className={`p-2 rounded bg-white dark:bg-gray-800 border-cyan-200 dark:border-cyan-800 ${t.text} font-medium text-cyan-700 dark:text-cyan-300`}>
-                                {log.reason}
-                              </div>
-                            </div>
-
-                            {log.context.metadata && Object.keys(log.context.metadata).length > 0 && (
-                              <div>
-                                <div className={`text-xs ${t.textMuted} mb-1`}>附加信息</div>
-                                <pre className={`p-2 rounded bg-white dark:bg-gray-800 border ${t.border} ${t.text} text-xs overflow-auto max-h-32`}>
-                                  {JSON.stringify(log.context.metadata, null, 2)}
-                                </pre>
-                              </div>
-                            )}
-
-                            <div className="flex items-center justify-between text-xs text-gray-400">
-                              <span>日志ID: {log.id}</span>
-                              <span>{formatTime(log.timestamp)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+              <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                <div className={`text-sm ${t.textMuted}`}>
+                  显示 {(stateChangePage - 1) * STATE_CHANGE_PAGE_SIZE + 1}-{Math.min(stateChangePage * STATE_CHANGE_PAGE_SIZE, debouncedFilteredStateChangeLogs.length)} 条，共 {debouncedFilteredStateChangeLogs.length} 条
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setStateChangePage(p => Math.max(1, p - 1))}
+                    disabled={stateChangePage === 1}
+                    className={`p-1.5 rounded-lg ${stateChangePage === 1 ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
+                  <span className={`text-sm ${t.text}`}>第 {stateChangePage} / {stateChangeTotalPages || 1} 页</span>
+                  <button
+                    onClick={() => setStateChangePage(p => Math.min(stateChangeTotalPages, p + 1))}
+                    disabled={stateChangePage >= stateChangeTotalPages}
+                    className={`p-1.5 rounded-lg ${stateChangePage >= stateChangeTotalPages ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </>
       )}

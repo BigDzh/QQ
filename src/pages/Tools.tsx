@@ -35,7 +35,7 @@ export default function Tools() {
   const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrLang, setOcrLang] = useState<'chi_sim+eng' | 'eng' | 'chi_sim'>('chi_sim+eng');
   const [ocrDragging, setOcrDragging] = useState(false);
-  const [ocrHistory, setOcrHistory] = useState<Array<{ id: string; text: string; timestamp: number; lang: string; preview?: string }>>([]);
+  const [ocrHistory, setOcrHistory] = useState<Array<{ id: string; text: string; timestamp: number; lang: string }>>([]);
   const [showOcrHistory, setShowOcrHistory] = useState(false);
   const [ocrPreprocess, setOcrPreprocess] = useState<{ grayscale: boolean; contrast: number; denoise: boolean }>({ grayscale: false, contrast: 1, denoise: false });
   const [showPreprocess, setShowPreprocess] = useState(false);
@@ -652,9 +652,15 @@ export default function Tools() {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
         document.removeEventListener('keydown', handleKeyDown);
-        document.body.removeChild(overlay);
-        document.body.removeChild(selectionDiv);
-        document.body.removeChild(sizeInfo);
+        try {
+          if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        } catch { /* ignore */ }
+        try {
+          if (selectionDiv.parentNode) selectionDiv.parentNode.removeChild(selectionDiv);
+        } catch { /* ignore */ }
+        try {
+          if (sizeInfo.parentNode) sizeInfo.parentNode.removeChild(sizeInfo);
+        } catch { /* ignore */ }
         selectionRef.current = null;
       };
 
@@ -735,13 +741,12 @@ export default function Tools() {
     });
   };
 
-  const addToOcrHistory = (text: string, lang: string, preview?: string) => {
+  const addToOcrHistory = (text: string, lang: string) => {
     const newEntry = {
       id: Date.now().toString(),
-      text,
+      text: text.slice(0, 1000),
       timestamp: Date.now(),
       lang,
-      preview
     };
     setOcrHistory(prev => [newEntry, ...prev].slice(0, 50));
   };
@@ -810,7 +815,7 @@ export default function Tools() {
 
       const { text } = result.data;
       setOcrResult(text);
-      addToOcrHistory(text, ocrLang, ocrImage || undefined);
+      addToOcrHistory(text, ocrLang);
       console.log('[OCR] Worker terminated, recognition successful');
 
       if (imageData && imageData === ocrImage) {
@@ -1276,9 +1281,6 @@ export default function Tools() {
                         className={`p-3 rounded-lg border ${t.border} hover:${t.hoverBg} cursor-pointer transition-colors`}
                         onClick={() => {
                           setOcrResult(item.text);
-                          if (item.preview) {
-                            setOcrImage(item.preview);
-                          }
                         }}
                       >
                         <div className="flex items-center justify-between mb-1">

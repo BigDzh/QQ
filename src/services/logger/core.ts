@@ -506,3 +506,12 @@ export function resetLogger(): void {
     loggerInstance = null;
   }
 }
+
+if (typeof window !== 'undefined') {
+  const handleBeforeUnload = () => {
+    if (loggerInstance) {
+      loggerInstance.destroy();
+    }
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+}

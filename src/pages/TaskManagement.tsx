@@ -212,6 +212,9 @@ export default function TaskManagement() {
       showToast(`已删除 ${result.deletedCount} 个重复任务`, 'success');
       const newGroups = findDuplicates(tasks.filter(t => t.status !== '已完成' && !result.deletedTaskIds.includes(t.id)));
       setDuplicateGroups(newGroups);
+      if (newGroups.length === 0) {
+        setShowDuplicateModal(false);
+      }
     }
     setBatchDeleteConfirm({ isOpen: false, ruleName: '', count: 0, ruleId: '' });
   };

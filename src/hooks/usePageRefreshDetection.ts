@@ -10,12 +10,24 @@ interface PageRefreshState {
   pendingTaskData: Record<string, unknown> | null;
 }
 
+function safeJsonParse<T>(str: string | null, fallback: T): T {
+  if (!str) return fallback;
+  try {
+    return JSON.parse(str) as T;
+  } catch (error) {
+    console.error('Failed to parse JSON:', error);
+    return fallback;
+  }
+}
+
 export function getPageRefreshState(): PageRefreshState {
   const currentTimestamp = Date.now().toString();
   const previousTimestamp = sessionStorage.getItem(PAGE_REFRESH_DETECTION_KEY);
   const submissionToken = sessionStorage.getItem(TASK_SUBMISSION_TOKEN_KEY);
-  const pendingTaskDataStr = sessionStorage.getItem(PENDING_TASK_KEY);
-  const pendingTaskData = pendingTaskDataStr ? JSON.parse(pendingTaskDataStr) : null;
+  const pendingTaskData = safeJsonParse(
+    sessionStorage.getItem(PENDING_TASK_KEY),
+    null
+  );
 
   const isPageRefresh = previousTimestamp !== null &&
     currentTimestamp !== previousTimestamp &&
@@ -30,48 +42,94 @@ export function getPageRefreshState(): PageRefreshState {
 }
 
 export function markPageLoaded(): void {
-  sessionStorage.setItem(PAGE_REFRESH_DETECTION_KEY, Date.now().toString());
+  try {
+    sessionStorage.setItem(PAGE_REFRESH_DETECTION_KEY, Date.now().toString());
+  } catch (error) {
+    console.error('Failed to mark page loaded:', error);
+  }
 }
 
 export function generateSubmissionToken(): string {
   const token = `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  sessionStorage.setItem(TASK_SUBMISSION_TOKEN_KEY, token);
+  try {
+    sessionStorage.setItem(TASK_SUBMISSION_TOKEN_KEY, token);
+  } catch (error) {
+    console.error('Failed to generate submission token:', error);
+  }
   return token;
 }
 
 export function setPendingTaskData(taskData: Record<string, unknown>): void {
-  sessionStorage.setItem(PENDING_TASK_KEY, JSON.stringify(taskData));
+  try {
+    sessionStorage.setItem(PENDING_TASK_KEY, JSON.stringify(taskData));
+  } catch (error) {
+    console.error('Failed to set pending task data:', error);
+  }
 }
 
 export function getAndClearPendingTask(): Record<string, unknown> | null {
   const pendingTaskStr = sessionStorage.getItem(PENDING_TASK_KEY);
   sessionStorage.removeItem(PENDING_TASK_KEY);
   sessionStorage.removeItem(TASK_SUBMISSION_TOKEN_KEY);
-  return pendingTaskStr ? JSON.parse(pendingTaskStr) : null;
+  return safeJsonParse(pendingTaskStr, null);
 }
 
 export function clearPendingTask(): void {
-  sessionStorage.removeItem(PENDING_TASK_KEY);
-  sessionStorage.removeItem(TASK_SUBMISSION_TOKEN_KEY);
+  try {
+    sessionStorage.removeItem(PENDING_TASK_KEY);
+    sessionStorage.removeItem(TASK_SUBMISSION_TOKEN_KEY);
+  } catch (error) {
+    console.error('Failed to clear pending task:', error);
+  }
 }
 
 export function isValidSubmissionToken(token: string): boolean {
-  const storedToken = sessionStorage.getItem(TASK_SUBMISSION_TOKEN_KEY);
-  return storedToken === token;
+  try {
+    const storedToken = sessionStorage.getItem(TASK_SUBMISSION_TOKEN_KEY);
+    return storedToken === token;
+  } catch (error) {
+    console.error('Failed to validate submission token:', error);
+    return false;
+  }
 }
 
 export function recordActivity(): void {
-  sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+  try {
+    sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
+  } catch (error) {
+    console.error('Failed to record activity:', error);
+  }
 }
 
 export function wasRecentlyActive(): boolean {
-  const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
-  if (!lastActivity) return false;
-  const diff = Date.now() - parseInt(lastActivity, 10);
-  return diff < 5000;
+  try {
+    const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+    if (!lastActivity) return false;
+    const diff = Date.now() - parseInt(lastActivity, 10);
+    return diff < 5000;
+  } catch (error) {
+    console.error('Failed to check recent activity:', error);
+    return false;
+  }
 }
 
 export function isDuplicateSubmission(): boolean {
-  const { isPageRefresh, pendingTaskData } = getPageRefreshState();
-  return isPageRefresh && pendingTaskData !== null;
+  try {
+    const { isPageRefresh, pendingTaskData } = getPageRefreshState();
+    return isPageRefresh && pendingTaskData !== null;
+  } catch (error) {
+    console.error('Failed to check duplicate submission:', error);
+    return false;
+  }
+}
+
+export function clearAllPageRefreshData(): void {
+  try {
+    sessionStorage.removeItem(PAGE_REFRESH_DETECTION_KEY);
+    sessionStorage.removeItem(LAST_ACTIVITY_KEY);
+    sessionStorage.removeItem(TASK_SUBMISSION_TOKEN_KEY);
+    sessionStorage.removeItem(PENDING_TASK_KEY);
+  } catch (error) {
+    console.error('Failed to clear all page refresh data:', error);
+  }
 }

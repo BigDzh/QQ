@@ -15,35 +15,66 @@ const NORMAL_STATES = ['正常', '未投产'];
 
 let logBuffer: StateChangeLog[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
+let isUnloading = false;
+
+function getStateChangeLogsFromStorage(): StateChangeLog[] {
+  try {
+    return safeGetObject<StateChangeLog[]>(STATE_CHANGE_LOGS_KEY) || [];
+  } catch (error) {
+    console.error('Failed to get state change logs:', error);
+    return [];
+  }
+}
+
+function saveStateChangeLogsToStorage(logs: StateChangeLog[]): void {
+  try {
+    safeSetObject(STATE_CHANGE_LOGS_KEY, logs);
+  } catch (error) {
+    console.error('Failed to save state change logs:', error);
+  }
+}
 
 export function getStateChangeLogs(): StateChangeLog[] {
-  return safeGetObject<StateChangeLog[]>(STATE_CHANGE_LOGS_KEY) || [];
+  return getStateChangeLogsFromStorage();
 }
 
 export function saveStateChangeLogs(logs: StateChangeLog[]): void {
-  safeSetObject(STATE_CHANGE_LOGS_KEY, logs);
+  saveStateChangeLogsToStorage(logs);
 }
 
 function flushLogs(): void {
   if (logBuffer.length === 0) return;
 
-  const logs = getStateChangeLogs();
-  const newLogs = [...logBuffer, ...logs].slice(0, MAX_STATE_CHANGE_LOGS);
-  saveStateChangeLogs(newLogs);
-  logBuffer = [];
-
-  if (flushTimer) {
-    clearTimeout(flushTimer);
-    flushTimer = null;
+  try {
+    const logs = getStateChangeLogsFromStorage();
+    const newLogs = [...logBuffer, ...logs].slice(0, MAX_STATE_CHANGE_LOGS);
+    saveStateChangeLogsToStorage(newLogs);
+    logBuffer = [];
+  } finally {
+    if (flushTimer) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
   }
 }
 
 function scheduleFlush(): void {
-  if (flushTimer) return;
+  if (flushTimer || isUnloading) return;
 
   flushTimer = setTimeout(() => {
     flushLogs();
   }, FLUSH_INTERVAL_MS);
+}
+
+function handleBeforeUnload(): void {
+  isUnloading = true;
+  if (logBuffer.length > 0) {
+    flushLogs();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', handleBeforeUnload);
 }
 
 export function flushStateChangeLogs(): void {
@@ -223,7 +254,7 @@ function notifyListeners(log: StateChangeLog): void {
 }
 
 export function getFilteredStateChangeLogs(filter: StateChangeLogFilter): StateChangeLog[] {
-  let logs = getStateChangeLogs();
+  let logs = getStateChangeLogsFromStorage();
 
   if (filter.resourceType) {
     logs = logs.filter(log => log.resourceType === filter.resourceType);
@@ -274,12 +305,16 @@ export function getFilteredStateChangeLogs(filter: StateChangeLogFilter): StateC
 
 export function clearStateChangeLogs(): void {
   flushLogs();
-  localStorage.removeItem(STATE_CHANGE_LOGS_KEY);
+  try {
+    localStorage.removeItem(STATE_CHANGE_LOGS_KEY);
+  } catch (error) {
+    console.error('Failed to clear state change logs:', error);
+  }
 }
 
 export function exportStateChangeLogs(): string {
   flushLogs();
-  const logs = getStateChangeLogs();
+  const logs = getStateChangeLogsFromStorage();
   return JSON.stringify(logs, null, 2);
 }
 
@@ -290,7 +325,7 @@ export function getStateChangeStats(): {
   recentCount: number;
 } {
   flushLogs();
-  const logs = getStateChangeLogs();
+  const logs = getStateChangeLogsFromStorage();
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
   const byPriority: Record<StateChangePriority, number> = {
@@ -317,4 +352,32 @@ export function getStateChangeStats(): {
     byLevel,
     recentCount: logs.filter(log => log.timestamp >= oneDayAgo).length,
   };
+}
+
+export function getStateChangeLogsByResource(resourceType: AuditResourceType, resourceId?: string): StateChangeLog[] {
+  const logs = getStateChangeLogsFromStorage();
+  return logs.filter(log =>
+    log.resourceType === resourceType &&
+    (!resourceId || log.resourceId === resourceId)
+  );
+}
+
+export function getStateChangeLogsByUser(userId: string): StateChangeLog[] {
+  const logs = getStateChangeLogsFromStorage();
+  return logs.filter(log => log.userId === userId);
+}
+
+export function getStateChangeLogsByTimeRange(startTime: string, endTime: string): StateChangeLog[] {
+  const logs = getStateChangeLogsFromStorage();
+  return logs.filter(log => log.timestamp >= startTime && log.timestamp <= endTime);
+}
+
+export function searchStateChangeLogs(keyword: string): StateChangeLog[] {
+  const logs = getStateChangeLogsFromStorage();
+  const lowerKeyword = keyword.toLowerCase();
+  return logs.filter(log =>
+    log.reason.toLowerCase().includes(lowerKeyword) ||
+    log.resourceName.toLowerCase().includes(lowerKeyword) ||
+    log.username.toLowerCase().includes(lowerKeyword)
+  );
 }

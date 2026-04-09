@@ -20,6 +20,33 @@ export interface TaskUniquenessKey {
   createdAt: string;
 }
 
+export interface FaultTaskKey {
+  faultType: 'module-fault' | 'component-fault' | 'software-incomplete' | 'document-incomplete';
+  faultId: string;
+}
+
+export interface FaultTaskRecord {
+  key: string;
+  faultType: FaultTaskKey['faultType'];
+  faultId: string;
+  taskId: string;
+  taskTitle: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface DuplicateInterceptionLog {
+  id: string;
+  timestamp: string;
+  faultType: FaultTaskKey['faultType'];
+  faultId: string;
+  attemptedTaskTitle: string;
+  existingTaskId: string;
+  existingTaskTitle: string;
+  timeWindowMinutes: number;
+  reason: string;
+}
+
 export interface TaskValidationResult {
   isValid: boolean;
   error?: string;
@@ -40,13 +67,36 @@ export class DuplicateTaskService {
   private trash: TrashTask[] = [];
   private deletionHistory: DeletionHistory[] = [];
   private config: DeletionConfig;
-  private listeners: Set<() => void> = new Set();
   private cachedTasks: Task[] = [];
   private submissionTokens: Map<string, SubmissionToken> = new Map();
+  private faultTaskRecords: FaultTaskRecord[] = [];
+  private duplicateInterceptionLogs: DuplicateInterceptionLog[] = [];
+  private faultTaskTimeWindowMinutes: number = 30;
+  private listeners: Set<() => void> = new Set();
 
   constructor() {
     this.loadFromStorage();
     this.config = { ...DEFAULT_DELETION_CONFIG };
+    this.cleanupExpiredFaultRecords();
+    this.setupBeforeUnloadHandler();
+  }
+
+  private setupBeforeUnloadHandler(): void {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        this.saveToStorage();
+      });
+    }
+  }
+
+  private safeJsonParse<T>(json: string | null, fallback: T): T {
+    if (!json) return fallback;
+    try {
+      return JSON.parse(json) as T;
+    } catch (error) {
+      console.warn('Failed to parse JSON:', error);
+      return fallback;
+    }
   }
 
   private generateId(): string {
@@ -59,11 +109,19 @@ export class DuplicateTaskService {
       const trashJson = localStorage.getItem('duplicate-task-trash');
       const historyJson = localStorage.getItem('duplicate-task-history');
       const configJson = localStorage.getItem('duplicate-task-config');
+      const faultRecordsJson = localStorage.getItem('duplicate-task-fault-records');
+      const faultConfigJson = localStorage.getItem('duplicate-task-fault-config');
 
-      if (rulesJson) this.rules = JSON.parse(rulesJson);
-      if (trashJson) this.trash = JSON.parse(trashJson);
-      if (historyJson) this.deletionHistory = JSON.parse(historyJson);
-      if (configJson) this.config = JSON.parse(configJson);
+      this.rules = this.safeJsonParse(rulesJson, []);
+      this.trash = this.safeJsonParse(trashJson, []);
+      this.deletionHistory = this.safeJsonParse(historyJson, []);
+      this.config = this.safeJsonParse(configJson, { ...DEFAULT_DELETION_CONFIG });
+      this.faultTaskRecords = this.safeJsonParse(faultRecordsJson, []);
+
+      if (faultConfigJson) {
+        const faultConfig = this.safeJsonParse(faultConfigJson, { timeWindowMinutes: 30 });
+        this.faultTaskTimeWindowMinutes = faultConfig.timeWindowMinutes || 30;
+      }
     } catch (e) {
       console.warn('Failed to load duplicate task data from storage:', e);
     }
@@ -75,6 +133,10 @@ export class DuplicateTaskService {
       localStorage.setItem('duplicate-task-trash', JSON.stringify(this.trash));
       localStorage.setItem('duplicate-task-history', JSON.stringify(this.deletionHistory));
       localStorage.setItem('duplicate-task-config', JSON.stringify(this.config));
+      localStorage.setItem('duplicate-task-fault-records', JSON.stringify(this.faultTaskRecords));
+      localStorage.setItem('duplicate-task-fault-config', JSON.stringify({
+        timeWindowMinutes: this.faultTaskTimeWindowMinutes,
+      }));
     } catch (e) {
       console.warn('Failed to save duplicate task data to storage:', e);
     }
@@ -91,6 +153,124 @@ export class DuplicateTaskService {
 
   updateTaskCache(tasks: Task[]): void {
     this.cachedTasks = tasks;
+  }
+
+  setFaultTaskTimeWindow(minutes: number): void {
+    this.faultTaskTimeWindowMinutes = Math.max(1, minutes);
+    this.cleanupExpiredFaultRecords();
+  }
+
+  getFaultTaskTimeWindow(): number {
+    return this.faultTaskTimeWindowMinutes;
+  }
+
+  private generateFaultTaskKey(faultType: FaultTaskKey['faultType'], faultId: string): string {
+    return `${faultType}:${faultId}`;
+  }
+
+  private createFaultTaskRecord(
+    faultType: FaultTaskKey['faultType'],
+    faultId: string,
+    taskId: string,
+    taskTitle: string
+  ): FaultTaskRecord {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + this.faultTaskTimeWindowMinutes * 60 * 1000);
+    return {
+      key: this.generateFaultTaskKey(faultType, faultId),
+      faultType,
+      faultId,
+      taskId,
+      taskTitle,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+    };
+  }
+
+  registerFaultTask(
+    faultType: FaultTaskKey['faultType'],
+    faultId: string,
+    taskId: string,
+    taskTitle: string
+  ): void {
+    this.cleanupExpiredFaultRecords();
+    const key = this.generateFaultTaskKey(faultType, faultId);
+    const existingRecord = this.faultTaskRecords.find(r => r.key === key);
+    if (existingRecord) {
+      existingRecord.taskId = taskId;
+      existingRecord.taskTitle = taskTitle;
+      existingRecord.createdAt = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + this.faultTaskTimeWindowMinutes * 60 * 1000);
+      existingRecord.expiresAt = expiresAt.toISOString();
+    } else {
+      this.faultTaskRecords.push(this.createFaultTaskRecord(faultType, faultId, taskId, taskTitle));
+    }
+    this.saveToStorage();
+  }
+
+  checkFaultTaskDuplicate(
+    faultType: FaultTaskKey['faultType'],
+    faultId: string
+  ): { isDuplicate: boolean; existingTaskId?: string; existingTaskTitle?: string; record?: FaultTaskRecord } {
+    this.cleanupExpiredFaultRecords();
+    const key = this.generateFaultTaskKey(faultType, faultId);
+    const record = this.faultTaskRecords.find(r => r.key === key && r.expiresAt > new Date().toISOString());
+    if (record) {
+      return {
+        isDuplicate: true,
+        existingTaskId: record.taskId,
+        existingTaskTitle: record.taskTitle,
+        record,
+      };
+    }
+    return { isDuplicate: false };
+  }
+
+  private cleanupExpiredFaultRecords(): void {
+    const now = new Date().toISOString();
+    const beforeCount = this.faultTaskRecords.length;
+    this.faultTaskRecords = this.faultTaskRecords.filter(r => r.expiresAt > now);
+    if (this.faultTaskRecords.length < beforeCount) {
+      console.log(`[DuplicateTaskService] Cleaned up ${beforeCount - this.faultTaskRecords.length} expired fault task records`);
+    }
+  }
+
+  logDuplicateInterception(
+    faultType: FaultTaskKey['faultType'],
+    faultId: string,
+    attemptedTaskTitle: string,
+    existingTaskId: string,
+    existingTaskTitle: string,
+    reason: string
+  ): DuplicateInterceptionLog {
+    const log: DuplicateInterceptionLog = {
+      id: this.generateId(),
+      timestamp: new Date().toISOString(),
+      faultType,
+      faultId,
+      attemptedTaskTitle,
+      existingTaskId,
+      existingTaskTitle,
+      timeWindowMinutes: this.faultTaskTimeWindowMinutes,
+      reason,
+    };
+    this.duplicateInterceptionLogs.push(log);
+    if (this.duplicateInterceptionLogs.length > 500) {
+      this.duplicateInterceptionLogs = this.duplicateInterceptionLogs.slice(-250);
+    }
+    console.log(
+      `[DuplicateTaskService] Duplicate task intercepted: ${faultType} - ${faultId}`,
+      log
+    );
+    return log;
+  }
+
+  getDuplicateInterceptionLogs(limit: number = 100): DuplicateInterceptionLog[] {
+    return this.duplicateInterceptionLogs.slice(-limit).reverse();
+  }
+
+  clearDuplicateInterceptionLogs(): void {
+    this.duplicateInterceptionLogs = [];
   }
 
   generateSubmissionToken(taskData: Omit<Task, 'id' | 'createdAt'>): string {

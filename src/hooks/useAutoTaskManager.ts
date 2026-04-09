@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { useTaskNotification } from '../components/TaskNotificationPopup';
 import { usePerformanceMode } from '../context/PerformanceModeContext';
+import { useLowPerformanceMode } from '../context/LowPerformanceModeContext';
 import { duplicateTaskService } from '../services/duplicateTaskService';
 import { addAuditLog } from '../services/audit';
 import {
@@ -48,6 +49,7 @@ export function useAutoTaskManager() {
   const { projects, tasks, addTask, updateTask, currentUser } = useApp();
   const { showNotification } = useTaskNotification();
   const { isHighPerformance } = usePerformanceMode();
+  const { getEffectiveFeatureState } = useLowPerformanceMode();
   const processedItemsRef = useRef<Set<string>>(new Set());
   const lastProcessTimeRef = useRef<number>(0);
   const isProcessingRef = useRef<boolean>(false);
@@ -184,6 +186,41 @@ export function useAutoTaskManager() {
       return null;
     }
 
+    const faultDuplicateCheck = duplicateTaskService.checkFaultTaskDuplicate('module-fault', moduleNumber);
+    if (faultDuplicateCheck.isDuplicate && faultDuplicateCheck.record) {
+      duplicateTaskService.logDuplicateInterception(
+        'module-fault',
+        moduleNumber,
+        `${moduleName} (${moduleNumber}) 故障处理`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Module ${moduleNumber} 在时间窗口内已创建过任务`
+      );
+      logDuplicateAttempt(
+        'module-fault',
+        `${moduleName} (${moduleNumber}) 故障处理`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Module ${moduleNumber} status is 故障 (fault record check)`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          faultDuplicateCheck.existingTaskId!,
+          faultDuplicateCheck.existingTaskTitle!,
+          `自动任务创建被阻止：故障模块重复检查（时间窗口）`,
+          undefined,
+          { faultType: 'module-fault', faultId: moduleNumber } as any
+        );
+      }
+      return null;
+    }
+
     const targetTitle = `${moduleName} (${moduleNumber}) 故障处理`;
     const taskInfo = {
       title: targetTitle,
@@ -195,6 +232,15 @@ export function useAutoTaskManager() {
 
     const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
     if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      duplicateTaskService.registerFaultTask('module-fault', moduleNumber, duplicateCheck.duplicateTask.id, duplicateCheck.duplicateTask.title);
+      duplicateTaskService.logDuplicateInterception(
+        'module-fault',
+        moduleNumber,
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Module ${moduleNumber} 匹配到现有重复任务`
+      );
       logDuplicateAttempt(
         'module-fault',
         targetTitle,
@@ -224,6 +270,7 @@ export function useAutoTaskManager() {
 
     const taskId = addTask(taskInfo);
 
+    duplicateTaskService.registerFaultTask('module-fault', moduleNumber, taskId, targetTitle);
     logTaskCreation('module-fault', targetTitle, taskId, `Module ${moduleNumber} status is 故障`);
 
     if (isHighPerformanceRef.current) {
@@ -246,6 +293,41 @@ export function useAutoTaskManager() {
       return null;
     }
 
+    const faultDuplicateCheck = duplicateTaskService.checkFaultTaskDuplicate('component-fault', componentNumber);
+    if (faultDuplicateCheck.isDuplicate && faultDuplicateCheck.record) {
+      duplicateTaskService.logDuplicateInterception(
+        'component-fault',
+        componentNumber,
+        `${componentName} (${componentNumber}) 故障处理`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Component ${componentNumber} 在时间窗口内已创建过任务`
+      );
+      logDuplicateAttempt(
+        'component-fault',
+        `${componentName} (${componentNumber}) 故障处理`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Component ${componentNumber} status is 故障 (fault record check)`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          faultDuplicateCheck.existingTaskId!,
+          faultDuplicateCheck.existingTaskTitle!,
+          `自动任务创建被阻止：故障组件重复检查（时间窗口）`,
+          undefined,
+          { faultType: 'component-fault', faultId: componentNumber } as any
+        );
+      }
+      return null;
+    }
+
     const targetTitle = `${componentName} (${componentNumber}) 故障处理`;
     const taskInfo = {
       title: targetTitle,
@@ -257,6 +339,15 @@ export function useAutoTaskManager() {
 
     const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
     if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      duplicateTaskService.registerFaultTask('component-fault', componentNumber, duplicateCheck.duplicateTask.id, duplicateCheck.duplicateTask.title);
+      duplicateTaskService.logDuplicateInterception(
+        'component-fault',
+        componentNumber,
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Component ${componentNumber} 匹配到现有重复任务`
+      );
       logDuplicateAttempt(
         'component-fault',
         targetTitle,
@@ -286,6 +377,7 @@ export function useAutoTaskManager() {
 
     const taskId = addTask(taskInfo);
 
+    duplicateTaskService.registerFaultTask('component-fault', componentNumber, taskId, targetTitle);
     logTaskCreation('component-fault', targetTitle, taskId, `Component ${componentNumber} status is 故障`);
 
     if (isHighPerformanceRef.current) {
@@ -307,6 +399,41 @@ export function useAutoTaskManager() {
       return null;
     }
 
+    const faultDuplicateCheck = duplicateTaskService.checkFaultTaskDuplicate('software-incomplete', `${sw.name}-${sw.version}`);
+    if (faultDuplicateCheck.isDuplicate && faultDuplicateCheck.record) {
+      duplicateTaskService.logDuplicateInterception(
+        'software-incomplete',
+        `${sw.name}-${sw.version}`,
+        `${sw.name} (${sw.version}) 软件开发`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Software ${sw.name} 在时间窗口内已创建过任务`
+      );
+      logDuplicateAttempt(
+        'software-incomplete',
+        `${sw.name} (${sw.version}) 软件开发`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Software ${sw.name} status is 未完成 (fault record check)`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          faultDuplicateCheck.existingTaskId!,
+          faultDuplicateCheck.existingTaskTitle!,
+          `自动任务创建被阻止：软件重复检查（时间窗口）`,
+          undefined,
+          { faultType: 'software-incomplete', faultId: `${sw.name}-${sw.version}` } as any
+        );
+      }
+      return null;
+    }
+
     const targetTitle = `${sw.name} (${sw.version}) 软件开发`;
     const taskInfo = {
       title: targetTitle,
@@ -318,6 +445,15 @@ export function useAutoTaskManager() {
 
     const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
     if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      duplicateTaskService.registerFaultTask('software-incomplete', `${sw.name}-${sw.version}`, duplicateCheck.duplicateTask.id, duplicateCheck.duplicateTask.title);
+      duplicateTaskService.logDuplicateInterception(
+        'software-incomplete',
+        `${sw.name}-${sw.version}`,
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Software ${sw.name} 匹配到现有重复任务`
+      );
       logDuplicateAttempt(
         'software-incomplete',
         targetTitle,
@@ -347,6 +483,7 @@ export function useAutoTaskManager() {
 
     const taskId = addTask(taskInfo);
 
+    duplicateTaskService.registerFaultTask('software-incomplete', `${sw.name}-${sw.version}`, taskId, targetTitle);
     logTaskCreation('software-incomplete', targetTitle, taskId, `Software ${sw.name} status is 未完成`);
     showNotification(`自动创建任务`, `已为未完成软件 ${sw.name} 自动创建任务`, 'info');
 
@@ -374,6 +511,41 @@ export function useAutoTaskManager() {
       return null;
     }
 
+    const faultDuplicateCheck = duplicateTaskService.checkFaultTaskDuplicate('document-incomplete', `${doc.name}-${doc.documentNumber}`);
+    if (faultDuplicateCheck.isDuplicate && faultDuplicateCheck.record) {
+      duplicateTaskService.logDuplicateInterception(
+        'document-incomplete',
+        `${doc.name}-${doc.documentNumber}`,
+        `${doc.name} (${doc.documentNumber}) 文档编写`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Document ${doc.name} 在时间窗口内已创建过任务`
+      );
+      logDuplicateAttempt(
+        'document-incomplete',
+        `${doc.name} (${doc.documentNumber}) 文档编写`,
+        faultDuplicateCheck.existingTaskId!,
+        faultDuplicateCheck.existingTaskTitle!,
+        `Document ${doc.name} status is 未完成 (fault record check)`,
+        true
+      );
+      if (currentUser) {
+        addAuditLog(
+          currentUser.id,
+          currentUser.username,
+          'CREATE_BLOCKED',
+          'WARNING',
+          '任务',
+          faultDuplicateCheck.existingTaskId!,
+          faultDuplicateCheck.existingTaskTitle!,
+          `自动任务创建被阻止：文档重复检查（时间窗口）`,
+          undefined,
+          { faultType: 'document-incomplete', faultId: `${doc.name}-${doc.documentNumber}` } as any
+        );
+      }
+      return null;
+    }
+
     const targetTitle = `${doc.name} (${doc.documentNumber}) 文档编写`;
     const taskInfo = {
       title: targetTitle,
@@ -385,6 +557,15 @@ export function useAutoTaskManager() {
 
     const duplicateCheck = duplicateTaskService.checkDuplicate(taskInfo);
     if (duplicateCheck.isDuplicate && duplicateCheck.duplicateTask) {
+      duplicateTaskService.registerFaultTask('document-incomplete', `${doc.name}-${doc.documentNumber}`, duplicateCheck.duplicateTask.id, duplicateCheck.duplicateTask.title);
+      duplicateTaskService.logDuplicateInterception(
+        'document-incomplete',
+        `${doc.name}-${doc.documentNumber}`,
+        targetTitle,
+        duplicateCheck.duplicateTask.id,
+        duplicateCheck.duplicateTask.title,
+        `Document ${doc.name} 匹配到现有重复任务`
+      );
       logDuplicateAttempt(
         'document-incomplete',
         targetTitle,
@@ -414,6 +595,7 @@ export function useAutoTaskManager() {
 
     const taskId = addTask(taskInfo);
 
+    duplicateTaskService.registerFaultTask('document-incomplete', `${doc.name}-${doc.documentNumber}`, taskId, targetTitle);
     logTaskCreation('document-incomplete', targetTitle, taskId, `Document ${doc.name} status is 未完成`);
     showNotification(`自动创建任务`, `已为未完成文档 ${doc.name} 自动创建任务`, 'info');
 
@@ -430,8 +612,16 @@ export function useAutoTaskManager() {
     }
   }, [updateTask, showNotification]);
 
+  const taskAutoCreateFeature = { id: 'task-auto-create', name: '自动任务创建', description: '', category: 'enhanced' as const, enabledInHighMode: true, enabledInLowMode: false, resourceCost: 'medium' as const };
+  const isAutoTaskEnabled = getEffectiveFeatureState(taskAutoCreateFeature);
+
   useEffect(() => {
     if (!isMountedRef.current) return;
+
+    if (!isAutoTaskEnabled) {
+      console.log('[AutoTaskManager] Auto task creation is disabled (feature flag off)');
+      return;
+    }
 
     if (pendingTaskBlockedRef.current) {
       console.log('[AutoTaskManager] Skipping task processing due to page refresh detection');
@@ -506,6 +696,7 @@ export function useAutoTaskManager() {
       isProcessingRef.current = false;
     }
   }, [
+    isAutoTaskEnabled,
     projects,
     tasks,
     buildExistingTaskKeys,
@@ -517,6 +708,16 @@ export function useAutoTaskManager() {
     processIncompleteDocument,
     processCompletedDocument,
   ]);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      processedItemsRef.current.clear();
+      recentlyCreatedRef.current.clear();
+      taskCreationLogsRef.current = [];
+      duplicateAttemptLogsRef.current = [];
+    };
+  }, []);
 
   return null;
 }

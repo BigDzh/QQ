@@ -46,12 +46,9 @@ export function Modal({
   useEffect(() => {
     if (shouldRender && !isClosing && isOpen) {
       document.body.style.overflow = 'hidden';
-    } else if (!shouldRender || (shouldRender && isClosing && !isOpen)) {
+    } else if (!shouldRender && !isOpen) {
       document.body.style.overflow = '';
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
   }, [shouldRender, isClosing, isOpen]);
 
   useEffect(() => {

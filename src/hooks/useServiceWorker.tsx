@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 
 interface UseServiceWorkerReturn {
   isSupported: boolean;
@@ -14,22 +14,40 @@ export function useServiceWorker(): UseServiceWorkerReturn {
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(false);
   const [registration, setRegistration] = useState<ServiceWorkerRegistration | null>(null);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
+  const newWorkerListenerRef = useRef<(() => void) | null>(null);
+  const stateChangeListenerRef = useRef<(() => void) | null>(null);
+  const controllerChangeListenerRef = useRef<(() => void) | null>(null);
+
+  const cleanup = useCallback(() => {
+    const reg = registrationRef.current;
+    if (reg) {
+      if (newWorkerListenerRef.current) {
+        reg.removeEventListener('updatefound', newWorkerListenerRef.current);
+        newWorkerListenerRef.current = null;
+      }
+      if (stateChangeListenerRef.current && reg.installing) {
+        reg.installing.removeEventListener('statechange', stateChangeListenerRef.current);
+        stateChangeListenerRef.current = null;
+      }
+    }
+    if (controllerChangeListenerRef.current) {
+      navigator.serviceWorker?.removeEventListener('controllerchange', controllerChangeListenerRef.current);
+      controllerChangeListenerRef.current = null;
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
       setIsSupported(false);
-      return;
+      return () => cleanup();
     }
 
     if (window.location.protocol === 'file:') {
       setIsSupported(false);
-      return;
+      return () => cleanup();
     }
 
     setIsSupported(true);
-
-    let newWorkerListener: (() => void) | null = null;
-    let controllerChangeListener: (() => void) | null = null;
 
     const registerSW = async () => {
       try {
@@ -41,28 +59,30 @@ export function useServiceWorker(): UseServiceWorkerReturn {
         setRegistration(reg);
         setIsRegistered(true);
 
-        newWorkerListener = () => {
+        newWorkerListenerRef.current = () => {
           const newWorker = reg.installing;
           if (!newWorker) return;
 
-          newWorker.addEventListener('statechange', () => {
+          stateChangeListenerRef.current = () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               setIsUpdateAvailable(true);
             }
-          });
+          };
+
+          newWorker.addEventListener('statechange', stateChangeListenerRef.current);
         };
 
-        controllerChangeListener = () => {
+        controllerChangeListenerRef.current = () => {
           window.location.reload();
         };
 
-        reg.addEventListener('updatefound', newWorkerListener);
+        reg.addEventListener('updatefound', newWorkerListenerRef.current);
 
         if (reg.waiting && navigator.serviceWorker.controller) {
           setIsUpdateAvailable(true);
         }
 
-        navigator.serviceWorker.addEventListener('controllerchange', controllerChangeListener);
+        navigator.serviceWorker.addEventListener('controllerchange', controllerChangeListenerRef.current);
       } catch (error) {
         console.error('Service Worker registration failed:', error);
         setIsRegistered(false);
@@ -71,21 +91,8 @@ export function useServiceWorker(): UseServiceWorkerReturn {
 
     registerSW();
 
-    return () => {
-      const reg = registrationRef.current;
-      if (reg) {
-        if (newWorkerListener) {
-          reg.removeEventListener('updatefound', newWorkerListener);
-        }
-        if (reg.installing && newWorkerListener) {
-          reg.installing.removeEventListener('statechange', () => {});
-        }
-      }
-      if (controllerChangeListener) {
-        navigator.serviceWorker.removeEventListener('controllerchange', controllerChangeListener);
-      }
-    };
-  }, []);
+    return () => cleanup();
+  }, [cleanup]);
 
   const update = () => {
     if (registration?.waiting) {

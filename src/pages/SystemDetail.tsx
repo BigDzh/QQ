@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { getDefaultStageForEntity } from '../services/stageConfig';
 import { SystemLogs } from './ProjectDetail/components/SystemLogs';
+import { useSystemLogger } from '../hooks/useSystemLogger';
 
 interface ModuleTreeNode {
   id: string;
@@ -29,9 +30,13 @@ interface ModuleTreeNode {
 export default function SystemDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, addModule, updateProject } = useApp();
+  const { projects, addModule, updateProject, currentUser } = useApp();
   const { showToast } = useToast();
   const t = useThemeStyles();
+  const { logConfigChange } = useSystemLogger({
+    userId: currentUser?.id || null,
+    username: currentUser?.username || '系统',
+  });
 
   const [viewMode, setViewMode] = useState<'card' | 'tree'>('card');
   const [showModuleModal, setShowModuleModal] = useState(false);
@@ -481,11 +486,29 @@ export default function SystemDetail() {
     }
 
     try {
+      const previousSystemState = {
+        systemNumber: system.systemNumber,
+        systemName: system.systemName,
+        productionOrderNumber: system.productionOrderNumber,
+        holder: system.holder,
+        status: system.status,
+        stage: system.stage,
+        version: system.version,
+      };
+
       updateProject(project.id, {
         systems: project.systems?.map((s: any) =>
           s.id === system.id ? { ...s, ...editForm } : s
         ),
       });
+
+      logConfigChange(
+        `系统配置变更: ${system.systemName} → ${editForm.systemName}`,
+        previousSystemState,
+        editForm,
+        '用户在系统详情页更新系统配置',
+        [system.id]
+      );
 
       showToast('系统信息更新成功', 'success');
       setIsEditing(false);

@@ -39,6 +39,10 @@ export async function parseExcelFile(file: File): Promise<ImportResult> {
           totalRows: 0,
           selectedRows: 0,
         });
+      } finally {
+        if (typeof window !== 'undefined' && 'gc' in window && Math.random() < 0.1) {
+          (window as Window & { gc?: () => void }).gc?.();
+        }
       }
     };
 

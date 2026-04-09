@@ -526,10 +526,7 @@ export function DocumentList({
                     {canEdit && (
                       <button
                         onClick={() => {
-                          if (confirm('确定要删除该文档吗？')) {
-                            onDeleteDocument(doc.id);
-                            showToast('文档已删除', 'success');
-                          }
+                          onDeleteDocument(doc.id);
                         }}
                         className={`p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${t.textMuted}`}
                         title="删除"

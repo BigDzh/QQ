@@ -529,10 +529,7 @@ export function SystemList({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm('确定要删除该系统吗？')) {
-                            onDeleteSystem(system.id);
-                            showToast('系统已删除', 'success');
-                          }
+                          onDeleteSystem(system.id);
                         }}
                         className={`p-1.5 rounded border ${t.border} text-red-500 card-btn-interactive`}
                         title="删除"

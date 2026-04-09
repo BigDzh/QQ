@@ -759,7 +759,8 @@ export default function FileManagement() {
               <option key={stage} value={stage}>{stage}</option>
             ))}
           </select>
-          {canEdit && (
+        </div>
+        {canEdit && (
             <>
               {activeTab === 'documents' && (
                 <>
@@ -917,10 +918,10 @@ export default function FileManagement() {
                 </div>
               );
             })}
-          </div>
-      )}
+            </div>
+          )}
 
-      {activeTab === 'software' && (
+          {activeTab === 'software' && (
         <div className="space-y-6">
           {stageOptions.map((stage) => {
             const stageSoft = filteredSoftware.filter((s) => s.stage === stage);
@@ -1015,8 +1016,8 @@ export default function FileManagement() {
                                 )}
                               </div>
                             </td>
-                          <td className="px-4 py-3 text-sm">{soft.version || '-'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
+                            <td className="px-4 py-3 text-sm">{soft.version || '-'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-500">
                             {soft.fileSize ? formatFileSize(soft.fileSize) : '-'}
                           </td>
                           <td className="px-4 py-3">
