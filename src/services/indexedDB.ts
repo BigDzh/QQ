@@ -1,5 +1,6 @@
 const DB_NAME = 'LifecycleManagementDB';
 const DB_VERSION = 1;
+import { logger } from '../utils/logger';
 
 export interface DBSchema {
   projects: {
@@ -52,7 +53,7 @@ class IndexedDBService {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onerror = () => {
-        console.error('[IndexedDB] Failed to open database:', request.error);
+        logger.error('[IndexedDB] Failed to open database:', request.error);
         reject(request.error);
       };
 
@@ -112,7 +113,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error getting ${storeName}/${key}:`, error);
+      logger.error(`[IndexedDB] Error getting ${storeName}/${key}:`, error);
       return null;
     }
   }
@@ -126,7 +127,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error getting all from ${storeName}:`, error);
+      logger.error(`[IndexedDB] Error getting all from ${storeName}:`, error);
       return [];
     }
   }
@@ -140,7 +141,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error putting ${storeName}:`, error);
+      logger.error(`[IndexedDB] Error putting ${storeName}:`, error);
       return null;
     }
   }
@@ -154,7 +155,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error deleting ${storeName}/${key}:`, error);
+      logger.error(`[IndexedDB] Error deleting ${storeName}/${key}:`, error);
       return false;
     }
   }
@@ -168,7 +169,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error clearing ${storeName}:`, error);
+      logger.error(`[IndexedDB] Error clearing ${storeName}:`, error);
       return false;
     }
   }
@@ -182,7 +183,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error counting ${storeName}:`, error);
+      logger.error(`[IndexedDB] Error counting ${storeName}:`, error);
       return 0;
     }
   }
@@ -201,7 +202,7 @@ class IndexedDBService {
         request.onerror = () => reject(request.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error querying ${storeName} by ${indexName}:`, error);
+      logger.error(`[IndexedDB] Error querying ${storeName} by ${indexName}:`, error);
       return [];
     }
   }
@@ -222,7 +223,7 @@ class IndexedDBService {
         });
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error bulk putting ${storeName}:`, error);
+      logger.error(`[IndexedDB] Error bulk putting ${storeName}:`, error);
       return 0;
     }
   }
@@ -254,7 +255,7 @@ class IndexedDBService {
         transaction.onerror = () => reject(transaction.error);
       });
     } catch (error) {
-      console.error(`[IndexedDB] Error deleting by index ${storeName}/${indexName}:`, error);
+      logger.error(`[IndexedDB] Error deleting by index ${storeName}/${indexName}:`, error);
       return 0;
     }
   }
@@ -268,6 +269,54 @@ class IndexedDBService {
     }
   }
 
+  async cleanupOldRecords(storeName: StoreNames, maxAgeMs: number, maxRecords?: number): Promise<{ deletedCount: number }> {
+    try {
+      const now = Date.now();
+      const cutoffTime = now - maxAgeMs;
+      let deletedCount = 0;
+
+      if (maxRecords !== undefined) {
+        const allRecords = await this.getAll(storeName);
+        if (allRecords.length > maxRecords) {
+          const sortedRecords = allRecords.sort((a: any, b: any) => {
+            const timeA = a.timestamp || a.createdAt || 0;
+            const timeB = b.timestamp || b.createdAt || 0;
+            return timeA - timeB;
+          });
+          const recordsToDelete = sortedRecords.slice(0, allRecords.length - maxRecords);
+          for (const record of recordsToDelete) {
+            const key = (record as any).id || (record as any).key;
+            if (key) {
+              await this.delete(storeName, key);
+              deletedCount++;
+            }
+          }
+        }
+      }
+
+      const deletedByAge = await this.deleteByIndex(storeName, 'by-timestamp', IDBKeyRange.upperBound(cutoffTime));
+      deletedCount += deletedByAge;
+
+      console.info(`[IndexedDB] Cleaned up ${deletedCount} old records from ${storeName}`);
+      return { deletedCount };
+    } catch (error) {
+      logger.error(`[IndexedDB] Error cleaning up ${storeName}:`, error);
+      return { deletedCount: 0 };
+    }
+  }
+
+  async getStorageStats(): Promise<{ storeName: StoreNames; count: number }[]> {
+    const stats: { storeName: StoreNames; count: number }[] = [];
+    const storeNames: StoreNames[] = ['projects', 'tasks', 'auditLogs', 'searchCache'];
+
+    for (const name of storeNames) {
+      const count = await this.count(name);
+      stats.push({ storeName: name, count });
+    }
+
+    return stats;
+  }
+
   async deleteDatabase(): Promise<boolean> {
     try {
       await this.close();
@@ -278,12 +327,12 @@ class IndexedDBService {
           resolve(true);
         };
         request.onerror = () => {
-          console.error('[IndexedDB] Failed to delete database');
+          logger.error('[IndexedDB] Failed to delete database');
           resolve(false);
         };
       });
     } catch (error) {
-      console.error('[IndexedDB] Error deleting database:', error);
+      logger.error('[IndexedDB] Error deleting database:', error);
       return false;
     }
   }

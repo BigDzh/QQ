@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { useToast } from '../components/Toast';
 import { useThemeStyles, useIsCyberpunk, useIsAnime } from '../hooks/useThemeStyles';
 import type { Component } from '../types';
+import { logger } from '../utils/logger';
 
 export default function SoftwareDetail() {
   const { id } = useParams<{ id: string }>();

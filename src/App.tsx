@@ -93,7 +93,7 @@ function MemoryMonitorWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (alerts && alerts.length > 0) {
       const latest = alerts[alerts.length - 1];
-      console.warn(`[Memory ${latest.type.toUpperCase()}] ${latest.message}`);
+      logger.warn(`[Memory ${latest.type.toUpperCase()}] ${latest.message}`);
     }
   }, [alerts]);
 
@@ -109,14 +109,14 @@ function ServerLifecycleWrapper({ children }: { children: React.ReactNode }) {
     terminationDelay: 1000,
     enabled: true,
     onServerTerminating: () => {
-      console.log('[App] Server termination initiated');
+      logger.log('[App] Server termination initiated');
     },
     onServerTerminated: () => {
-      console.log('[App] Server termination completed');
+      logger.log('[App] Server termination completed');
     },
     onError: (error) => {
-      console.error('[App] Server termination error:', error);
-      showToast(`服务器关闭异常: ${error.message}`, 'error');
+      logger.error('[App] Server termination error:', error);
+      showToast(`服务器关闭错误: ${error.message}`, 'error');
     },
   });
 

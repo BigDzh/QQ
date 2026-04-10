@@ -15,7 +15,7 @@ function getAuditLogsFromStorage(): AuditLog[] {
   try {
     return safeGetObject<AuditLog[]>(AUDIT_LOGS_KEY) || [];
   } catch (error) {
-    console.error('Failed to get audit logs:', error);
+    logger.error('Failed to get audit logs:', error);
     return [];
   }
 }
@@ -28,7 +28,7 @@ function saveAuditLogs(logs: AuditLog[]): void {
   try {
     safeSetObject(AUDIT_LOGS_KEY, logs);
   } catch (error) {
-    console.error('Failed to save audit logs:', error);
+    logger.error('Failed to save audit logs:', error);
   }
 }
 

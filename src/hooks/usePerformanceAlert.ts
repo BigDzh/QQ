@@ -38,7 +38,7 @@ export function getAlertConfig(): AlertConfig {
       return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
     }
   } catch {
-    console.warn('Failed to load alert config');
+    logger.warn('Failed to load alert config');
   }
   return DEFAULT_CONFIG;
 }
@@ -47,7 +47,7 @@ export function saveAlertConfig(config: AlertConfig): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch {
-    console.warn('Failed to save alert config');
+    logger.warn('Failed to save alert config');
   }
 }
 
@@ -79,10 +79,10 @@ export function usePerformanceAlert(
       lastAlertTime.current[type] = now;
 
       const messages: Record<keyof AlertThreshold, string> = {
-        cpu: `CPU使用率过高: ${value}% (阈值: ${threshold}%)`,
-        memory: `内存使用率过高: ${value}% (阈值: ${threshold}%)`,
-        disk: `磁盘使用率过高: ${value}% (阈值: ${threshold}%)`,
-        fps: `帧率过低: ${value} FPS (阈值: ${threshold})`,
+        cpu: `CPU使用率过�? ${value}% (阈�? ${threshold}%)`,
+        memory: `内存使用率过�? ${value}% (阈�? ${threshold}%)`,
+        disk: `磁盘使用率过�? ${value}% (阈�? ${threshold}%)`,
+        fps: `帧率过低: ${value} FPS (阈�? ${threshold})`,
       };
 
       showToast(messages[type], 'warning');

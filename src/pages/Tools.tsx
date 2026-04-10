@@ -4,6 +4,7 @@ import { useToast } from '../components/Toast';
 import { useThemeStyles } from '../hooks/useThemeStyles';
 import { generateMD5, calculateFileMD5, copyToClipboard } from '../utils/md5';
 import { deleteFile } from '../services/database';
+import { logger } from '../utils/logger';
 import JumpSkillConfig from './Tools/JumpSkillConfig';
 import ChineseSymbolConverter from './Tools/ChineseSymbolConverter';
 import {

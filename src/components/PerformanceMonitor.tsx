@@ -47,7 +47,7 @@ export default function PerformanceMonitor({
     try {
       observer.observe({ type: 'resource', buffered: true });
     } catch (e) {
-      console.warn('Resource timing observation failed');
+      logger.warn('Resource timing observation failed');
     }
 
     return () => observer.disconnect();
@@ -101,7 +101,7 @@ export default function PerformanceMonitor({
           />
           <MetricCard
             icon={<Eye className="w-4 h-4" />}
-            label="最大内容绘制 (LCP)"
+            label="最大内容绘�?(LCP)"
             value={metrics.lcp !== null ? formatTime(metrics.lcp) : '-'}
             status={metrics.lcp !== null && metrics.lcp < 2500 ? 'good' : metrics.lcp !== null && metrics.lcp < 4000 ? 'warning' : 'bad'}
           />
@@ -113,7 +113,7 @@ export default function PerformanceMonitor({
           />
           <MetricCard
             icon={<Gauge className="w-4 h-4" />}
-            label="可交互时间 (TTI)"
+            label="可交互时�?(TTI)"
             value={metrics.tti !== null ? formatTime(metrics.tti) : '-'}
             status={metrics.tti !== null && metrics.tti < 3500 ? 'good' : metrics.tti !== null && metrics.tti < 5000 ? 'warning' : 'bad'}
           />
@@ -134,7 +134,7 @@ export default function PerformanceMonitor({
           <div className="pt-3 border-t border-gray-700/50">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-gray-400">资源加载</span>
-              <span className="text-gray-300">{resources.length} 个文件 · {formatBytes(totalResourceSize)}</span>
+              <span className="text-gray-300">{resources.length} 个文�?· {formatBytes(totalResourceSize)}</span>
             </div>
             <div className="max-h-48 overflow-y-auto space-y-1">
               {resources.slice(-10).reverse().map((resource, index) => (
@@ -152,7 +152,7 @@ export default function PerformanceMonitor({
         )}
 
         <div className="pt-2 text-xs text-gray-500 text-center">
-          仅开发环境显示 · 生产环境自动隐藏
+          仅开发环境显�?· 生产环境自动隐藏
         </div>
       </div>
     </div>

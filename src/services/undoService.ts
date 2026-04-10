@@ -55,7 +55,7 @@ export async function undoAction(id: string): Promise<boolean> {
     undoHistory = undoHistory.filter((a) => a.id !== id);
     return true;
   } catch (error) {
-    console.error('Undo failed:', error);
+    logger.error('Undo failed:', error);
     return false;
   }
 }

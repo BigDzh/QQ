@@ -12,6 +12,7 @@ import { useThemeStyles } from '../hooks/useThemeStyles';
 import { getDefaultStageForEntity } from '../services/stageConfig';
 import { SystemLogs } from './ProjectDetail/components/SystemLogs';
 import { useSystemLogger } from '../hooks/useSystemLogger';
+import type { Project, System, Module, Component } from '../types';
 
 interface ModuleTreeNode {
   id: string;
@@ -24,7 +25,7 @@ interface ModuleTreeNode {
   parentId?: string;
   level: number;
   children: ModuleTreeNode[];
-  data: any;
+  data: System | Module | Component;
 }
 
 export default function SystemDetail() {
@@ -61,17 +62,17 @@ export default function SystemDetail() {
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  const system = useMemo(() => {
+  const system = useMemo<System | null>(() => {
     for (const p of projects) {
-      const found = p.systems?.find((s: any) => s.id === id);
+      const found = p.systems?.find((s: System) => s.id === id);
       if (found) return found;
     }
     return null;
   }, [projects, id]);
 
-  const project = useMemo(() => {
+  const project = useMemo<Project | null>(() => {
     if (!system) return null;
-    return projects.find((p: any) => p.systems?.some((s: any) => s.id === id));
+    return projects.find((p: Project) => p.systems?.some((s: System) => s.id === id)) || null;
   }, [projects, system, id]);
 
   const allProjectModules = useMemo(() => {
@@ -81,11 +82,11 @@ export default function SystemDetail() {
 
   const systemModules = useMemo(() => {
     if (!allProjectModules.length || !system?.id) return [];
-    return allProjectModules.filter((m: any) => m.systemId === system.id);
+    return allProjectModules.filter((m: Module) => m.systemId === system.id);
   }, [allProjectModules, system]);
 
   const moduleCategories = useMemo(() => {
-    const cats = systemModules.map((m: any) => m.category).filter(Boolean);
+    const cats = systemModules.map((m: Module) => m.category).filter(Boolean);
     return ['全部', ...new Set(cats)];
   }, [systemModules]);
 
@@ -95,7 +96,7 @@ export default function SystemDetail() {
     return ['全部', ...new Set([...projectCats, ...moduleCats])];
   }, [project, moduleCategories]);
 
-  const getComponentsArray = (module: any): any[] => {
+  const getComponentsArray = (module: Module): Component[] => {
     if (!module || !module.components || !Array.isArray(module.components)) return [];
     return module.components;
   };
@@ -113,7 +114,7 @@ export default function SystemDetail() {
 
     const modulesByCategory: Record<string, ModuleTreeNode> = {};
 
-    systemModules.forEach((module: any) => {
+    systemModules.forEach((module: Module) => {
       const cat = module.category || '其他';
       if (!modulesByCategory[cat]) {
         modulesByCategory[cat] = {
@@ -142,7 +143,7 @@ export default function SystemDetail() {
       };
 
       const components = getComponentsArray(module);
-      components.forEach((comp: any) => {
+      components.forEach((comp: Component) => {
         moduleNode.children.push({
           id: comp.id,
           name: comp.componentName,
@@ -165,7 +166,7 @@ export default function SystemDetail() {
 
   const unlinkedModules = useMemo(() => {
     if (!allProjectModules.length) return [];
-    return allProjectModules.filter((m: any) => !m.systemId || m.systemId === '');
+    return allProjectModules.filter((m: Module) => !m.systemId || m.systemId === '');
   }, [allProjectModules]);
 
   const stats = useMemo(() => {
@@ -183,8 +184,8 @@ export default function SystemDetail() {
       const componentCount = components.length;
       totalComponents += componentCount;
 
-      const normalCount = components.filter((c: any) => c.status === '正常').length;
-      const faultCount = components.filter((c: any) => c.status === '故障').length;
+      const normalCount = components.filter((c: Component) => c.status === '正常').length;
+      const faultCount = components.filter((c: Component) => c.status === '故障').length;
       normalComponents += normalCount;
       faultComponents += faultCount;
 
@@ -213,7 +214,7 @@ export default function SystemDetail() {
 
   const filteredModules = useMemo(() => {
     if (activeCategory === '全部') return systemModules;
-    return systemModules.filter((m: any) => m.category === activeCategory);
+    return systemModules.filter((m: Module) => m.category === activeCategory);
   }, [systemModules, activeCategory]);
 
   const toggleNode = (nodeId: string) => {
@@ -497,7 +498,7 @@ export default function SystemDetail() {
       };
 
       updateProject(project.id, {
-        systems: project.systems?.map((s: any) =>
+        systems: project.systems?.map((s: System) =>
           s.id === system.id ? { ...s, ...editForm } : s
         ),
       });
@@ -753,11 +754,11 @@ export default function SystemDetail() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filteredModules.map((module: any) => {
+                  {filteredModules.map((module: Module) => {
                     const components = getComponentsArray(module);
                     const componentCount = components.length;
-                    const normalCount = components.filter((c: any) => c.status === '正常').length;
-                    const faultCount = components.filter((c: any) => c.status === '故障').length;
+                    const normalCount = components.filter((c: Component) => c.status === '正常').length;
+                    const faultCount = components.filter((c: Component) => c.status === '故障').length;
                     const health = componentCount > 0 ? Math.round((normalCount / componentCount) * 100) : 100;
                     const statusColor = statusColors[module.status] || statusColors['未知'];
                     const catColor = categoryColors[module.category] || categoryColors['其他'];
@@ -828,8 +829,8 @@ export default function SystemDetail() {
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {unlinkedModules.slice(0, 6).map((module: any) => {
-                const otherSystem = project.systems?.find((s: any) => s.id === module.systemId);
+              {unlinkedModules.slice(0, 6).map((module: Module) => {
+                const otherSystem = project.systems?.find((s: System) => s.id === module.systemId);
                 return (
                   <div
                     key={module.id}

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import CryptoJS from 'crypto-js';
 import type { User } from '../types/auth';
 import type { Project, Module, Component, Task, BorrowRecord, System, ProjectStage, SystemStatus, DesignFile, ModuleStatus } from '../types';
@@ -13,6 +13,7 @@ import {
 } from '../services/storageManager';
 import { dataRelationService } from '../services/dataRelationService';
 import { invalidateSearchCache } from '../services/searchService';
+import { logger } from '../utils/logger';
 
 interface AppState {
   currentUser: User | null;
@@ -113,7 +114,16 @@ const calculateSystemStatus = (modules: any[]): SystemStatus => {
 const getDefaultPasswordHash = (): string => {
   const envKey = typeof import.meta !== 'undefined' && (import.meta as { env?: { VITE_ADMIN_PASSWORD_HASH?: string } }).env?.VITE_ADMIN_PASSWORD_HASH;
   if (envKey) return envKey;
-  return CryptoJS.SHA256('admin123').toString();
+
+  const storedHash = sessionStorage.getItem('admin_password_hash');
+  if (storedHash) return storedHash;
+
+  const randomPassword = CryptoJS.lib.WordArray.random(16).toString();
+  const hash = CryptoJS.SHA256(randomPassword).toString();
+  sessionStorage.setItem('admin_password_hash', hash);
+  logger.warn('⚠️ 首次启动：已生成随机管理员密码，请查看控制台或通过注册新用户后删除默认账户');
+    logger.warn('生成的临时密码:', randomPassword);
+  return hash;
 };
 
 const defaultPasswordHash = getDefaultPasswordHash();
@@ -145,7 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     autoCleanupIfNeeded();
     const warning = getStorageWarning();
     if (warning) {
-      console.warn('Storage warning:', warning);
+      logger.warn('Storage warning:', warning);
     }
 
     const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -278,7 +288,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return true;
       }
     } catch (error) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
     }
     return false;
   }, []);
@@ -384,7 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             { metadata: { projectId, projectName: currentProject?.name } }
           );
         } catch (error) {
-          console.error('Failed to add state change log:', error);
+          logger.error('Failed to add state change log:', error);
         }
       }
 
@@ -475,7 +485,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             { metadata: { projectId, projectName: currentProject?.name } }
           );
         } catch (error) {
-          console.error('Failed to add state change log:', error);
+          logger.error('Failed to add state change log:', error);
         }
       }
 
@@ -655,7 +665,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (isReasonMandatory('COMPONENT', component?.status || '', updates.status)) {
               const validation = validateReason(updates.statusChangeReason);
               if (!validation.isValid) {
-                console.error('Invalid status change reason:', validation.errors);
+                logger.error('Invalid status change reason:', validation.errors);
               }
             }
 
@@ -673,7 +683,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   { metadata: { projectId, moduleId, projectName: currentProject?.name, moduleName: currentModule?.moduleName } }
                 );
               } catch (error) {
-                console.error('Failed to add state change log:', error);
+                logger.error('Failed to add state change log:', error);
               }
             }
 

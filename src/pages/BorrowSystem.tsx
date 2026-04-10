@@ -55,25 +55,41 @@ export default function BorrowSystem() {
 
   // 可借用模块：状态为"正常"且当前没有借用中的记录
   const normalModules = useMemo(() => {
-    let modules = projects.flatMap((project) =>
-      project.modules
-        .filter((m) => {
-          // 状态必须为正常
-          if (m.status !== '正常') return false;
-          // 检查是否有借用中的记录
-          const hasBorrowingRecord = borrowRecords.some(
-            (r) => r.itemId === m.id && r.itemType === 'module' && r.status === '借用中'
-          );
-          return !hasBorrowingRecord;
-        })
-        .map((m) => ({
-          ...m,
-          projectId: project.id,
-          projectName: project.name,
-          systemId: m.systemId,
-          componentCount: m.components.length,
-        }))
+    const borrowedModuleIds = new Set(
+      borrowRecords
+        .filter(r => r.itemType === 'module' && r.status === '借用中')
+        .map(r => r.itemId)
     );
+
+    let modules: Array<{
+      id: string;
+      moduleName: string;
+      moduleNumber: string;
+      status: string;
+      projectId: string;
+      projectName: string;
+      systemId?: string;
+      componentCount: number;
+      components: Array<{ id: string; status: string }>;
+    }> = [];
+
+    for (const project of projects) {
+      for (const m of project.modules) {
+        if (m.status === '正常' && !borrowedModuleIds.has(m.id)) {
+          modules.push({
+            id: m.id,
+            moduleName: m.moduleName,
+            moduleNumber: m.moduleNumber,
+            status: m.status,
+            projectId: project.id,
+            projectName: project.name,
+            systemId: m.systemId,
+            componentCount: m.components.length,
+            components: m.components,
+          });
+        }
+      }
+    }
 
     if (filterSystemId) {
       modules = modules.filter(m => m.systemId === filterSystemId);
@@ -82,9 +98,7 @@ export default function BorrowSystem() {
       modules = modules.filter(m => m.id === filterModuleId);
     }
     if (filterComponentId) {
-      modules = modules.filter(m =>
-        m.components.some(c => c.id === filterComponentId)
-      );
+      modules = modules.filter(m => m.components.some(c => c.id === filterComponentId));
     }
 
     return modules;
@@ -92,28 +106,43 @@ export default function BorrowSystem() {
 
   // 可借用组件：状态为"正常"且当前没有借用中的记录
   const normalComponents = useMemo(() => {
-    let components = projects.flatMap((project) =>
-      project.modules.flatMap((module) =>
-        module.components
-          .filter((c) => {
-            // 状态必须为正常
-            if (c.status !== '正常') return false;
-            // 检查是否有借用中的记录
-            const hasBorrowingRecord = borrowRecords.some(
-              (r) => r.itemId === c.id && r.itemType === 'component' && r.status === '借用中'
-            );
-            return !hasBorrowingRecord;
-          })
-          .map((c) => ({
-            ...c,
-            moduleId: module.id,
-            moduleName: module.moduleName,
-            projectId: project.id,
-            projectName: project.name,
-            systemId: module.systemId,
-          }))
-      )
+    const borrowedComponentIds = new Set(
+      borrowRecords
+        .filter(r => r.itemType === 'component' && r.status === '借用中')
+        .map(r => r.itemId)
     );
+
+    let components: Array<{
+      id: string;
+      componentName: string;
+      componentNumber: string;
+      status: string;
+      moduleId: string;
+      moduleName: string;
+      projectId: string;
+      projectName: string;
+      systemId?: string;
+    }> = [];
+
+    for (const project of projects) {
+      for (const module of project.modules) {
+        for (const c of module.components) {
+          if (c.status === '正常' && !borrowedComponentIds.has(c.id)) {
+            components.push({
+              id: c.id,
+              componentName: c.componentName,
+              componentNumber: c.componentNumber,
+              status: c.status,
+              moduleId: module.id,
+              moduleName: module.moduleName,
+              projectId: project.id,
+              projectName: project.name,
+              systemId: module.systemId,
+            });
+          }
+        }
+      }
+    }
 
     if (filterSystemId) {
       components = components.filter(c => c.systemId === filterSystemId);

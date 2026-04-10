@@ -193,7 +193,7 @@ export function useComponentRenderTracker(componentName: string) {
     lastRenderTimeRef.current = now;
 
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`[Performance] ${componentName} rendered #${renderCountRef.current} in ${renderDuration.toFixed(2)}ms`);
+      logger.debug(`[Performance] ${componentName} rendered #${renderCountRef.current} in ${renderDuration.toFixed(2)}ms`);
     }
   });
 
@@ -227,7 +227,7 @@ export function measureAsync<T extends (...args: Parameters<T>) => ReturnType<T>
       return result;
     } catch (error) {
       const duration = performance.now() - start;
-      console.warn(`[Performance] ${metricName} failed after ${duration.toFixed(2)}ms:`, error);
+      logger.warn(`[Performance] ${metricName} failed after ${duration.toFixed(2)}ms:`, error);
       throw error;
     }
   };
@@ -247,7 +247,7 @@ export function measureSync<T extends (...args: Parameters<T>) => ReturnType<T>>
       return result;
     } catch (error) {
       const duration = performance.now() - start;
-      console.warn(`[Performance] ${metricName} failed after ${duration.toFixed(2)}ms:`, error);
+      logger.warn(`[Performance] ${metricName} failed after ${duration.toFixed(2)}ms:`, error);
       throw error;
     }
   };

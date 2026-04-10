@@ -53,8 +53,8 @@ export async function recognizeOCR(
   language: 'chi_sim+eng' | 'eng' | 'chi_sim' = 'chi_sim+eng',
   onProgress?: OCRProgressCallback
 ): Promise<OCRResult> {
-  console.log('[OCR Service] Initializing OCR with language:', language);
-  console.log('[OCR Service] Image source length:', imageSource?.length);
+  logger.log('[OCR Service] Initializing OCR with language:', language);
+  logger.log('[OCR Service] Image source length:', imageSource?.length);
 
   if (!navigator.onLine) {
     throw new Error('当前处于离线状态，OCR功能需要网络连接。请连接网络后重试。');
@@ -62,23 +62,23 @@ export async function recognizeOCR(
 
   try {
     const Tesseract = await import('tesseract.js');
-    console.log('[OCR Service] Tesseract.js loaded successfully');
+    logger.log('[OCR Service] Tesseract.js loaded successfully');
 
     const worker = await Tesseract.createWorker(language, 1, {
       langPath: './tessdata',
       cacheMethod: 'readOnly',
       gzip: true,
       logger: (m: { status: string; progress?: number }) => {
-        console.log('[OCR Service Worker]', m.status, m.progress !== undefined ? `${Math.round(m.progress * 100)}%` : '');
+        logger.log('[OCR Service Worker]', m.status, m.progress !== undefined ? `${Math.round(m.progress * 100)}%` : '');
         if (m.status === 'recognizing text' && m.progress !== undefined && onProgress) {
           onProgress(Math.round(m.progress * 100));
         }
       }
     });
 
-    console.log('[OCR Service] Worker created, starting recognition...');
+    logger.log('[OCR Service] Worker created, starting recognition...');
     const result = await worker.recognize(imageSource);
-    console.log('[OCR Service] Recognition completed, confidence:', result.data.confidence);
+    logger.log('[OCR Service] Recognition completed, confidence:', result.data.confidence);
 
     const ocrResult: OCRResult = {
       text: result.data.text,
@@ -86,12 +86,12 @@ export async function recognizeOCR(
     };
 
     await worker.terminate();
-    console.log('[OCR Service] Worker terminated');
+    logger.log('[OCR Service] Worker terminated');
 
     return ocrResult;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error('[OCR Service] OCR recognition failed:', errorMessage);
+    logger.error('[OCR Service] OCR recognition failed:', errorMessage);
     throw new Error(`OCR识别失败: ${errorMessage}`);
   }
 }

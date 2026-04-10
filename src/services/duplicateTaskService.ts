@@ -74,11 +74,24 @@ export class DuplicateTaskService {
   private faultTaskTimeWindowMinutes: number = 30;
   private listeners: Set<() => void> = new Set();
 
+  private static readonly MAX_FAULT_RECORDS = 200;
+  private static readonly MAX_INTERCEPTION_LOGS = 500;
+
   constructor() {
     this.loadFromStorage();
     this.config = { ...DEFAULT_DELETION_CONFIG };
     this.cleanupExpiredFaultRecords();
+    this.cleanupLogs();
     this.setupBeforeUnloadHandler();
+  }
+
+  private cleanupLogs(): void {
+    if (this.duplicateInterceptionLogs.length > DuplicateTaskService.MAX_INTERCEPTION_LOGS) {
+      this.duplicateInterceptionLogs = this.duplicateInterceptionLogs.slice(-DuplicateTaskService.MAX_INTERCEPTION_LOGS);
+    }
+    if (this.faultTaskRecords.length > DuplicateTaskService.MAX_FAULT_RECORDS) {
+      this.faultTaskRecords = this.faultTaskRecords.slice(-DuplicateTaskService.MAX_FAULT_RECORDS);
+    }
   }
 
   private setupBeforeUnloadHandler(): void {
@@ -194,6 +207,7 @@ export class DuplicateTaskService {
     taskTitle: string
   ): void {
     this.cleanupExpiredFaultRecords();
+    this.cleanupLogs();
     const key = this.generateFaultTaskKey(faultType, faultId);
     const existingRecord = this.faultTaskRecords.find(r => r.key === key);
     if (existingRecord) {

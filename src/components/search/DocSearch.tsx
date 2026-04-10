@@ -82,7 +82,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
       setSearchResults(result);
 
       if (result.searchTime > 300) {
-        console.warn(`Search took ${result.searchTime.toFixed(2)}ms, exceeding 300ms target`);
+        logger.warn(`Search took ${result.searchTime.toFixed(2)}ms, exceeding 300ms target`);
       }
     },
     [documents, searchType, matchMode, sortField, sortOrder]
@@ -343,8 +343,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
               <span className="text-sm text-gray-600">
                 找到{' '}
                 <span className="font-bold text-primary-600">{searchResults.total}</span>{' '}
-                个结果
-              </span>
+                个结�?              </span>
               <span
                 className={`text-xs px-2 py-0.5 rounded ${
                   searchTime <= 300
@@ -367,9 +366,8 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
                 }`}
               >
                 <ArrowUpDown size={14} />
-                相关度
-                {sortField === 'relevance' && (
-                  <span className="ml-1">{sortOrder === 'desc' ? '↓' : '↑'}</span>
+                相关�?                {sortField === 'relevance' && (
+                  <span className="ml-1">{sortOrder === 'desc' ? '�? : '�?}</span>
                 )}
               </button>
               <button
@@ -383,7 +381,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
                 <Clock size={14} />
                 创建时间
                 {sortField === 'createdTime' && (
-                  <span className="ml-1">{sortOrder === 'desc' ? '↓' : '↑'}</span>
+                  <span className="ml-1">{sortOrder === 'desc' ? '�? : '�?}</span>
                 )}
               </button>
               <button
@@ -397,7 +395,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
                 <HardDrive size={14} />
                 文件大小
                 {sortField === 'fileSize' && (
-                  <span className="ml-1">{sortOrder === 'desc' ? '↓' : '↑'}</span>
+                  <span className="ml-1">{sortOrder === 'desc' ? '�? : '�?}</span>
                 )}
               </button>
             </div>
@@ -459,7 +457,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
                           </span>
                           <span
                             className={`px-2 py-0.5 rounded text-xs ${
-                              result.document.status === '已完成'
+                              result.document.status === '已完�?
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-gray-100 text-gray-600'
                             }`}
@@ -471,7 +469,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">
-                        匹配度: {result.score}%
+                        匹配�? {result.score}%
                       </span>
                     </div>
                   </div>
@@ -491,9 +489,8 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
           {searchResults.totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
               <span className="text-sm text-gray-500">
-                第 {searchResults.page} / {searchResults.totalPages} 页，共{' '}
-                {searchResults.total} 条
-              </span>
+                �?{searchResults.page} / {searchResults.totalPages} 页，共{' '}
+                {searchResults.total} �?              </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(page - 1)}
@@ -552,7 +549,7 @@ export default function DocSearch({ projectId, onSelectDocument, className = '' 
       {!searchResults && (
         <div className="p-8 text-center">
           <FileText size={48} className="mx-auto text-gray-300 mb-4" />
-          <p className="text-gray-500">输入搜索关键词开始搜索文档</p>
+          <p className="text-gray-500">输入搜索关键词开始搜索文�?/p>
           <p className="text-sm text-gray-400 mt-1">
             支持按文档编号或名称进行{matchMode === 'exact' ? '精确' : '模糊'}搜索
           </p>

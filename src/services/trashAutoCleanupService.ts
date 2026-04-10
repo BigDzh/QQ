@@ -1,4 +1,5 @@
 import type { TrashTask } from '../types/duplicateTask';
+import { logger } from '../utils/logger';
 
 export interface AutoCleanupConfig {
   enabled: boolean;
@@ -94,7 +95,7 @@ export class TrashAutoCleanupService {
         return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
       }
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to load config:', e);
+      logger.warn('[TrashAutoCleanup] Failed to load config:', e);
     }
     return { ...DEFAULT_CONFIG };
   }
@@ -103,7 +104,7 @@ export class TrashAutoCleanupService {
     try {
       localStorage.setItem('trash-auto-cleanup-config', JSON.stringify(this.config));
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to save config:', e);
+      logger.warn('[TrashAutoCleanup] Failed to save config:', e);
     }
   }
 
@@ -114,7 +115,7 @@ export class TrashAutoCleanupService {
         this.cleanupState = { ...this.cleanupState, ...JSON.parse(stored) };
       }
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to load state:', e);
+      logger.warn('[TrashAutoCleanup] Failed to load state:', e);
     }
   }
 
@@ -122,7 +123,7 @@ export class TrashAutoCleanupService {
     try {
       localStorage.setItem(CLEANUP_STATE_KEY, JSON.stringify(this.cleanupState));
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to save state:', e);
+      logger.warn('[TrashAutoCleanup] Failed to save state:', e);
     }
   }
 
@@ -136,7 +137,7 @@ export class TrashAutoCleanupService {
         this.pendingNotifications = JSON.parse(stored);
       }
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to load pending notifications:', e);
+      logger.warn('[TrashAutoCleanup] Failed to load pending notifications:', e);
     }
   }
 
@@ -144,7 +145,7 @@ export class TrashAutoCleanupService {
     try {
       localStorage.setItem(PENDING_NOTIFICATIONS_KEY, JSON.stringify(this.pendingNotifications));
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to save pending notifications:', e);
+      logger.warn('[TrashAutoCleanup] Failed to save pending notifications:', e);
     }
   }
 
@@ -155,7 +156,7 @@ export class TrashAutoCleanupService {
         this.auditLog = JSON.parse(stored);
       }
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to load audit log:', e);
+      logger.warn('[TrashAutoCleanup] Failed to load audit log:', e);
     }
   }
 
@@ -166,7 +167,7 @@ export class TrashAutoCleanupService {
       }
       localStorage.setItem(CLEANUP_AUDIT_KEY, JSON.stringify(this.auditLog));
     } catch (e) {
-      console.warn('[TrashAutoCleanup] Failed to save audit log:', e);
+      logger.warn('[TrashAutoCleanup] Failed to save audit log:', e);
     }
   }
 
@@ -248,7 +249,7 @@ export class TrashAutoCleanupService {
 
   start(): void {
     if (this.intervalId) return;
-    console.log('[TrashAutoCleanup] Service started');
+    logger.log('[TrashAutoCleanup] Service started');
     this.scheduleNextCleanup();
     this.notify();
   }
@@ -258,7 +259,7 @@ export class TrashAutoCleanupService {
       clearTimeout(this.intervalId);
       this.intervalId = null;
     }
-    console.log('[TrashAutoCleanup] Service stopped');
+    logger.log('[TrashAutoCleanup] Service stopped');
     this.notify();
   }
 
@@ -282,7 +283,7 @@ export class TrashAutoCleanupService {
 
   async executeAutoCleanup(): Promise<CleanupResult> {
     if (!this.callbacks.getTrashItems || !this.callbacks.onPermanentlyDelete || !this.callbacks.onUpdateHistory) {
-      console.error('[TrashAutoCleanup] Callbacks not registered');
+      logger.error('[TrashAutoCleanup] Callbacks not registered');
       return {
         success: false,
         deletedCount: 0,
@@ -292,7 +293,7 @@ export class TrashAutoCleanupService {
       };
     }
     if (this.isProcessingRef.value) {
-      console.log('[TrashAutoCleanup] Cleanup already in progress, skipping');
+      logger.log('[TrashAutoCleanup] Cleanup already in progress, skipping');
       return {
         success: false,
         deletedCount: 0,
@@ -326,7 +327,7 @@ export class TrashAutoCleanupService {
       );
 
       if (expiredItems.length === 0) {
-        console.log('[TrashAutoCleanup] No expired items found');
+        logger.log('[TrashAutoCleanup] No expired items found');
         this.cleanupState.lastCleanupTime = now.toISOString();
         this.scheduleNextCleanup();
         this.isProcessingRef.value = false;
@@ -336,7 +337,7 @@ export class TrashAutoCleanupService {
         return result;
       }
 
-      console.log(`[TrashAutoCleanup] Found ${expiredItems.length} expired items`);
+      logger.log(`[TrashAutoCleanup] Found ${expiredItems.length} expired items`);
 
       for (const item of expiredItems) {
         try {
@@ -385,7 +386,7 @@ export class TrashAutoCleanupService {
       result.success = false;
       result.errors.push(`Cleanup execution error: ${e}`);
       this.cleanupState.consecutiveFailures++;
-      console.error('[TrashAutoCleanup] Cleanup failed:', e);
+      logger.error('[TrashAutoCleanup] Cleanup failed:', e);
     } finally {
       this.isProcessingRef.value = false;
       this.cleanupState.isRunning = false;

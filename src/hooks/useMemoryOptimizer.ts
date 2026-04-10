@@ -39,7 +39,7 @@ export function useMemoryOptimizer(options: UseMemoryOptimizerOptions = {}) {
     }
 
     if (autoCleanup && percent >= cleanupThreshold) {
-      console.log(`[useMemoryOptimizer] Memory pressure detected (${Math.round(percent * 100)}%), triggering cleanup...`);
+      logger.log(`[useMemoryOptimizer] Memory pressure detected (${Math.round(percent * 100)}%), triggering cleanup...`);
       memoryOptimizer.performCleanup();
     }
   }, [autoCleanup, cleanupThreshold, onMemoryWarning, onMemoryCritical]);

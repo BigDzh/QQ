@@ -28,7 +28,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    logger.error('ErrorBoundary caught an error:', error, errorInfo);
 
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
@@ -61,7 +61,7 @@ export default class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="text-red-500" size={32} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-800">出错了</h1>
+                <h1 className="text-xl font-bold text-gray-800">出错啦！</h1>
                 <p className="text-sm text-gray-500">应用程序遇到了一个意外错误</p>
               </div>
             </div>
@@ -162,7 +162,7 @@ export class AsyncErrorBoundary extends Component<AsyncErrorBoundaryProps, Async
   }
 
   componentDidCatch(error: Error) {
-    console.error('AsyncErrorBoundary caught an error:', error);
+    logger.error('AsyncErrorBoundary caught an error:', error);
     if (this.props.onError) {
       this.props.onError(error);
     }

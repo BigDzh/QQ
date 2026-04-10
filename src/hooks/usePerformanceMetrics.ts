@@ -79,25 +79,25 @@ export function usePerformanceMetrics(): PerformanceMetrics {
     try {
       fcpObserver.observe({ type: 'paint', buffered: true });
     } catch (e) {
-      console.warn('FCP observation not supported');
+      logger.warn('FCP observation not supported');
     }
 
     try {
       lcpObserver.observe({ type: 'largest-contentful-paint', buffered: true });
     } catch (e) {
-      console.warn('LCP observation not supported');
+      logger.warn('LCP observation not supported');
     }
 
     try {
       fidObserver.observe({ type: 'first-input', buffered: true });
     } catch (e) {
-      console.warn('FID observation not supported');
+      logger.warn('FID observation not supported');
     }
 
     try {
       clsObserver.observe({ type: 'layout-shift', buffered: true });
     } catch (e) {
-      console.warn('CLS observation not supported');
+      logger.warn('CLS observation not supported');
     }
 
     const calculateTTI = () => {
@@ -158,7 +158,7 @@ export function useResourceTiming() {
     try {
       observer.observe({ type: 'resource', buffered: true });
     } catch (e) {
-      console.warn('Resource timing observation not supported');
+      logger.warn('Resource timing observation not supported');
     }
 
     return () => observer.disconnect();

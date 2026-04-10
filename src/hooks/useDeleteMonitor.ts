@@ -44,7 +44,7 @@ export function useDeleteMonitor(options: UseDeleteMonitorOptions = {}): UseDele
     }
 
     if (import.meta.env.DEV) {
-      console.log('[DeleteMonitor] Recorded delete operation:', fullOperation);
+      logger.log('[DeleteMonitor] Recorded delete operation:', fullOperation);
     }
   }, [maxHistorySize, onDeleteOperation]);
 
@@ -82,7 +82,7 @@ export function useDeleteMonitor(options: UseDeleteMonitorOptions = {}): UseDele
   useEffect(() => {
     return () => {
       if (import.meta.env.DEV) {
-        console.log('[DeleteMonitor] Component unmounted, final stats:', getDeleteStats());
+        logger.log('[DeleteMonitor] Component unmounted, final stats:', getDeleteStats());
       }
     };
   }, [getDeleteStats]);

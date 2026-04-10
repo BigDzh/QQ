@@ -11,7 +11,7 @@ import { useThemeStyles } from '../hooks/useThemeStyles';
 import { useProjectState } from '../hooks/useProjectState';
 import { useModalState } from '../hooks/useModalState';
 import { useProjectHandlers } from '../hooks/useProjectHandlers';
-import type { ProjectStage, Module } from '../types';
+import type { ProjectStage, Module, Component, System, Document, Software } from '../types';
 import { getDefaultStageForEntity, STAGE_OPTIONS } from '../services/stageConfig';
 import {
   ModuleModal,
@@ -137,13 +137,13 @@ export default function ProjectDetail() {
     fileConflictInfo,
   } = modalState;
 
-  const allComponents = useMemo(() => {
+  const allComponents = useMemo<Component[]>(() => {
     if (!project) return [];
     const modules = project.modules || [];
     const seen = new Set<string>();
-    const comps: any[] = [];
-    modules.forEach((m: any) => {
-      (m.components || []).forEach((comp: any) => {
+    const comps: Component[] = [];
+    modules.forEach((m: Module) => {
+      (m.components || []).forEach((comp: Component) => {
         if (!seen.has(comp.componentName)) {
           seen.add(comp.componentName);
           comps.push(comp);
@@ -160,35 +160,35 @@ export default function ProjectDetail() {
     const documents = project.documents || [];
     const software = project.software || [];
     const totalModules = modules.length;
-    const totalComponents = modules.reduce((sum: number, m: any) => sum + (m.components?.length || 0), 0);
+    const totalComponents = modules.reduce((sum: number, m: Module) => sum + (m.components?.length || 0), 0);
     const normalComponents = modules.reduce(
-      (sum: number, m: any) => sum + (m.components?.filter((c: any) => c.status === '正常').length || 0), 0
+      (sum: number, m: Module) => sum + (m.components?.filter((c: Component) => c.status === '正常').length || 0), 0
     );
     const faultComponents = modules.reduce(
-      (sum: number, m: any) => sum + (m.components?.filter((c: any) => c.status === '故障').length || 0), 0
+      (sum: number, m: Module) => sum + (m.components?.filter((c: Component) => c.status === '故障').length || 0), 0
     );
-    const documentsCompleted = documents.filter((d: any) => d.status === '已完成').length;
-    const softwareCompleted = software.filter((s: any) => s.status === '已完成').length;
+    const documentsCompleted = documents.filter((d: Document) => d.status === '已完成').length;
+    const softwareCompleted = software.filter((s: Software) => s.status === '已完成').length;
 
-    const moduleStatusStats = modules.reduce((acc: Record<string, number>, m: any) => {
+    const moduleStatusStats = modules.reduce((acc: Record<string, number>, m: Module) => {
       acc[m.status] = (acc[m.status] || 0) + 1;
       return acc;
     }, {});
 
-    const categoryStats = modules.reduce((acc: Record<string, { moduleCount: number; componentCount: number }>, m: any) => {
+    const categoryStats = modules.reduce((acc: Record<string, { moduleCount: number; componentCount: number }>, m: Module) => {
       if (!acc[m.category]) acc[m.category] = { moduleCount: 0, componentCount: 0 };
       acc[m.category].moduleCount += 1;
       acc[m.category].componentCount += m.components?.length || 0;
       return acc;
     }, {});
 
-    const systemStatusStats = systems.reduce((acc: Record<string, number>, s: any) => {
+    const systemStatusStats = systems.reduce((acc: Record<string, number>, s: System) => {
       acc[s.status] = (acc[s.status] || 0) + 1;
       return acc;
     }, {});
 
-    const componentStatusStats = modules.reduce((acc: Record<string, number>, m: any) => {
-      (m.components || []).forEach((c: any) => {
+    const componentStatusStats = modules.reduce((acc: Record<string, number>, m: Module) => {
+      (m.components || []).forEach((c: Component) => {
         acc[c.status] = (acc[c.status] || 0) + 1;
       });
       return acc;
@@ -678,10 +678,10 @@ export default function ProjectDetail() {
                       />
                       <span className={t.text}>无关联系统</span>
                     </label>
-                    {systems.filter((s: any) => {
-                      const search = (moduleEditForm as any).systemSearch || '';
+                    {systems.filter((s: System) => {
+                      const search = (moduleEditForm as Record<string, unknown>).systemSearch as string || '';
                       return !search || s.systemName.toLowerCase().includes(search.toLowerCase()) || s.systemNumber.toLowerCase().includes(search.toLowerCase());
-                    }).map((sys: any) => (
+                    }).map((sys: System) => (
                       <label key={sys.id} className={`flex items-center gap-2 p-2 rounded cursor-pointer ${moduleEditForm.systemId === sys.id ? 'bg-amber-50 dark:bg-amber-900/30' : ''} hover:bg-gray-100 dark:hover:bg-gray-700`}>
                         <input
                           type="radio"
@@ -896,11 +896,11 @@ export default function ProjectDetail() {
           onCancel={() => { setShowComponentEditModal(false); setEditingComponent(null); }}
           onSubmit={handlers.handleComponentEditSubmit}
           component={editingComponent}
-          module={project.modules.find((m: any) => m.id === editingComponent.moduleId)}
+          module={project.modules.find((m: Module) => m.id === editingComponent.moduleId)}
           modules={project.modules}
           project={project}
           form={componentEditForm}
-          onChange={(field, value) => setComponentEditForm((prev: any) => ({ ...prev, [field]: value }))}
+          onChange={(field, value) => setComponentEditForm((prev: Record<string, unknown>) => ({ ...prev, [field]: value }))}
           errors={{}}
         />
       )}

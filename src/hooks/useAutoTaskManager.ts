@@ -81,7 +81,7 @@ export function useAutoTaskManager() {
     if (taskCreationLogsRef.current.length > 100) {
       taskCreationLogsRef.current = taskCreationLogsRef.current.slice(-50);
     }
-    console.log(`[AutoTaskManager] Created task: ${type} - ${title} (ID: ${taskId})`, log);
+    logger.log(`[AutoTaskManager] Created task: ${type} - ${title} (ID: ${taskId})`, log);
   }, []);
 
   const logDuplicateAttempt = useCallback((
@@ -105,7 +105,7 @@ export function useAutoTaskManager() {
     if (duplicateAttemptLogsRef.current.length > 100) {
       duplicateAttemptLogsRef.current = duplicateAttemptLogsRef.current.slice(-50);
     }
-    console.log(`[AutoTaskManager] Duplicate task blocked: ${type} - ${title} (Duplicate of: ${duplicateTaskTitle}, ID: ${duplicateTaskId})`, log);
+    logger.log(`[AutoTaskManager] Duplicate task blocked: ${type} - ${title} (Duplicate of: ${duplicateTaskTitle}, ID: ${duplicateTaskId})`, log);
   }, []);
 
   const cleanupProcessedItems = useCallback(() => {
@@ -125,7 +125,7 @@ export function useAutoTaskManager() {
 
     if (isPageRefresh && pendingTaskData) {
       pendingTaskBlockedRef.current = true;
-      console.log('[AutoTaskManager] Page refresh detected, blocking automatic task creation from previous session');
+      logger.log('[AutoTaskManager] Page refresh detected, blocking automatic task creation from previous session');
       getAndClearPendingTask();
     }
 
@@ -414,7 +414,7 @@ export function useAutoTaskManager() {
         `${sw.name} (${sw.version}) 软件开发`,
         faultDuplicateCheck.existingTaskId!,
         faultDuplicateCheck.existingTaskTitle!,
-        `Software ${sw.name} status is 未完成 (fault record check)`,
+        `Software ${sw.name} status is 未完成(fault record check)`,
         true
       );
       if (currentUser) {
@@ -438,7 +438,7 @@ export function useAutoTaskManager() {
     const taskInfo = {
       title: targetTitle,
       description: `软件 ${sw.name} 尚未完成开发。`,
-      priority: '高' as const,
+      priority: '紧急' as const,
       status: '进行中' as const,
       projectId,
     };
@@ -526,7 +526,7 @@ export function useAutoTaskManager() {
         `${doc.name} (${doc.documentNumber}) 文档编写`,
         faultDuplicateCheck.existingTaskId!,
         faultDuplicateCheck.existingTaskTitle!,
-        `Document ${doc.name} status is 未完成 (fault record check)`,
+        `Document ${doc.name} status is 未完成(fault record check)`,
         true
       );
       if (currentUser) {
@@ -550,7 +550,7 @@ export function useAutoTaskManager() {
     const taskInfo = {
       title: targetTitle,
       description: `文档 ${doc.name} 尚未完成。`,
-      priority: '中' as const,
+      priority: '紧急' as const,
       status: '进行中' as const,
       projectId,
     };
@@ -619,12 +619,12 @@ export function useAutoTaskManager() {
     if (!isMountedRef.current) return;
 
     if (!isAutoTaskEnabled) {
-      console.log('[AutoTaskManager] Auto task creation is disabled (feature flag off)');
+      logger.log('[AutoTaskManager] Auto task creation is disabled (feature flag off)');
       return;
     }
 
     if (pendingTaskBlockedRef.current) {
-      console.log('[AutoTaskManager] Skipping task processing due to page refresh detection');
+      logger.log('[AutoTaskManager] Skipping task processing due to page refresh detection');
       pendingTaskBlockedRef.current = false;
       return;
     }

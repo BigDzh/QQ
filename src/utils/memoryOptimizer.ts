@@ -46,21 +46,21 @@ export class MemoryOptimizer {
   }
 
   performCleanup(): void {
-    console.log('[MemoryOptimizer] Performing cleanup...');
+    logger.log('[MemoryOptimizer] Performing cleanup...');
     this.cleanupCallbacks.forEach(callback => {
       try {
         callback();
       } catch (error) {
-        console.error('[MemoryOptimizer] Cleanup callback error:', error);
+        logger.error('[MemoryOptimizer] Cleanup callback error:', error);
       }
     });
     this.caches.forEach(cache => cache.clear());
-    console.log('[MemoryOptimizer] Cleanup completed');
+    logger.log('[MemoryOptimizer] Cleanup completed');
   }
 
   clearAllCaches(): void {
     this.caches.forEach(cache => cache.clear());
-    console.log('[MemoryOptimizer] All caches cleared');
+    logger.log('[MemoryOptimizer] All caches cleared');
   }
 
   getCacheStats(): { name: string; size: number }[] {
@@ -73,7 +73,7 @@ export class MemoryOptimizer {
   setLowMemoryMode(enabled: boolean): void {
     this.isLowMemoryMode = enabled;
     if (enabled) {
-      console.log('[MemoryOptimizer] Low memory mode enabled, reducing cache sizes...');
+      logger.log('[MemoryOptimizer] Low memory mode enabled, reducing cache sizes...');
       this.caches.forEach((cache, name) => {
         const newCache = new LRUCache(Math.floor(this.config.maxCacheSize * 0.3));
         const items = cache.getAll();
@@ -87,7 +87,7 @@ export class MemoryOptimizer {
         this.caches.set(name, newCache);
       });
     } else {
-      console.log('[MemoryOptimizer] Low memory mode disabled, restoring cache sizes...');
+      logger.log('[MemoryOptimizer] Low memory mode disabled, restoring cache sizes...');
     }
   }
 
@@ -121,9 +121,9 @@ export function checkMemoryPressure(): { level: 'normal' | 'warning' | 'critical
 export function forceGarbageCollection(): void {
   if (window.gc) {
     window.gc();
-    console.log('[MemoryOptimizer] GC forced');
+    logger.log('[MemoryOptimizer] GC forced');
   } else {
-    console.warn('[MemoryOptimizer] GC not available (requires --expose-gc flag)');
+    logger.warn('[MemoryOptimizer] GC not available (requires --expose-gc flag)');
   }
 }
 

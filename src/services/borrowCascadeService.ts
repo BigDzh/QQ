@@ -71,10 +71,19 @@ export interface CascadeOperation {
 }
 
 const STATUS_CHANGE_AUDIT_KEY = 'borrow_status_change_audit';
+const MAX_AUDIT_ENTRIES = 500;
+const AUDIT_RETENTION_DAYS = 90;
 
 export class BorrowCascadeService {
   private auditCache: StatusChangeAuditEntry[] | null = null;
-  private static readonly MAX_AUDIT_CACHE_SIZE = 500;
+  private static instance: BorrowCascadeService | null = null;
+
+  public static getInstance(): BorrowCascadeService {
+    if (!BorrowCascadeService.instance) {
+      BorrowCascadeService.instance = new BorrowCascadeService();
+    }
+    return BorrowCascadeService.instance;
+  }
 
   private generateId(): string {
     return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -84,8 +93,19 @@ export class BorrowCascadeService {
     try {
       const existing = this.getAuditFromStorage();
       existing.push(audit);
-      localStorage.setItem(STATUS_CHANGE_AUDIT_KEY, JSON.stringify(existing));
-      this.auditCache = null;
+
+      if (existing.length > MAX_AUDIT_ENTRIES) {
+        const cutoffTime = Date.now() - (AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const filtered = existing.filter(entry => new Date(entry.timestamp).getTime() > cutoffTime);
+        const trimmed = filtered.length > MAX_AUDIT_ENTRIES
+          ? filtered.slice(-MAX_AUDIT_ENTRIES)
+          : filtered;
+        localStorage.setItem(STATUS_CHANGE_AUDIT_KEY, JSON.stringify(trimmed));
+        this.auditCache = trimmed;
+      } else {
+        localStorage.setItem(STATUS_CHANGE_AUDIT_KEY, JSON.stringify(existing));
+        this.auditCache = existing;
+      }
     } catch (error) {
       console.error('[BorrowCascadeService] Failed to save audit:', error);
     }
@@ -98,15 +118,37 @@ export class BorrowCascadeService {
       const stored = localStorage.getItem(STATUS_CHANGE_AUDIT_KEY);
       this.auditCache = stored ? JSON.parse(stored) : [];
 
-      if (this.auditCache.length > BorrowCascadeService.MAX_AUDIT_CACHE_SIZE) {
-        this.auditCache = this.auditCache.slice(-BorrowCascadeService.MAX_AUDIT_CACHE_SIZE);
+      if (this.auditCache.length > MAX_AUDIT_ENTRIES) {
+        const cutoffTime = Date.now() - (AUDIT_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+        const filtered = this.auditCache.filter(entry => new Date(entry.timestamp).getTime() > cutoffTime);
+        this.auditCache = filtered.length > MAX_AUDIT_ENTRIES
+          ? filtered.slice(-MAX_AUDIT_ENTRIES)
+          : filtered;
+        localStorage.setItem(STATUS_CHANGE_AUDIT_KEY, JSON.stringify(this.auditCache));
       }
 
-      return this.auditCache!;
+      return this.auditCache;
     } catch {
       this.auditCache = [];
       return this.auditCache;
     }
+  }
+
+  public clearAuditCache(): void {
+    this.auditCache = null;
+  }
+
+  public getAuditStats(): { count: number; oldestTimestamp: string | null; newestTimestamp: string | null } {
+    const audits = this.getAuditFromStorage();
+    if (audits.length === 0) {
+      return { count: 0, oldestTimestamp: null, newestTimestamp: null };
+    }
+    const timestamps = audits.map(a => new Date(a.timestamp).getTime());
+    return {
+      count: audits.length,
+      oldestTimestamp: audits[0].timestamp,
+      newestTimestamp: audits[audits.length - 1].timestamp,
+    };
   }
 
   validateModuleComponentRelation(module: Module): {

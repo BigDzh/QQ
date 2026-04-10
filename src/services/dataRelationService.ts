@@ -90,7 +90,7 @@ export class DataRelationService {
     this.tasks = tasks || [];
     this.borrowRecords = borrowRecords || [];
     this.invalidateAllCaches();
-    console.log('[DataRelationService] Initialized with:', {
+    logger.log('[DataRelationService] Initialized with:', {
       projects: this.projects.length,
       tasks: this.tasks.length,
       borrowRecords: this.borrowRecords.length,

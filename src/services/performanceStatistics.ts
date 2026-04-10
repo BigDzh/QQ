@@ -46,7 +46,7 @@ export function getStatisticsConfig(): StatisticsConfig {
       return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
     }
   } catch {
-    console.warn('Failed to load statistics config');
+    logger.warn('Failed to load statistics config');
   }
   return DEFAULT_CONFIG;
 }
@@ -57,7 +57,7 @@ export function saveStatisticsConfig(config: Partial<StatisticsConfig>): void {
     const updated = { ...current, ...config };
     localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(updated));
   } catch {
-    console.warn('Failed to save statistics config');
+    logger.warn('Failed to save statistics config');
   }
 }
 
@@ -101,7 +101,7 @@ export function addPerformanceRecord(record: Omit<PerformanceRecord, 'timestamp'
 
     updateDailyStats(fullRecord);
   } catch (error) {
-    console.warn('Failed to add performance record:', error);
+    logger.warn('Failed to add performance record:', error);
   }
 }
 
@@ -177,7 +177,7 @@ function updateDailyStats(record: PerformanceRecord): void {
 
     localStorage.setItem(STORAGE_KEY_DAILY_STATS, JSON.stringify(trimmedStats));
   } catch (error) {
-    console.warn('Failed to update daily stats:', error);
+    logger.warn('Failed to update daily stats:', error);
   }
 }
 
@@ -196,7 +196,7 @@ export function clearAllStatistics(): void {
     localStorage.removeItem(STORAGE_KEY_RECORDS);
     localStorage.removeItem(STORAGE_KEY_DAILY_STATS);
   } catch {
-    console.warn('Failed to clear statistics');
+    logger.warn('Failed to clear statistics');
   }
 }
 

@@ -253,10 +253,13 @@ export default function Login() {
             <button
               type="button"
               onClick={() => {
-                localStorage.removeItem('users');
-                localStorage.removeItem('auth_token');
-                showToast('登录数据已重置，请使用 admin / admin123 登录', 'success');
-                setError('');
+                if (window.confirm('⚠️ 确定要重置所有登录数据吗？\n\n此操作将：\n• 删除所有用户账户\n• 清除登录令牌\n• 需要重新注册用户\n\n这是一个不可逆操作！')) {
+                  localStorage.removeItem('users');
+                  localStorage.removeItem('auth_token');
+                  sessionStorage.removeItem('admin_password_hash');
+                  showToast('登录数据已重置，请注册新用户', 'success');
+                  setError('');
+                }
               }}
               className={`text-xs ${t.textMuted} hover:${t.text} underline`}
             >
@@ -336,11 +339,13 @@ export default function Login() {
           </div>
         </form>
 
-        <div className="mt-6 p-4 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition" onClick={() => { setUsername('admin'); setPassword('admin123'); setTimeout(() => { if (login('admin', 'admin123')) { showToast('登录成功', 'success'); navigate('/projects'); } else { setError('用户名或密码错误'); showToast('登录失败', 'error'); } }, 100); }}>
+        <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-600 text-center">
-            演示账户：admin / admin123
+            首次使用？请点击"注册"按钮创建账户
           </p>
-          <p className="text-xs text-gray-400 text-center mt-1">点击直接登录</p>
+          <p className="text-xs text-gray-400 text-center mt-1">
+            管理员账户请在首次启动时查看控制台获取临时密码
+          </p>
         </div>
       </div>
 

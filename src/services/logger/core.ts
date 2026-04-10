@@ -78,7 +78,7 @@ class LogStore<T extends HierarchicalLogEntry> {
         this.entries = stored.slice(0, this.maxEntries);
       }
     } catch (e) {
-      console.error('Failed to load logs from storage:', e);
+      logger.error('Failed to load logs from storage:', e);
     }
   }
 
@@ -97,7 +97,7 @@ class LogStore<T extends HierarchicalLogEntry> {
       safeSetObject(this.storageKey, this.entries);
       this.isDirty = false;
     } catch (e) {
-      console.error('Failed to save logs to storage:', e);
+      logger.error('Failed to save logs to storage:', e);
     }
   }
 
@@ -171,7 +171,7 @@ class LogStore<T extends HierarchicalLogEntry> {
     try {
       localStorage.removeItem(this.storageKey);
     } catch (e) {
-      console.error('Failed to clear log storage:', e);
+      logger.error('Failed to clear log storage:', e);
     }
   }
 
@@ -189,7 +189,7 @@ class LogStore<T extends HierarchicalLogEntry> {
       try {
         listener(entry);
       } catch (e) {
-        console.error('Error in log listener:', e);
+        logger.error('Error in log listener:', e);
       }
     });
   }
@@ -259,7 +259,7 @@ export class HierarchicalLogger {
     };
 
     const prefix = `%c[${layerEmoji[entry.layer]}${entry.layer}] [${entry.level}]`;
-    console.log(prefix, styleMap[entry.level], entry);
+    logger.log(prefix, styleMap[entry.level], entry);
   }
 
   private notifyGlobalListeners(entry: HierarchicalLogEntry): void {
@@ -267,7 +267,7 @@ export class HierarchicalLogger {
       try {
         listener(entry);
       } catch (e) {
-        console.error('Error in global log listener:', e);
+        logger.error('Error in global log listener:', e);
       }
     });
   }

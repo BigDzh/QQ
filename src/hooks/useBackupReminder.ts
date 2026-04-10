@@ -77,7 +77,7 @@ export function useBackupReminder(options: UseBackupReminderOptions = {}) {
       }));
       return true;
     } catch (error) {
-      console.error('Backup failed:', error);
+      logger.error('Backup failed:', error);
       return false;
     }
   }, []);

@@ -87,7 +87,7 @@ export function useDocSearch(): UseDocSearchReturn {
     };
 
     worker.onerror = (error) => {
-      console.error('DocSearch Worker error:', error);
+      logger.error('DocSearch Worker error:', error);
       setIsSearching(false);
 
       const pending = pendingRef.current.get('current');

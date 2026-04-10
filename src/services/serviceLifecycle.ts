@@ -36,7 +36,7 @@ class ServiceLifecycleManager {
     this.services.clear();
 
     if (errors.length > 0) {
-      console.error('[ServiceLifecycle] Errors during destroy:', errors);
+      logger.error('[ServiceLifecycle] Errors during destroy:', errors);
     }
   }
 

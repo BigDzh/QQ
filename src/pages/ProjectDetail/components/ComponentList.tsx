@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Package, Copy, Trash2, Edit2, Search, X, Plus, CheckSquare, Square, ArrowUp, ArrowDown } from 'lucide-react';
 import { useThemeStyles } from '../../../hooks/useThemeStyles';
@@ -6,17 +6,22 @@ import { useToast } from '../../../components/Toast';
 import { EnhancedComponentStatusModal } from './EnhancedComponentStatusModal';
 import { BatchOperationsBar } from '../../../components/BatchOperationsBar';
 import { ConfirmModal } from './ConfirmModal';
-import type { Component, ComponentStatus } from '../../../types';
+import type { Component, ComponentStatus, Module, ProjectStage } from '../../../types';
 import { STAGE_OPTIONS, getDefaultStageForEntity } from '../../../services/stageConfig';
 
+interface ComponentWithModule extends Component {
+  moduleName: string;
+  moduleId: string;
+}
+
 interface ComponentListProps {
-  modules: any[];
+  modules: Module[];
   canEdit: boolean;
   onAddComponent: () => void;
-  onEditComponent: (component: any) => void;
+  onEditComponent: (component: Component) => void;
   onDeleteComponent: (moduleId: string, componentId: string) => void;
-  onCopyComponent: (component: any) => void;
-  onStatusChange?: (component: any) => void;
+  onCopyComponent: (component: Component) => void;
+  onStatusChange?: (component: Component) => void;
   onStatusChangeWithReason?: (componentId: string, moduleId: string, newStatus: ComponentStatus, reason: string) => Promise<{ success: boolean; error?: string; errorType?: 'network' | 'permission' | 'validation' | 'unknown' }>;
   onBatchDeleteComponents?: (moduleIdComponentIds: { moduleId: string; componentId: string }[]) => Promise<void>;
   onBatchUpdateStatus?: (moduleIdComponentIds: { moduleId: string; componentId: string }[], newStatus: ComponentStatus) => Promise<void>;
@@ -80,8 +85,8 @@ export function ComponentList({
     setSelectedComponents(new Set());
   }, [selectedStage, selectedStatus, selectedComponentName]);
 
-  const allComponents = useMemo(() => {
-    return modules.flatMap(m => m.components.map((c: any) => ({ ...c, moduleName: m.moduleName, moduleId: m.id })));
+  const allComponents = useMemo<ComponentWithModule[]>(() => {
+    return modules.flatMap(m => m.components.map((c: Component) => ({ ...c, moduleName: m.moduleName, moduleId: m.id })));
   }, [modules]);
 
   const filteredComponents = useMemo(() => {
@@ -95,7 +100,7 @@ export function ComponentList({
           c.componentName.toLowerCase().includes(debouncedComponentSearchTerm.toLowerCase())
         )
       )
-      .sort((a: any, b: any) => {
+      .sort((a: ComponentWithModule, b: ComponentWithModule) => {
         const aVal = String(a[sortField] || '');
         const bVal = String(b[sortField] || '');
         if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
@@ -262,11 +267,11 @@ export function ComponentList({
 
   const stageInfo = useMemo(() => {
     return (['F阶段', 'C阶段', 'S阶段', 'D阶段', 'P阶段'] as const).map(stage => {
-      const stageComponents = allComponents.filter((c: any) => c.stage === stage);
+      const stageComponents = allComponents.filter((c: ComponentWithModule) => c.stage === stage);
       const total = stageComponents.length;
       const statusCounts: Record<StatusType, number> = {} as Record<StatusType, number>;
       STATUS_LIST.forEach(s => { statusCounts[s] = 0; });
-      stageComponents.forEach((c: any) => {
+      stageComponents.forEach((c: ComponentWithModule) => {
         if (STATUS_LIST.includes(c.status as StatusType)) {
           statusCounts[c.status as StatusType]++;
         }

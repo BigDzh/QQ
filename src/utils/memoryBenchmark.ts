@@ -38,7 +38,7 @@ function generateMockProjects(count: number): Project[] {
       projectNumber: `TEST-${i}`,
       stage: 'D阶段',
       version: 'v1.0',
-      categories: ['控制类'],
+      categories: ['控制�?],
       modules: Array.from({ length: 10 }, (_, mi) => ({
         id: `mod-${i}-${mi}`,
         projectId: `proj-${i}`,
@@ -46,7 +46,7 @@ function generateMockProjects(count: number): Project[] {
         productionOrderNumber: `PO-${i}-${mi}`,
         moduleNumber: `M-${i}-${mi}`,
         moduleName: `模块 ${i}-${mi}`,
-        category: '控制类',
+        category: '控制�?,
         holder: '测试人员',
         status: '正常',
         stage: 'D阶段',
@@ -63,7 +63,7 @@ function generateMockProjects(count: number): Project[] {
           stage: 'D阶段',
           version: 'v1.0',
           logs: [],
-          certificates: { pcb: '已签署', assembly: '已签署', coating: '已签署', final: '已签署' },
+          certificates: { pcb: '已签�?, assembly: '已签�?, coating: '已签�?, final: '已签�? },
           statusChanges: [],
         })),
         logs: [],
@@ -85,8 +85,8 @@ function generateMockTasks(count: number): Task[] {
     id: `task-${i}`,
     title: `测试任务 ${i}`,
     description: `测试任务描述 ${i}`,
-    priority: '中' as const,
-    status: '进行中' as const,
+    priority: '�? as const,
+    status: '进行�? as const,
     createdAt: new Date().toISOString(),
   }));
 }
@@ -96,13 +96,13 @@ export async function runMemoryOptimizationTests(): Promise<BenchmarkReport> {
   const projectScales = [10, 50, 100];
   const taskCount = 50;
 
-  console.log('[Performance Test] Starting memory optimization tests...');
+  logger.log('[Performance Test] Starting memory optimization tests...');
 
   for (const scale of projectScales) {
     const projects = generateMockProjects(scale);
     const tasks = generateMockTasks(taskCount);
 
-    console.log(`[Performance Test] Testing with ${scale} projects and ${taskCount} tasks...`);
+    logger.log(`[Performance Test] Testing with ${scale} projects and ${taskCount} tasks...`);
 
     const memBefore = getMemoryUsage();
 
@@ -111,7 +111,7 @@ export async function runMemoryOptimizationTests(): Promise<BenchmarkReport> {
     const memAfter = getMemoryUsage();
 
     const result: PerformanceTestResult = {
-      name: `搜索 ${scale} 个项目 + ${taskCount} 个任务`,
+      name: `搜索 ${scale} 个项�?+ ${taskCount} 个任务`,
       duration: 0,
       memoryBefore: memBefore,
       memoryAfter: memAfter,
@@ -120,7 +120,7 @@ export async function runMemoryOptimizationTests(): Promise<BenchmarkReport> {
     };
 
     results.push(result);
-    console.log(`[Performance Test] Memory delta: ${(memAfter - memBefore) / 1024}KB`);
+    logger.log(`[Performance Test] Memory delta: ${(memAfter - memBefore) / 1024}KB`);
   }
 
   searchAll('测试', results.length > 0 ? generateMockProjects(10) : [], []);
@@ -142,7 +142,7 @@ export async function runMemoryOptimizationTests(): Promise<BenchmarkReport> {
     averageResponseTimeImprovement: 0,
   };
 
-  console.log('[Performance Test] Tests completed:', summary);
+  logger.log('[Performance Test] Tests completed:', summary);
 
   return {
     timestamp: new Date().toISOString(),

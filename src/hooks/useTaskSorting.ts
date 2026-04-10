@@ -16,9 +16,9 @@ interface UseTaskSortingReturn {
 const DEFAULT_SORTING_CONFIG: SortingConfig = {
   urgencyWeights: {
     'ÊûÅÈ´ò': 100,
-    'È´ò': 75,
-    '‰∏≠': 50,
-    '‰Ωé': 25,
+    'È´?: 75,
+    '‰∏?: 50,
+    '‰Ω?: 25,
   },
   timeDecayFactor: 0.001,
 };
@@ -93,7 +93,7 @@ export function useSortingConfigStorage() {
         return JSON.parse(stored) as SortingConfig;
       }
     } catch (e) {
-      console.warn('Failed to load sorting config from storage:', e);
+      logger.warn('Failed to load sorting config from storage:', e);
     }
     return null;
   }, []);
@@ -102,7 +102,7 @@ export function useSortingConfigStorage() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
     } catch (e) {
-      console.warn('Failed to save sorting config to storage:', e);
+      logger.warn('Failed to save sorting config to storage:', e);
     }
   }, []);
 
@@ -110,7 +110,7 @@ export function useSortingConfigStorage() {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch (e) {
-      console.warn('Failed to clear sorting config from storage:', e);
+      logger.warn('Failed to clear sorting config from storage:', e);
     }
   }, []);
 

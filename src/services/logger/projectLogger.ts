@@ -54,7 +54,7 @@ class ProjectLogStore {
         }
       }
     } catch (e) {
-      console.error('Failed to load project logs from storage:', e);
+      logger.error('Failed to load project logs from storage:', e);
     }
   }
 
@@ -62,7 +62,7 @@ class ProjectLogStore {
     try {
       localStorage.setItem(this.storageKey, JSON.stringify(this.entries));
     } catch (e) {
-      console.error('Failed to save project logs to storage:', e);
+      logger.error('Failed to save project logs to storage:', e);
     }
   }
 
@@ -113,7 +113,7 @@ class ProjectLogStore {
     try {
       localStorage.removeItem(this.storageKey);
     } catch (e) {
-      console.error('Failed to clear project log storage:', e);
+      logger.error('Failed to clear project log storage:', e);
     }
   }
 
@@ -131,7 +131,7 @@ class ProjectLogStore {
       try {
         listener(entry);
       } catch (e) {
-        console.error('Error in project log listener:', e);
+        logger.error('Error in project log listener:', e);
       }
     });
   }
@@ -162,7 +162,7 @@ class ProjectLoggerService {
     };
 
     const prefix = `%c[📋PROJECT] [${entry.level}]`;
-    console.log(prefix, styleMap[entry.level], entry);
+    logger.log(prefix, styleMap[entry.level], entry);
   }
 
   logProjectChange(

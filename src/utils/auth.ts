@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import DOMPurify from 'dompurify';
 import type { User, UserRole } from '../types/auth';
 import { ROLE_PERMISSIONS, type Permission } from '../types/auth';
 
@@ -108,13 +109,24 @@ export function formatFileSize(bytes: number): string {
 
 export function sanitizeInput(input: unknown): string {
   if (typeof input !== 'string') return '';
-  return input
-    .replace(/<script\b[^>]*>/gi, '')
-    .replace(/<\/script>/gi, '')
-    .replace(/<[^>]*>/g, '')
+
+  const sanitized = DOMPurify.sanitize(input, {
+    ALLOWED_TAGS: [],
+    ALLOWED_ATTR: [],
+  });
+
+  const additionalCleanup = sanitized
     .replace(/javascript:/gi, '')
     .replace(/on\w+=/gi, '')
+    .replace(/data:/gi, '')
+    .replace(/vbscript:/gi, '')
     .trim();
+
+  if (additionalCleanup !== input) {
+    console.warn('Input was sanitized for security reasons');
+  }
+
+  return additionalCleanup;
 }
 
 export function validateEmail(email: string): boolean {
@@ -151,7 +163,7 @@ export function validatePasswordStrength(password: string): PasswordValidationRe
     errors.push('密码应包含至少一个数字');
   }
 
-  if (!/[!@#$%^&*()_+\-={}[\];':"\\|,.<>\/?`~]/.test(password)) {
+  if (!/[-!@#$%^&*()_+\[\]{};':"\\|,.<>\/?`~]/.test(password)) {
     errors.push('密码应包含至少一个特殊字符');
   }
 

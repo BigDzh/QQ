@@ -1,7 +1,7 @@
 export function printElement(elementId: string): void {
   const element = document.getElementById(elementId);
   if (!element) {
-    console.error('Print element not found');
+    logger.error('Print element not found');
     return;
   }
 

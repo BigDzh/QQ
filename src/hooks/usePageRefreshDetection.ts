@@ -2,6 +2,7 @@ const PAGE_REFRESH_DETECTION_KEY = 'qq_export_page_load_timestamp';
 const LAST_ACTIVITY_KEY = 'qq_export_last_activity';
 const TASK_SUBMISSION_TOKEN_KEY = 'qq_export_task_submission_token';
 const PENDING_TASK_KEY = 'qq_export_pending_task';
+import { logger } from '../utils/logger';
 
 interface PageRefreshState {
   isPageRefresh: boolean;
@@ -15,7 +16,7 @@ function safeJsonParse<T>(str: string | null, fallback: T): T {
   try {
     return JSON.parse(str) as T;
   } catch (error) {
-    console.error('Failed to parse JSON:', error);
+    logger.error('Failed to parse JSON:', error);
     return fallback;
   }
 }
@@ -45,7 +46,7 @@ export function markPageLoaded(): void {
   try {
     sessionStorage.setItem(PAGE_REFRESH_DETECTION_KEY, Date.now().toString());
   } catch (error) {
-    console.error('Failed to mark page loaded:', error);
+    logger.error('Failed to mark page loaded:', error);
   }
 }
 
@@ -54,7 +55,7 @@ export function generateSubmissionToken(): string {
   try {
     sessionStorage.setItem(TASK_SUBMISSION_TOKEN_KEY, token);
   } catch (error) {
-    console.error('Failed to generate submission token:', error);
+    logger.error('Failed to generate submission token:', error);
   }
   return token;
 }
@@ -63,7 +64,7 @@ export function setPendingTaskData(taskData: Record<string, unknown>): void {
   try {
     sessionStorage.setItem(PENDING_TASK_KEY, JSON.stringify(taskData));
   } catch (error) {
-    console.error('Failed to set pending task data:', error);
+    logger.error('Failed to set pending task data:', error);
   }
 }
 
@@ -79,7 +80,7 @@ export function clearPendingTask(): void {
     sessionStorage.removeItem(PENDING_TASK_KEY);
     sessionStorage.removeItem(TASK_SUBMISSION_TOKEN_KEY);
   } catch (error) {
-    console.error('Failed to clear pending task:', error);
+    logger.error('Failed to clear pending task:', error);
   }
 }
 
@@ -88,7 +89,7 @@ export function isValidSubmissionToken(token: string): boolean {
     const storedToken = sessionStorage.getItem(TASK_SUBMISSION_TOKEN_KEY);
     return storedToken === token;
   } catch (error) {
-    console.error('Failed to validate submission token:', error);
+    logger.error('Failed to validate submission token:', error);
     return false;
   }
 }
@@ -97,7 +98,7 @@ export function recordActivity(): void {
   try {
     sessionStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
   } catch (error) {
-    console.error('Failed to record activity:', error);
+    logger.error('Failed to record activity:', error);
   }
 }
 
@@ -108,7 +109,7 @@ export function wasRecentlyActive(): boolean {
     const diff = Date.now() - parseInt(lastActivity, 10);
     return diff < 5000;
   } catch (error) {
-    console.error('Failed to check recent activity:', error);
+    logger.error('Failed to check recent activity:', error);
     return false;
   }
 }
@@ -118,7 +119,7 @@ export function isDuplicateSubmission(): boolean {
     const { isPageRefresh, pendingTaskData } = getPageRefreshState();
     return isPageRefresh && pendingTaskData !== null;
   } catch (error) {
-    console.error('Failed to check duplicate submission:', error);
+    logger.error('Failed to check duplicate submission:', error);
     return false;
   }
 }
@@ -130,6 +131,6 @@ export function clearAllPageRefreshData(): void {
     sessionStorage.removeItem(TASK_SUBMISSION_TOKEN_KEY);
     sessionStorage.removeItem(PENDING_TASK_KEY);
   } catch (error) {
-    console.error('Failed to clear all page refresh data:', error);
+    logger.error('Failed to clear all page refresh data:', error);
   }
 }

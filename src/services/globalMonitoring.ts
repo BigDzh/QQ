@@ -60,8 +60,8 @@ class GlobalMonitoringService {
 
     if (this.config.enabled && import.meta.env.DEV) {
       console.group('[GlobalMonitor] Delete Operation Recorded');
-      console.log('Operation:', fullOperation);
-      console.log('Total operations:', this.deleteOperations.length);
+      logger.log('Operation:', fullOperation);
+      logger.log('Total operations:', this.deleteOperations.length);
       console.groupEnd();
     }
   }
@@ -116,7 +116,7 @@ class GlobalMonitoringService {
     }
 
     if (this.config.enabled) {
-      console.error('[GlobalMonitor] Error tracked:', error, context);
+      logger.error('[GlobalMonitor] Error tracked:', error, context);
     }
   }
 

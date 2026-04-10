@@ -79,7 +79,7 @@ export function useComputeWorker(options: UseComputeWorkerOptions = {}): UseComp
     };
 
     worker.onerror = (error) => {
-      console.error('Worker error:', error);
+      logger.error('Worker error:', error);
       setIsReady(false);
     };
 

@@ -75,7 +75,7 @@ function buildSearchableItems(projects: Project[], tasks: Task[]): SearchableIte
       id: task.id,
       type: 'task',
       title: task.title,
-      subtitle: `状态: ${task.status} | 优先级: ${task.priority}`,
+      subtitle: `状�? ${task.status} | 优先�? ${task.priority}`,
       path: '/tasks',
     });
   }
@@ -122,7 +122,7 @@ export async function searchWithWorker(
         });
       }
     } catch (error) {
-      console.warn('Worker search failed, falling back to main thread:', error);
+      logger.warn('Worker search failed, falling back to main thread:', error);
     }
   }
 

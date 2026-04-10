@@ -24,7 +24,7 @@ export async function compressFolderToZip(
 
     const dataParts = file.dataUrl.split(',');
     if (dataParts.length < 2) {
-      console.warn(`Invalid data URL for file: ${file.name}`);
+      logger.warn(`Invalid data URL for file: ${file.name}`);
       continue;
     }
 

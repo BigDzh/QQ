@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react';
+import { logger } from '../utils/logger';
 
 interface ServerProcess {
   id: string;
@@ -39,11 +40,11 @@ async function terminateServerViaApi(
       });
 
       if (response.ok) {
-        console.log(`[ServerLifecycle] Server terminated via API on attempt ${attempt}`);
+        logger.log(`[ServerLifecycle] Server terminated via API on attempt ${attempt}`);
         return true;
       }
     } catch (error) {
-      console.warn(`[ServerLifecycle] Termination attempt ${attempt} failed:`, error);
+      logger.warn(`[ServerLifecycle] Termination attempt ${attempt} failed:`, error);
       if (attempt < retries) {
         await sleep(RETRY_DELAY);
       }
@@ -57,7 +58,7 @@ function terminateViaNavigatorBeacon(serverUrl: string): void {
     const data = JSON.stringify({ reason: 'browser_closed', timestamp: Date.now() });
     navigator.sendBeacon(`${serverUrl}/__terminate`, data);
   } catch (error) {
-    console.warn('[ServerLifecycle] Beacon termination failed:', error);
+    logger.warn('[ServerLifecycle] Beacon termination failed:', error);
   }
 }
 
@@ -68,10 +69,10 @@ function killLocalProcess(pid: number): Promise<boolean> {
         const { exec } = require('child_process');
         exec(`taskkill /PID ${pid} /F`, (error: Error | null) => {
           if (error) {
-            console.error(`[ServerLifecycle] Failed to kill process ${pid}:`, error);
+            logger.error(`[ServerLifecycle] Failed to kill process ${pid}:`, error);
             resolve(false);
           } else {
-            console.log(`[ServerLifecycle] Process ${pid} terminated successfully`);
+            logger.log(`[ServerLifecycle] Process ${pid} terminated successfully`);
             resolve(true);
           }
         });
@@ -79,16 +80,16 @@ function killLocalProcess(pid: number): Promise<boolean> {
         const { exec } = require('child_process');
         exec(`kill -9 ${pid}`, (error: Error | null) => {
           if (error) {
-            console.error(`[ServerLifecycle] Failed to kill process ${pid}:`, error);
+            logger.error(`[ServerLifecycle] Failed to kill process ${pid}:`, error);
             resolve(false);
           } else {
-            console.log(`[ServerLifecycle] Process ${pid} terminated successfully`);
+            logger.log(`[ServerLifecycle] Process ${pid} terminated successfully`);
             resolve(true);
           }
         });
       }
     } catch (error) {
-      console.error('[ServerLifecycle] Process termination error:', error);
+      logger.error('[ServerLifecycle] Process termination error:', error);
       resolve(false);
     }
   });
@@ -102,7 +103,7 @@ async function terminateElectronProcess(pid: number): Promise<boolean> {
       return result === true;
     }
   } catch (error) {
-    console.error('[ServerLifecycle] Electron IPC termination failed:', error);
+    logger.error('[ServerLifecycle] Electron IPC termination failed:', error);
   }
   return killLocalProcess(pid);
 }
@@ -137,7 +138,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
     isTerminatingRef.current = true;
     terminationAttemptedRef.current = true;
 
-    console.log('[ServerLifecycle] Initiating server termination...');
+    logger.log('[ServerLifecycle] Initiating server termination...');
     terminatingRef.current?.();
 
     const errors: Error[] = [];
@@ -145,7 +146,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
     for (const process of processes) {
       if (process.pid) {
         try {
-          console.log(`[ServerLifecycle] Terminating process: ${process.name} (PID: ${process.pid})`);
+          logger.log(`[ServerLifecycle] Terminating process: ${process.name} (PID: ${process.pid})`);
           const success = await terminateElectronProcess(process.pid);
           if (!success) {
             errors.push(new Error(`Failed to terminate process ${process.pid}`));
@@ -174,10 +175,10 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
       const combinedError = new Error(
         `Server termination completed with ${errors.length} error(s): ${errors.map((e) => e.message).join(', ')}`
       );
-      console.error('[ServerLifecycle] Termination errors:', combinedError);
+      logger.error('[ServerLifecycle] Termination errors:', combinedError);
       errorRef.current?.(combinedError);
     } else {
-      console.log('[ServerLifecycle] Server termination completed successfully');
+      logger.log('[ServerLifecycle] Server termination completed successfully');
       terminatedRef.current?.();
     }
   }, [serverUrl, processes, terminationDelay]);
@@ -186,7 +187,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
     (event: BeforeUnloadEvent) => {
       if (!enabled) return;
 
-      console.log('[ServerLifecycle] BeforeUnload event triggered');
+      logger.log('[ServerLifecycle] BeforeUnload event triggered');
 
       terminateServers();
 
@@ -199,7 +200,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
   const handleUnload = useCallback(() => {
     if (!enabled) return;
 
-    console.log('[ServerLifecycle] Unload event triggered');
+    logger.log('[ServerLifecycle] Unload event triggered');
 
     if (!isTerminatingRef.current) {
       terminateServers();
@@ -210,7 +211,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
     if (!enabled) return;
 
     if (document.visibilityState === 'hidden') {
-      console.log('[ServerLifecycle] Page hidden - preparing for potential close');
+      logger.log('[ServerLifecycle] Page hidden - preparing for potential close');
 
       setTimeout(() => {
         if (document.visibilityState === 'hidden' && !isTerminatingRef.current) {
@@ -235,7 +236,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
   }, [enabled, handleBeforeUnload, handleUnload, handleVisibilityChange]);
 
   const manuallyTerminate = useCallback(async () => {
-    console.log('[ServerLifecycle] Manual termination requested');
+    logger.log('[ServerLifecycle] Manual termination requested');
     await terminateServers();
   }, [terminateServers]);
 
@@ -248,7 +249,7 @@ export function useServerLifecycle(options: ServerLifecycleOptions = {}) {
 export function registerTerminationEndpoint(app: any, serverProcess: { kill: () => void }) {
   if (app && typeof app.post === 'function') {
     app.post('/__terminate', (_req: any, res: any) => {
-      console.log('[ServerLifecycle] Received termination request via API');
+      logger.log('[ServerLifecycle] Received termination request via API');
       try {
         if (serverProcess && typeof serverProcess.kill === 'function') {
           serverProcess.kill();
@@ -257,7 +258,7 @@ export function registerTerminationEndpoint(app: any, serverProcess: { kill: () 
           res.status(200).json({ success: true, message: 'Termination acknowledged' });
         }
       } catch (error) {
-        console.error('[ServerLifecycle] Termination error:', error);
+        logger.error('[ServerLifecycle] Termination error:', error);
         res.status(500).json({ success: false, error: 'Termination failed' });
       }
     });

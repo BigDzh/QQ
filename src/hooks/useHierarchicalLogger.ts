@@ -98,7 +98,7 @@ export function useHierarchicalLogger(options: UseHierarchicalLoggerOptions = {}
             listener(latestLogs[0]);
           }
         } catch (e) {
-          console.error('Error in auto-refresh listener:', e);
+          logger.error('Error in auto-refresh listener:', e);
         }
       });
     }, refreshInterval);
