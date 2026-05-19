@@ -1,0 +1,55 @@
+warning: in the working copy of 'src/components/ModuleStatusBoard.tsx', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/src/components/ModuleStatusBoard.tsx b/src/components/ModuleStatusBoard.tsx[m
+[1mindex 9a3e518..6c4e0c1 100644[m
+[1m--- a/src/components/ModuleStatusBoard.tsx[m
+[1m+++ b/src/components/ModuleStatusBoard.tsx[m
+[36m@@ -1,4 +1,5 @@[m
+ import React, { useState, useRef, useCallback, useEffect } from 'react';[m
+[32m+[m[32mimport { useNavigate } from 'react-router-dom';[m
+ import { Package, CheckCircle, XCircle, AlertTriangle, Shield, TestTube, Cpu, Clock } from 'lucide-react';[m
+ import type { Component, ComponentStatus } from '../types';[m
+ import { useThemeStyles } from '../hooks/useThemeStyles';[m
+[36m@@ -111,8 +112,9 @@[m [mconst CURSOR_OFFSET = 8;[m
+ const TOOLTIP_WIDTH = 288;[m
+ const TOOLTIP_HEIGHT = 340;[m
+ [m
+[31m-export default function ModuleStatusBoard({ components, moduleName, moduleId, projectId, canEdit = false, onComponentClick }: ModuleStatusBoardProps) {[m
+[32m+[m[32mexport default function ModuleStatusBoard({ components, moduleName, moduleId: _moduleId, projectId: _projectId, canEdit = false, onComponentClick }: ModuleStatusBoardProps) {[m
+   const t = useThemeStyles();[m
+[32m+[m[32m  const navigate = useNavigate();[m
+   const [tooltipState, setTooltipState] = useState<TooltipState>({[m
+     visible: false,[m
+     component: null,[m
+[36m@@ -259,11 +261,14 @@[m [mexport default function ModuleStatusBoard({ components, moduleName, moduleId, pr[m
+ [m
+     return ([m
+       <div[m
+[31m-        className={`relative p-3 rounded-lg border ${config.borderColor} ${config.bgColor} ${canEdit ? 'cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg' : 'cursor-default'} ${config.glowColor}`}[m
+[32m+[m[32m        className={`relative p-3 rounded-lg border ${config.borderColor} ${config.bgColor} ${canEdit ? 'cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg' : 'cursor-pointer'} ${config.glowColor}`}[m
+         onMouseEnter={(e) => handleMouseEnter(e, component)}[m
+         onMouseMove={(e) => handleMouseMove(e, component)}[m
+         onMouseLeave={handleMouseLeave}[m
+[31m-        onClick={() => canEdit && onComponentClick?.(component)}[m
+[32m+[m[32m        onClick={(e) => {[m
+[32m+[m[32m          e.stopPropagation();[m
+[32m+[m[32m          navigate(`/components/${component.id}`);[m
+[32m+[m[32m        }}[m
+       >[m
+         <div className="flex items-center gap-2">[m
+           <Icon size={16} className={config.color} />[m
+[36m@@ -277,7 +282,14 @@[m [mexport default function ModuleStatusBoard({ components, moduleName, moduleId, pr[m
+           </div>[m
+         </div>[m
+         <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${config.color.replace('text-', 'bg-')}`} />[m
+[31m-        <div className="mt-1 flex items-center justify-between">[m
+[32m+[m[32m        <div[m
+[32m+[m[32m          className="mt-1 flex items-center justify-between"[m
+[32m+[m[32m          onClick={(e) => {[m
+[32m+[m[32m            e.stopPropagation();[m
+[32m+[m[32m            e.preventDefault();[m
+[32m+[m[32m            canEdit && onComponentClick?.(component);[m
+[32m+[m[32m          }}[m
+[32m+[m[32m        >[m
+           <span className={`text-xs ${t.textMuted} truncate`}>[m
+             {component.status}[m
+           </span>[m

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailwind 极简测试</title>
+  <!-- 直接通过 Vite 导入编译后的 CSS -->
+  <link rel="stylesheet" href="/src/index.css" />
+</head>
+<body class="bg-gray-900 text-white p-8">
+
+  <h1 class="text-3xl font-bold mb-6 text-blue-400">🔍 Tailwind CSS 诊断测试</h1>
+
+  <!-- 测试 1: 基础颜色 -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-green-400">✅ 测试 1：基础颜色类</h2>
+    
+    <div class="grid grid-cols-3 gap-4 max-w-lg">
+      <div class="p-4 bg-red-500 text-center rounded">红色</div>
+      <div class="p-4 bg-blue-500 text-white text-center rounded">蓝色</div>
+      <div class="p-4 bg-green-500 text-white text-center rounded">绿色</div>
+      <div class="p-4 bg-yellow-500 text-black text-center rounded">黄色</div>
+      <div class="p-4 bg-purple-500 text-white text-center rounded">紫色</div>
+      <div class="p-4 bg-gray-800 text-white text-center rounded border border-gray-600">灰色</div>
+    </div>
+  </div>
+
+  <!-- 测试 2: 布局 -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-green-400">✅ 测试 2：布局类 (Flex/Grid)</h2>
+    
+    <div class="flex gap-4 mb-4">
+      <div class="flex-1 bg-indigo-600 p-3 rounded text-center">Flex 1</div>
+      <div class="flex-2 bg-pink-600 p-3 rounded text-center">Flex 2</div>
+      <div class="flex-1 bg-cyan-600 p-3 rounded text-center">Flex 1</div>
+    </div>
+  </div>
+
+  <!-- 测试 3: 间距和尺寸 -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-green-400">✅ 测试 3：间距/内边距/外边距</h2>
+    
+    <div class="space-y-4 max-w-md">
+      <div class="p-2 bg-blue-800 rounded">p-2 (小)</div>
+      <div class="p-4 bg-blue-700 rounded">p-4 (中)</div>
+      <div class="p-8 bg-blue-600 rounded">p-8 (大)</div>
+    </div>
+  </div>
+
+  <!-- 测试 4: 文字样式 -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-green-400">✅ 测试 4：文字样式</h2>
+    
+    <div class="space-y-2">
+      <p class="text-xs">超小文字 text-xs</p>
+      <p class="text-sm">小文字 text-sm</p>
+      <p class="text-base">基础文字 text-base</p>
+      <p class="text-lg">大文字 text-lg</p>
+      <p class="text-xl font-bold">超大加粗 text-xl font-bold</p>
+      <p class="text-2xl italic">2倍斜体 text-2xl italic</p>
+    </div>
+  </div>
+
+  <!-- 测试 5: 边框和圆角 -->
+  <div class="mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-green-400">✅ 测试 5：边框/圆角/阴影</h2>
+    
+    <div class="flex gap-4 flex-wrap">
+      <div class="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-none flex items-center justify-center">
+        无圆角
+      </div>
+      <div class="w-24 h-24 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg shadow-md flex items-center justify-center">
+        圆角+阴影
+      </div>
+      <div class="w-24 h-24 bg-gradient-to-br from-orange-500 to-red-600 rounded-full shadow-lg flex items-center justify-center">
+        圆形
+      </div>
+      <div class="w-24 h-24 bg-white text-gray-900 rounded-xl shadow-xl border-4 border-dashed border-blue-400 flex items-center justify-center">
+        虚线边框
+      </div>
+    </div>
+  </div>
+
+  <!-- 诊断结果 -->
+  <hr class="my-8 border-gray-700"/>
+  
+  <div id="result" class="p-6 rounded-lg"></div>
+
+  <script>
+    window.addEventListener('load', () => {
+      const result = document.getElementById('result');
+      const checks = [];
+      
+      // 检查样式表
+      const sheetCount = document.styleSheets.length;
+      let totalRules = 0;
+      
+      for (let i = 0; i < sheetCount; i++) {
+        try {
+          totalRules += document.styleSheets[i].cssRules.length;
+        } catch(e) {}
+      }
+      
+      checks.push(`📊 样式表数量: ${sheetCount}`);
+      checks.push(`📝 CSS 规则总数: ${totalRules}`);
+      
+      // 检查具体元素
+      const testEl = document.querySelector('.bg-blue-500');
+      if (testEl) {
+        const style = window.getComputedStyle(testEl);
+        const bg = style.backgroundColor;
+        
+        if (bg && bg !== 'rgba(0, 0, 0, 0)') {
+          result.className = 'p-6 rounded-lg bg-green-900 border-2 border-green-500';
+          result.innerHTML = `
+            <h3 class="text-xl font-bold text-green-400 mb-3">🎉 Tailwind CSS 工作正常！</h3>
+            <ul class="space-y-2 text-green-200">
+              ${checks.map(c => `<li>${c}</li>`).join('')}
+              <li>✅ 背景色检测: ${bg}</li>
+              <li>✅ 所有颜色、布局、间距类名生效</li>
+            </ul>
+            <p class="mt-4 text-yellow-300 font-semibold">
+              → 如果此页正常但主应用不正常，请清除浏览器缓存后刷新主应用
+            </p>
+          `;
+        } else {
+          result.className = 'p-6 rounded-lg bg-red-900 border-2 border-red-500';
+          result.innerHTML = `
+            <h3 class="text-xl font-bold text-red-400 mb-3">❌ Tailwind CSS 未生效</h3>
+            <ul class="space-y-2 text-red-200">
+              ${checks.map(c => `<li>${c}</li>`).join('')}
+              <li>❌ 背景色为空或透明</li>
+              <li>❌ 需要重新安装依赖或检查配置</li>
+            </ul>
+          `;
+        }
+      }
+      
+      console.log('%c Tailwind 诊断完成', 'color: #10b981; font-size: 18px; font-weight: bold;');
+      console.log(checks.join('\n'));
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,1 @@
+﻿  Type '{ 鎶曚骇涓? false; 缁翠慨涓? false; 涓夐槻涓? false; 娴嬭瘯涓? false; 浠跨湡涓? false; }' is missing the following properties from type 'Record<ComponentStatus, boolean>': 鏈姇浜? 姝ｅ父, 鍊熺敤涓? 鏁呴殰

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSS 样式测试</title>
+</head>
+<body style="margin: 20px; font-family: sans-serif;">
+  
+  <h1>🎨 CSS 样式加载诊断测试</h1>
+  
+  <h2>1️⃣ 基础 HTML 样式测试</h2>
+  <div style="background: #f0f0f0; padding: 15px; border-radius: 8px;">
+    <p>✅ 如果看到灰色背景和圆角边框 = HTML 样式正常</p>
+  </div>
+
+  <h2>2️⃣ Tailwind CSS 类名测试</h2>
+  
+  <div class="bg-blue-500 text-white p-4 rounded-lg">
+    <p>✅ 如果看到蓝色背景 + 白色文字 + 圆角 = Tailwind 正常！</p>
+    <p class="text-yellow-300">🌟 黄色文字 = utilities 加载成功</p>
+  </div>
+
+  <br/>
+
+  <div class="flex gap-4 bg-gray-100 p-4 rounded-lg">
+    <button class="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+      ✅ 绿色按钮 (hover 变深)
+    </button>
+    <button class="px-6 py-3 bg-red-500 text-white rounded-lg shadow-lg">
+      🔴 红色按钮 + 阴影
+    </button>
+  </div>
+
+  <br/>
+
+  <div class="grid grid-cols-3 gap-4 max-w-md">
+    <div class="bg-purple-500 p-4 text-white text-center rounded-xl shadow-xl">
+      卡片 1
+    </div>
+    <div class="bg-pink-500 p-4 text-white text-center rounded-xl shadow-xl">
+      卡片 2
+    </div>
+    <div class="bg-indigo-500 p-4 text-white text-center rounded-xl shadow-xl">
+      卡片 3
+    </div>
+  </div>
+
+  <br/>
+  <hr/>
+  <br/>
+
+  <h2>3️⃣ 自定义样式测试</h2>
+  
+  <div class="animate-spin-slow w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+    旋
+  </div>
+
+  <br/>
+
+  <div class="shine-sweep bg-gray-800 text-white p-6 rounded-lg cursor-pointer">
+    ✨ 把鼠标悬停在这里查看光泽扫过效果
+  </div>
+
+  <br/>
+
+  <div class="border-gradient-flow p-6 rounded-lg bg-white">
+    🌈 渐变流动边框效果
+  </div>
+
+  <br/>
+  <hr/>
+  <br/>
+
+  <h2>4️⃣ 诊断结果说明</h2>
+  
+  <div id="diagnosis" style="padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; margin: 10px 0;"></div>
+
+  <script>
+    // 自动检测并显示诊断结果
+    window.addEventListener('load', () => {
+      const diagnosis = document.getElementById('diagnosis');
+      const results = [];
+      
+      // 检查 Tailwind 是否加载
+      const testElement = document.querySelector('.bg-blue-500');
+      if (testElement) {
+        const styles = window.getComputedStyle(testElement);
+        const bgColor = styles.backgroundColor;
+        
+        if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+          results.push('✅ Tailwind CSS 已正确编译和加载');
+          results.push(`   背景色值: ${bgColor}`);
+        } else {
+          results.push('❌ Tailwind CSS 未生效 - 类名未被转换为样式');
+        }
+      }
+      
+      // 检查 CSS 文件数量
+      const styleSheets = document.styleSheets;
+      let cssCount = 0;
+      for (let sheet of styleSheets) {
+        try {
+          cssCount += sheet.cssRules.length;
+        } catch(e) {}
+      }
+      results.push(`\n📊 当前页面加载了 ${styleSheets.length} 个样式表`);
+      results.push(`   总计约 ${cssCount} 条 CSS 规则`);
+      
+      // 显示结果
+      diagnosis.innerHTML = '<strong>自动诊断结果：</strong><br/>' + results.join('<br/>');
+      
+      console.log('%c CSS 诊断完成', 'color: blue; font-size: 16px; font-weight: bold;');
+      console.log(results.join('\n'));
+    });
+  </script>
+
+</body>
+</html>
